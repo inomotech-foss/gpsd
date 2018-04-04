@@ -376,6 +376,8 @@ boolopts = (
     ("tripmate",      True,  "DeLorme TripMate support"),
     ("tsip",          True,  "Trimble TSIP support"),
     ("ublox",         True,  "u-blox Protocol support"),
+    ("pds",           sys.platform.startswith('linux'),
+     "Qualcomm PDS support"),
     # Non-GPS protocols
     ("aivdm",         True,  "AIVDM support"),
     ("gpsclock",      True,  "GPSClock support"),
@@ -1210,6 +1212,14 @@ if not cleaning and not helping:
         announce("You do not have kernel CANbus available.")
         config.env["nmea2000"] = False
 
+    if config.CheckHeader(["linux/qrtr.h"]):
+        confdefs.append("#define HAVE_LINUX_QRTR_H 1\n")
+        announce("You have kernel QRTR available.")
+    else:
+        confdefs.append("/* #undef HAVE_LINUX_QRTR_H */\n")
+        announce("You do not have kernel QRTR available.")
+        env["pds"] = False
+
     # check for C11 or better, and __STDC__NO_ATOMICS__ is not defined
     # before looking for stdatomic.h
     if ((config.CheckC11() and
@@ -1697,6 +1707,7 @@ libgpsd_sources = [
     "drivers/driver_nmea0183.c",
     "drivers/driver_nmea2000.c",
     "drivers/driver_oncore.c",
+    "drivers/driver_pds.c",
     "drivers/driver_rtcm2.c",
     "drivers/driver_rtcm3.c",
     "drivers/drivers.c",

@@ -472,6 +472,7 @@ typedef enum {source_unknown,
               source_usb,       /* potential GPS source, discoverable */
               source_bluetooth, /* potential GPS source, discoverable */
               source_can,       /* potential GPS source, fixed CAN format */
+              source_qrtr,	/* potential GPS source, discoverable */
               source_pty,       /* PTY: we don't require exclusive access */
               source_tcp,       /* TCP/IP stream: case detected but not used */
               source_udp,       /* UDP stream: case detected but not used */
@@ -802,6 +803,14 @@ struct gps_device_t {
             char ais_channel;
         } aivdm;
 #endif /* AIVDM_ENABLE */
+#ifdef PDS_ENABLE
+       struct {
+           int ready;
+           int hostid;
+           unsigned int pds_node;
+           unsigned int pds_port;
+       } pds;
+#endif /* PDS_ENABLE */
     } driver;
 
     /*
