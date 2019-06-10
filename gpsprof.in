@@ -494,12 +494,11 @@ class spaceplot(plotter):
                                                 stat_alt.mean])
 
             # once more through the data, looking for 3D max
-            for fix_lla in self.fixes:
-                if not math.isnan(fix_lla[2]):
-                    fix_ecef = wgs84_to_ecef(fix_lla[:3])
-                    dist3d = dist_3d(self.centroid_ecef, fix_ecef)
-                    if dist_3d_max < dist3d:
-                        dist_3d_max = dist3d
+            if self.fixes:
+                dist_3d_max = max(dist_3d(self.centroid_ecef,
+                                          wgs84_to_ecef(f[:3]))
+                                  for f in self.fixes
+                                  if not math.isnan(f[2]))
 
             # Sort fixes by distance from average altitude
             alt_fixes_r.sort(key=lambda a: abs(a))
