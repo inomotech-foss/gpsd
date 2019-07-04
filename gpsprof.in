@@ -360,13 +360,10 @@ class spaceplot(plotter):
 
     def data(self):
         "Format data for dump"
-        res = ""
-        for i in range(len(self.recentered)):
-            (lat, lon) = self.recentered[i][:2]
-            (raw1, raw2, alt) = self.fixes[i]
-            res += "%.9f\t%.9f\t%.9f\t%.9f\t%.9f\n" \
-                % (lat, lon, raw1, raw2, alt)
-        return res
+        return "".join(
+            "%.9f\t%.9f\t%.9f\t%.9f\t%.9f\n" %
+            (r[0], r[1], self.fixes[i][0], self.fixes[i][1], self.fixes[i][2])
+            for i, r in enumerate(self.recentered))
 
     def plot(self):
         "Plot the data"
