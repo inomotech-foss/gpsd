@@ -109,6 +109,10 @@ test3 = [
     (0, -78.452222, 15.98, "Equatorial Sign Bolivia"),
     # 51.4778067, 0: EGM2008 45.8961, EGM96 45.7976, EGM84 47.2468
     (51.4778067, 0, 45.46, "Lawn Greenwich Observatory UK"),
+    # 180, 0: EGM2008 21.2813, EGM96 21.1534, EGM84 21.7089
+    (0, 180, 21.28, "Far away from Google default"),
+    # North Poll 2: EGM2008 14.8980, EGM96 13.6050, EGM84 13.0980
+    (90, 180, 14.90, "North Poll"),
     ]
 
 test4 = [
