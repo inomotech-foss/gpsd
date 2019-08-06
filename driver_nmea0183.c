@@ -288,7 +288,7 @@ static void register_fractional_time(const char *tag, const char *fld,
  *                                see faa_mode() for possible mode values
  *
  * see also:
- * https://gpsd.gitlab.io/gpsd/NMEA.html#_vtg_track_made_good_and_ground_speed
+ * https://gpsd.io/NMEA.html#_vtg_track_made_good_and_ground_speed
  */
 static gps_mask_t processVTG(int count,
                              char *field[],

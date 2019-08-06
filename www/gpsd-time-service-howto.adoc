@@ -1786,13 +1786,13 @@ by Jaap Winius <jwinius@rjsystems.nl>.
 
 - [[[RFC-5905]]] https://tools.ietf.org/html/rfc5905[RFC 5905]
 
-- [[[MACX-1]]] https://www.etsy.com/listing/280336400/navisys-gr-601w-u-blox-6-macx-1-usb-gnss[Navisys GR-601W u-blox-6 "Macx-1" USB GPS receiver]
+- [[[MACX-1]]] https://www.etsy.com/listing/280336400/navisys-gr-601w-u-blox-6-macx-1-usb-gnss[Navisys GR-601W u-blox-6 "Macx-1" USB GPS receiver] replaced by https://www.etsy.com/listing/501829632/navisys-gr-701w-u-blox-7-usb-pps[Navisys GR-701W u-blox-7 usb pps gps/qzss&amp;glonass receiver]
 
 - [[[CHRONY-COMPARE]]] https://chrony.tuxfamily.org/manual.html#Comparison-with-ntpd[ntpd (comparison with chrony)]
 
 - [[[CHRONYDEFAULT]]] https://lists.fedoraproject.org/pipermail/devel/2010-May/135679.html
 
-- [[[HARDWARE]]] https://gpsd.gitlab.io/gpsd/hardware.html[Compatible Hardware]
+- [[[HARDWARE]]] https://gpsd.io/hardware.html[Compatible Hardware]
 
 - [[[UBLOX-TIMING]]] https://www.u-blox.com/sites/default/files/products/documents/Timing_AppNote_(GPS.G6-X-11007).pdf[GPS-based timing considerations with u-blox 6 receivers]
 
@@ -1893,5 +1893,9 @@ by Jaap Winius <jwinius@rjsystems.nl>.
 
 2.11 June 2019::
     Check all links, and update to https where possible
+
+2.12 August 2019::
+    Extend MACX-1 link to include slternative dev etsy link
+    revise gpsd homepage link
 
 // end
