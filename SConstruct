@@ -92,6 +92,7 @@ gitrepo = "git@gitlab.com:gpsd/gpsd.git"
 ircchan = "irc://chat.freenode.net/#gpsd"
 mailman = "https://lists.nongnu.org/mailman/listinfo/"
 mainpage = "https://gpsd.io"
+project_page = "https://gitlab.com/gpsd/gpsd/"
 scpupload = "garyemiller@dl.sv.nongnu.org:/releases/gpsd/"
 sitename = "GPSD"
 sitesearch = "gpsd.io"
@@ -1831,6 +1832,7 @@ def substituter(target, source, env):
         ('@LIBGPSVERSION@', libgps_version),
         ('@MAILMAN@',    mailman),
         ('@MAINPAGE@',   mainpage),
+        ('@PROJECTPAGE@',   project_page),
         ('@MASTER@',     'DO NOT HAND_HACK! THIS FILE IS GENERATED'),
         ('@prefix@',     env['prefix']),
         ('@SCPUPLOAD@',  scpupload),
