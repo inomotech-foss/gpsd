@@ -429,6 +429,8 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
 	else if (c == 'Q')
 	    lexer->state = QZSS_LEAD_1;
 #ifdef OCEANSERVER_ENABLE
+	else if (c == 'O')
+	    lexer->state = NMEA_LEADER_END;
 	else if (c == 'C')
 	    lexer->state = NMEA_LEADER_END;
 #endif /* OCEANSERVER_ENABLE */
