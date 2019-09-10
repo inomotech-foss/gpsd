@@ -36,11 +36,10 @@ class gpscommon(object):
         self.bresponse = b''
         self.response = polystr(self.bresponse)
 
-        if host is not None:
-            self.host = host
-        if port is not None:
-            self.port = port
-        self.connect(self.host, self.port)
+        self.host = host
+        self.port = port
+        if self.host is not None:
+            self.connect(self.host, self.port)
 
     def connect(self, host, port):
         """Connect to a host on a given port.
