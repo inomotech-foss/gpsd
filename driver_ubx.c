@@ -2141,6 +2141,22 @@ static void ubx_event_hook(struct gps_device_t *session, event_t event)
          * Bad.  Don't do that anymore...
          */
     }
+    else if (event == event_reactivate) {
+        gpsd_log(&session->context->errout, LOG_INF, "UBX reactivated\n");
+
+        /* no longer set UBX-CFG-SBAS here, u-blox 9 does not have it */
+
+#ifdef RECONFIGURE_ENABLE
+        /*
+         * Turn off NMEA output, turn on UBX on this port.
+         */
+        if (session->mode == O_OPTIMIZE) {
+            ubx_mode(session, MODE_BINARY);
+        } else {
+            ubx_mode(session, MODE_NMEA);
+        }
+#endif /* RECONFIGURE_ENABLE */
+    }
 }
 
 #ifdef RECONFIGURE_ENABLE
@@ -2460,6 +2476,8 @@ static void ubx_cfg_prt(struct gps_device_t *session,
 
 static void ubx_mode(struct gps_device_t *session, int mode)
 {
+    gpsd_log(&session->context->errout, LOG_INF,
+             "ubx_mode(%d)\n", mode);
     ubx_cfg_prt(session,
                 gpsd_get_speed(session),
                 gpsd_get_parity(session),
