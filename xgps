@@ -584,6 +584,27 @@ class NoiseView(object):
             widget.set_markup(markup % s)
 
 
+class MagneticView(object):
+    "Encapsulate view object for watching Magnetic declination."
+
+    def __init__(self, deg_type):
+        "Initialize class MagneticView"
+        self.widget = Gtk.Entry()
+        self.widget.set_editable(False)
+        self.deg_type = deg_type
+
+    def update(self, tpv):
+        "Update class MagneticView"
+        if ((tpv.mode >= gps.MODE_2D and
+             hasattr(tpv, "lat") and
+             hasattr(tpv, "lon"))):
+            off = gps.clienthelpers.mag_var(tpv.lat, tpv.lon)
+            off2 = gps.clienthelpers.deg_to_str(self.deg_type, off)
+            self.widget.set_text(off2)
+        else:
+            self.widget.set_text("n/a")
+
+
 class MaidenheadView(object):
     "Encapsulate view object for watching Maidenhead grid location."
 
@@ -859,6 +880,7 @@ frame * {
                  ["Noise Statistics", False, "<Control>N", "Noise"],
                  ["Maidenhead", False, "<Control>M", "Maidenhead"],
                  ["AIS Data", False, "<Control>A", "AIS"],
+                 ["Magnetic Declination", False, "<Control>C", "Magnetic"],
                  ]
 
         for name, active, acc, handle in views:
@@ -1040,6 +1062,13 @@ frame * {
         self.gsview = MaidenheadView()
         gsframe.add(self.gsview.widget)
 
+        self.mvbox = Gtk.HBox(homogeneous=False, spacing=0)
+        vbox.add(self.mvbox)
+        mvframe = Gtk.Frame(label="Magnetic Declination")
+        self.mvbox.add(mvframe)
+        self.mvview = MagneticView(self.deg_type)
+        mvframe.add(self.mvview.widget)
+
         self.aisbox = Gtk.HBox(homogeneous=False, spacing=0)
         vbox.add(self.aisbox)
         aisframe = Gtk.Frame(label="AIS Data")
@@ -1054,6 +1083,9 @@ frame * {
         # Hide the Maidenhead window until user selects it.
         self.gsbox.hide()
 
+        # Hide the Magnetic window until user selects it.
+        self.mvbox.hide()
+
         # Hide the AIS window until user selects it.
         self.aisbox.hide()
 
@@ -1063,6 +1095,7 @@ frame * {
             "GPS": self.dataframe,
             "Noise": self.noisebox,
             "Maidenhead": self.gsbox,
+            'Magnetic': self.mvbox,
             "AIS": self.aisbox}
 
         # Discard field labels and associate data hooks with their widgets
@@ -1260,6 +1293,7 @@ frame * {
             if hook:  # Remove this guard when we have all hooks
                 widget.set_markup(markup % hook(self, tpv))
         self.gsview.update(tpv)
+        self.mvview.update(tpv)
 
     def update_version(self, ver):
         "Update the Version"
@@ -1374,6 +1408,8 @@ frame * {
 
         # print("set_deg:", _unused, handle)
         self.deg_type = handle
+        if hasattr(self, 'mvview') and self.mvview is not None:
+            self.mvview.deg_type = handle
 
     def set_units(self, _unused, handle):
         "Change the display units."
