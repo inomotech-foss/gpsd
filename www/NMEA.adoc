@@ -1887,6 +1887,45 @@ Field number:
 
 From <<GLOBALSAT>>.  Shown with a "@II" leader rather than "$GP".
 
+=== TLB - Target Label ===
+
+------------------------------------------------------------------------------
+        1   2   (3) (4)               5
+        |   |    |   |                |
+ $--TLB,x.x,c--c,x.x,c--c,...,x.x,c--c*hh<CR><LF>
+------------------------------------------------------------------------------
+
+Field Number:
+
+1. Target Number (0-99)
+2. Label assigned to target
+(3. Target number 2)
+(4. Label assigned to target number 2)
+5. Checksum
+
+Message can contain target number + label pairs up to maximum NMEA message length.
+Target number references to target number in TTM (and/or TLL) messages.
+
+=== TLL - Target Latitude and Longitude ===
+
+------------------------------------------------------------------------------
+        1  2       3 4        5 6    7         8 9 10
+        |  |       | |        | |    |         | | |
+ $--TLL,xx,llll.ll,a,yyyyy.yy,a,c--c,hhmmss.ss,a,a*hh<CR><LF>
+------------------------------------------------------------------------------
+
+Field Number:
+
+1. Target Number (0-99)
+2. Target Latitude
+3. N=north, S=south
+4. Target Longitude
+5. E=east, W=west
+6. Target name
+7. UTC of data
+8. Status (L=lost, Q=acquisition, T=tracking)
+9. R= reference target; null (,,)= otherwise
+
 === TPC - Trawl Position Cartesian Coordinates ===
 
 ------------------------------------------------------------------------------
