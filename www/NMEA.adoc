@@ -2410,7 +2410,6 @@ on the Web:
 |EVE - General Event Message
 |FIR - Fire Detection
 |MWD - Wind Direction & Speed
-|TLL - Target Latitude and Longitude
 |WDR - Distance to Waypoint - Rhumb Line
 |WDC - Distance to Waypoint - Great Circle
 |ZDL - Time and Distance to Variable Point
