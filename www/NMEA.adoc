@@ -328,7 +328,7 @@ LC talker prefix for this purpose.  Otherwise they use the CD prefix.
 A vessel's nav system is likely to have both CD and some other
 position indicating talker on its bus(es).
 
-LC -- Loran-C is a marine navigation system run by the U.S. government,
+LC -- Loran-C is a marine navigation system formerly run by the U.S. government,
 which is planning to shut it down in favor of GPS.  Some non-Loran
 devices emit GLL but use this talker ID for backward-compatibility
 reasons, so it may outlast the actual Loran system.
