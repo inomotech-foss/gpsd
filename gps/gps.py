@@ -77,9 +77,10 @@ STATUS_DGPS_FIX = 2
 STATUS_RTK_FIX = 3
 STATUS_RTK_FLT = 4
 STATUS_DR = 5
-STATUS_GNSSD = 6
+STATUS_GNSSDR = 6
 STATUS_TIME = 7
 STATUS_SIM = 8
+STATUS_PPS_FIX = 9
 MODE_NO_FIX = 1
 MODE_2D = 2
 MODE_3D = 3
@@ -93,21 +94,46 @@ class gpsfix(object):
     def __init__(self):
         "Init class gpsfix"
 
-        self.altitude = NaN         # Meters
+        self.altHAE = NaN           # Meters
+        self.altMSL = NaN           # Meters
         self.climb = NaN            # Meters per second
+        self.datum = ""
+        self.dgpsAge = -1
+        self.dgpsSta = ""
+        self.depth = NaN
+        self.device = ""
+        self.ecefx = NaN
+        self.ecefy = NaN
+        self.ecefz = NaN
+        self.ecefvx = NaN
+        self.ecefvy = NaN
+        self.ecefvz = NaN
+        self.ecefpAcc = NaN
+        self.ecefvAcc = NaN
         self.epc = NaN
         self.epd = NaN
+        self.eph = NaN
         self.eps = NaN
         self.ept = NaN
         self.epv = NaN
         self.epx = NaN
         self.epy = NaN
+        self.geoidSep = NaN        # Meters
         self.latitude = self.longitude = 0.0
+        self.magtrack = NaN
+        self.magvar = NaN
         self.mode = MODE_NO_FIX
+        self.relN = NaN
+        self.relE = NaN
+        self.relD = NaN
+        self.sep = NaN              # a.k.a. epe
         self.speed = NaN            # Knots
         self.status = STATUS_NO_FIX
         self.time = NaN
         self.track = NaN            # Degrees from true north
+        self.velN = NaN
+        self.velE = NaN
+        self.velD = NaN
 
 
 class gpsdata(object):
@@ -162,7 +188,7 @@ class gpsdata(object):
         if not isfinite(self.fix.altHAE):
             st += "Altitude HAE: ?\n"
         else:
-            st += "Altitude HAE: %f\n" % (self.fix.altHAAE)
+            st += "Altitude HAE: %f\n" % (self.fix.altHAE)
         if not isfinite(self.fix.speed):
             st += "Speed:    ?\n"
         else:
@@ -206,7 +232,7 @@ class gps(gpscommon, gpsdata, gpsjson):
         if mode:
             self.stream(mode)
 
-    def __oldstyle_shim(self):
+    def _oldstyle_shim(self):
         # The rest is backwards compatibility for the old interface
         def default(k, dflt, vbit=0):
             "Return default for key"
@@ -240,7 +266,8 @@ class gps(gpscommon, gpsdata, gpsjson):
                 # self.utc is always iso 8601 string
                 # just copy to fix.time
                 self.fix.time = self.utc
-            self.fix.altitude = default("alt", NaN, ALTITUDE_SET)
+            self.fix.altHAE = default("altHAE", NaN, ALTITUDE_SET)
+            self.fix.altMSL = default("altMSL", NaN, ALTITUDE_SET)
             self.fix.climb = default("climb", NaN, CLIMB_SET)
             self.fix.epc = default("epc", NaN, CLIMBERR_SET)
             self.fix.epd = default("epd", NaN)
@@ -295,7 +322,7 @@ class gps(gpscommon, gpsdata, gpsjson):
             return status
         if self.response.startswith("{") and self.response.endswith("}\r\n"):
             self.unpack(self.response)
-            self.__oldstyle_shim()
+            self._oldstyle_shim()
             self.valid |= PACKET_SET
         return 0
 
@@ -320,7 +347,7 @@ class gps(gpscommon, gpsdata, gpsjson):
 
 def is_sbas(prn):
     "Is this the NMEA ID of an SBAS satellite?"
-    return prn >= 120 and prn <= 158
+    return 120 <= prn <= 158
 
 
 if __name__ == '__main__':

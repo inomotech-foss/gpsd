@@ -121,62 +121,66 @@ static void gpsd_vlog(const int errlevel,
     (void)errlevel;
     (void)fmt;
 #else
-    if (errout->debug >= errlevel) {
-	char buf[BUFSIZ];
-	char *err_str;
+    char buf[BUFSIZ];
+    char *err_str;
 
-	gpsd_acquire_reporting_lock();
-	switch ( errlevel ) {
-	case LOG_ERROR:
-		err_str = "ERROR: ";
-		break;
-	case LOG_SHOUT:
-		err_str = "SHOUT: ";
-		break;
-	case LOG_WARN:
-		err_str = "WARN: ";
-		break;
-	case LOG_CLIENT:
-		err_str = "CLIENT: ";
-		break;
-	case LOG_INF:
-		err_str = "INFO: ";
-		break;
-	case LOG_DATA:
-		err_str = "DATA: ";
-		break;
-	case LOG_PROG:
-		err_str = "PROG: ";
-		break;
-	case LOG_IO:
-		err_str = "IO: ";
-		break;
-	case LOG_SPIN:
-		err_str = "SPIN: ";
-		break;
-	case LOG_RAW:
-		err_str = "RAW: ";
-		break;
-	default:
-		err_str = "UNK: ";
-	}
-
-	assert(errout->label != NULL);
-	(void)strlcpy(buf, errout->label, sizeof(buf));
-	(void)strlcat(buf, ":", sizeof(buf));
-	(void)strlcat(buf, err_str, sizeof(buf));
-	str_vappendf(buf, sizeof(buf), fmt, ap);
-
-	visibilize(outbuf, outlen, buf, strlen(buf));
-
-	if (getpid() == getsid(getpid()))
-	    syslog((errlevel <= LOG_SHOUT) ? LOG_ERR : LOG_NOTICE, "%s", outbuf);
-	else if (errout->report != NULL)
-	    errout->report(outbuf);
-	else
-	    (void)fputs(outbuf, stderr);
-	gpsd_release_reporting_lock();
+    // errout should never be NULL, but some code analyzers complain anyway
+    if (NULL == errout ||
+        errout->debug < errlevel) {
+        return;
     }
+
+    gpsd_acquire_reporting_lock();
+    switch ( errlevel ) {
+    case LOG_ERROR:
+            err_str = "ERROR: ";
+            break;
+    case LOG_SHOUT:
+            err_str = "SHOUT: ";
+            break;
+    case LOG_WARN:
+            err_str = "WARN: ";
+            break;
+    case LOG_CLIENT:
+            err_str = "CLIENT: ";
+            break;
+    case LOG_INF:
+            err_str = "INFO: ";
+            break;
+    case LOG_DATA:
+            err_str = "DATA: ";
+            break;
+    case LOG_PROG:
+            err_str = "PROG: ";
+            break;
+    case LOG_IO:
+            err_str = "IO: ";
+            break;
+    case LOG_SPIN:
+            err_str = "SPIN: ";
+            break;
+    case LOG_RAW:
+            err_str = "RAW: ";
+            break;
+    default:
+            err_str = "UNK: ";
+    }
+
+    assert(errout->label != NULL);
+    (void)strlcpy(buf, errout->label, sizeof(buf));
+    (void)strlcat(buf, ":", sizeof(buf));
+    (void)strlcat(buf, err_str, sizeof(buf));
+    str_vappendf(buf, sizeof(buf), fmt, ap);
+
+    visibilize(outbuf, outlen, buf, strlen(buf));
+
+    if (getpid() == getsid(getpid()))
+        syslog((errlevel <= LOG_SHOUT) ? LOG_ERR : LOG_NOTICE, "%s", outbuf);
+    else if (errout->report != NULL)
+        errout->report(outbuf);
+    else
+        (void)fputs(outbuf, stderr);
+    gpsd_release_reporting_lock();
 #endif /* !SQUELCH_ENABLE */
 }
 
@@ -1505,7 +1509,7 @@ gps_mask_t gpsd_poll(struct gps_device_t *session)
 	}
     }
 
-    if (session->lexer.outbuflen == 0) {	/* got new data, but no packet */
+    if (session->lexer.outbuflen == 0) {      /* got new data, but no packet */
 	GPSD_LOG(LOG_RAW + 1, &session->context->errout,
 		 "New data on %s, not yet a packet\n",
 		 session->gpsdata.dev.path);
@@ -1519,8 +1523,8 @@ gps_mask_t gpsd_poll(struct gps_device_t *session)
 		 session->gpsdata.dev.path);
 
 	/* track the packet count since achieving sync on the device */
-	if (driver_change
-		&& (session->drivers_identified & (1 << session->driver_index)) == 0) {
+	if (driver_change &&
+            (session->drivers_identified & (1 << session->driver_index)) == 0) {
 	    speed_t speed = gpsd_get_speed(session);
 
 	    /* coverity[var_deref_op] */
@@ -1647,7 +1651,7 @@ gps_mask_t gpsd_poll(struct gps_device_t *session)
 	 * devices output fix packets on a regular basis, even when unable
 	 * to derive a good fix. Such packets should set STATUS_NO_FIX.
 	 */
-	if ( 0 != (session->gpsdata.set & LATLON_SET)) {
+	if (0 != (session->gpsdata.set & (LATLON_SET|ECEF_SET))) {
 	    if ( session->gpsdata.status > STATUS_NO_FIX) {
 		session->context->fixcnt++;
 		session->fixcnt++;
@@ -1725,7 +1729,8 @@ int gpsd_multipoll(const bool data_ready,
 		return DEVICE_EOF;
 	    } else if (changed == ERROR_SET) {
 		GPSD_LOG(LOG_WARN, &device->context->errout,
-			 "device read of %s returned error or packet sniffer failed sync (flags %s)\n",
+			 "device read of %s returned error or "
+                         "packet sniffer failed sync (flags %s)\n",
 			 device->gpsdata.dev.path,
 			 gps_maskdump(changed));
 		return DEVICE_ERROR;
@@ -1804,6 +1809,7 @@ int gpsd_multipoll(const bool data_ready,
 		handler(device, changed);
 
 #ifdef __future__
+            // this breaks: test/daemon/passthrough.log ??
 	    /*
 	     * Bernd Ocklin suggests:
 	     * Exit when a full packet was received and parsed.
@@ -1812,6 +1818,8 @@ int gpsd_multipoll(const bool data_ready,
 	     * read.
 	     * Otherwise we can sit here for a long time without
 	     * any for-loop exit condition being met.
+             * It might also reduce the latency from a received packet to
+             * it being output by gpsd.
 	     */
 	    if ((changed & PACKET_SET) != 0)
                break;

@@ -103,23 +103,19 @@
  */
 #define NICEVAL	-10
 
-#if (defined(FIXED_PORT_SPEED) || \
-     defined(TIMESERVICE_ENABLE) || \
+#if (defined(TIMESERVICE_ENABLE) || \
      !defined(SOCKET_EXPORT_ENABLE))
     /*
-     * Force nowait in three circumstances:
+     * Force nowait in two circumstances:
      *
-     * (1) If we're running with FIXED_PORT_SPEED we're some sort
-     * of embedded configuration where we don't want to wait for connect
-     *
-     * (2) Socket export has been disabled.  In this case we have no
+     * (1) Socket export has been disabled.  In this case we have no
      * way to know when client apps are watching the export channels,
      * so we need to be running all the time.
      *
-     * (3) timeservice mode where we want the GPS always on for timing.
+     * (2) timeservice mode where we want the GPS always on for timing.
      */
 #define FORCE_NOWAIT
-#endif /* defined(FIXED_PORT_SPEED) || !defined(SOCKET_EXPORT_ENABLE) */
+#endif /* defined(TIMESERVICE_ENABLE) || !defined(SOCKET_EXPORT_ENABLE) */
 
 #ifdef SOCKET_EXPORT_ENABLE
 /* IP version used by the program */
@@ -211,29 +207,30 @@ static void typelist(void)
 
 static void usage(void)
 {
-    (void)printf("usage: gpsd [-b] [-D n] [-F sockfile] [-G] [-h] [-n] [-N] [-P pidfile] [-S port] device...\n\
+    (void)printf("usage: gpsd [OPTIONS] device...\n\n\
   Options include: \n\
   -b		     	    = bluetooth-safe: open data sources read-only\n\
   -D integer (default 0)    = set debug level \n\
-  -F sockfile		    = specify control socket location\n"
+  -F sockfile		    = specify control socket location\n\
+  -f FRAMING		    = fix device framing to FRAMING (8N1, 8O1, etc.)\n\
+  -G         		    = make gpsd listen on INADDR_ANY\n"
 #ifndef FORCE_GLOBAL_ENABLE
-"  -G         		    = make gpsd listen on INADDR_ANY\n"
-#endif /* FORCE_GLOBAL_ENABLE */
-"  -h		     	    = help message \n"
-#ifdef FORCE_NOWAIT
-"  -n			    = don't wait for client connects to poll GPS\n"
 "                             forced on in this binary\n"
-#else
-"  -n			    = don't wait for client connects to poll GPS\n"
+#endif /* FORCE_GLOBAL_ENABLE */
+"  -h		     	    = help message \n\
+  -n			    = don't wait for client connects to poll GPS\n"
+#ifdef FORCE_NOWAIT
+"                             forced on in this binary\n"
 #endif /* FORCE_NOWAIT */
 "  -N			    = don't go into background\n\
   -P pidfile	      	    = set file to record process ID\n\
   -r               	    = use GPS time even if no fix\n\
-  -S integer (default %s) = set port for daemon \n\
+  -S PORT (default %s) = set port for daemon \n\
+  -s SPEED                  = fix device speed to SPEED\n\
   -V			    = emit version and exit.\n"
 #ifdef NETFEED_ENABLE
-"A device may be a local serial device for GPS input, or a URL in one \n\
-of the following forms:\n\
+"\nA device may be a local serial device for GNSS input, plus an optional\n\
+PPS device, or a URL in one of the following forms:\n\
      tcp://host[:port]\n\
      udp://host[:port]\n\
      {dgpsip|ntrip}://[user:passwd@]host[:port][/stream]\n\
@@ -259,7 +256,7 @@ static socket_t filesock(char *filename)
     }
     (void)strlcpy(addr.sun_path, filename, sizeof(addr.sun_path));
     addr.sun_family = (sa_family_t)AF_UNIX;
-    if (bind(sock, (struct sockaddr *)&addr, (int)sizeof(addr)) < 0) {
+    if (bind(sock, (struct sockaddr *)&addr, (socklen_t)sizeof(addr)) < 0) {
 	GPSD_LOG(LOG_ERROR, &context.errout,
 		 "can't bind to local socket %s\n", filename);
 	(void)close(sock);
@@ -294,15 +291,12 @@ static void adjust_max_fd(int fd, bool on)
     if (on) {
 	if (fd > maxfd)
 	    maxfd = fd;
-    }
-    else {
-	if (fd == maxfd) {
-	    int tfd;
+    } else if (fd == maxfd) {
+        int tfd;
 
-	    for (maxfd = tfd = 0; tfd < (int)FD_SETSIZE; tfd++)
-		if (FD_ISSET(tfd, &all_fds))
-		    maxfd = tfd;
-	}
+        for (maxfd = tfd = 0; tfd < (int)FD_SETSIZE; tfd++)
+            if (FD_ISSET(tfd, &all_fds))
+                maxfd = tfd;
     }
 }
 
@@ -324,7 +318,7 @@ static socket_t passivesock_af(int af, char *service, char *tcp_or_udp, int qlen
     struct servent *pse;
     struct protoent *ppe;
     sockaddr_t sat;
-    int sin_len = 0;
+    size_t sin_len = 0;
     int type, proto, one = 1;
     in_port_t port;
     char *af_str = "";
@@ -366,7 +360,8 @@ static socket_t passivesock_af(int af, char *service, char *tcp_or_udp, int qlen
 	s = socket(PF_INET, type, proto);
 	if (s > -1 ) {
 	/* Set packet priority */
-	if (setsockopt(s, IPPROTO_IP, IP_TOS, &dscp, sizeof(dscp)) == -1)
+	if (setsockopt(s, IPPROTO_IP, IP_TOS, &dscp,
+                       (socklen_t)sizeof(dscp)) == -1)
 	    GPSD_LOG(LOG_WARN, &context.errout,
 		     "Warning: SETSOCKOPT TOS failed\n");
 	}
@@ -404,7 +399,8 @@ static socket_t passivesock_af(int af, char *service, char *tcp_or_udp, int qlen
 	 */
 	if (s > -1) {
 	    int on = 1;
-	    if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) == -1) {
+	    if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &on,
+                           (socklen_t)sizeof(on)) == -1) {
 		GPSD_LOG(LOG_ERROR, &context.errout,
 			 "Error: SETSOCKOPT IPV6_V6ONLY\n");
 		(void)close(s);
@@ -412,7 +408,8 @@ static socket_t passivesock_af(int af, char *service, char *tcp_or_udp, int qlen
 	    }
 #ifdef IPV6_TCLASS
 	    /* Set packet priority */
-	    if (setsockopt(s, IPPROTO_IPV6, IPV6_TCLASS, &dscp, sizeof(dscp)) == -1)
+	    if (setsockopt(s, IPPROTO_IPV6, IPV6_TCLASS, &dscp,
+                           (socklen_t)sizeof(dscp)) == -1)
 		GPSD_LOG(LOG_WARN, &context.errout,
 			 "Warning: SETSOCKOPT TOS failed\n");
 #endif /* IPV6_TCLASS */
@@ -432,13 +429,13 @@ static socket_t passivesock_af(int af, char *service, char *tcp_or_udp, int qlen
 	return -1;
     }
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one,
-		   (int)sizeof(one)) == -1) {
+		   (socklen_t)sizeof(one)) == -1) {
 	GPSD_LOG(LOG_ERROR, &context.errout,
 		 "Error: SETSOCKOPT SO_REUSEADDR\n");
 	(void)close(s);
 	return -1;
     }
-    if (bind(s, &sat.sa, sin_len) < 0) {
+    if (bind(s, &sat.sa, (socklen_t)sin_len) < 0) {
 	GPSD_LOG(LOG_ERROR, &context.errout,
 		 "can't bind to %s port %s, %s\n", af_str,
 		 service, strerror(errno));
@@ -802,7 +799,10 @@ static char *snarfline(char *p, char **out)
     char *q;
     static char stash[BUFSIZ];
 
-    for (q = p; isprint((unsigned char) *p) && !isspace((unsigned char) *p) && (p - q < (ssize_t) sizeof(stash) - 1);
+    for (q = p;
+         isprint((unsigned char) *p) &&
+         !isspace((unsigned char) *p) &&
+         (p - q < (ssize_t)(sizeof(stash) - 1));
 	 p++)
 	continue;
     (void)memcpy(stash, q, (size_t) (p - q));
@@ -1006,14 +1006,15 @@ static void set_serial(struct gps_device_t *device,
 #ifndef __clang_analyzer__
     while (isspace((unsigned char) *modestring))
 	modestring++;
-    if (*modestring && strchr("78", *modestring) != NULL) {
+    if (*modestring && (NULL != strchr("78", *modestring))) {
 	wordsize = (int)(*modestring++ - '0');
-	if (*modestring && strchr("NOE", *modestring) != NULL) {
+	if (*modestring && (NULL != strchr("NOE", *modestring))) {
 	    parity = *modestring++;
 	    while (isspace((unsigned char) *modestring))
 		modestring++;
-	    if (*modestring && strchr("12", *modestring) != NULL)
+	    if (*modestring && (NULL != strchr("12", *modestring))) {
 		stopbits = (unsigned int)(*modestring - '0');
+            }
 	}
     }
 #endif /* __clang_analyzer__ */
@@ -1522,15 +1523,20 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
 /* *INDENT-OFF* */
 		    if (NULL != dp->device_type &&
 		        NULL != dp->device_type->rtcm_writer) {
-			if (dp->device_type->rtcm_writer(dp,
-			        (const char *)device->lexer.outbuffer,
-			        device->lexer.outbuflen) == 0) {
-			    GPSD_LOG(LOG_ERROR, &context.errout,
-				     "Write to RTCM sink failed\n");
+                        // FIXME: don't write back to source
+                        ssize_t ret = dp->device_type->rtcm_writer(dp,
+			                 (const char *)device->lexer.outbuffer,
+			                 device->lexer.outbuflen);
+                        if (0 < ret) {
+                            GPSD_LOG(LOG_IO, &context.errout,
+                                     "<= DGPS: %zd bytes of RTCM relayed.\n",
+                                     device->lexer.outbuflen);
+                        } else if (0 == ret) {
+                            // nothing written, probably read_only
 			} else {
-			    GPSD_LOG(LOG_IO, &context.errout,
-				     "<= DGPS: %zd bytes of RTCM relayed.\n",
-				     device->lexer.outbuflen);
+			    GPSD_LOG(LOG_ERROR, &context.errout,
+				     "Write to RTCM sink failed, type %s\n",
+                                     dp->device_type->type_name);
 			}
 		    }
 /* *INDENT-ON* */
@@ -1653,13 +1659,11 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
 	/* some listeners may be in watcher mode */
 	if (sub->policy.watcher) {
 	    if (changed & DATA_IS) {
-		/* guard keeps mask dumper from eating CPU */
-		if (context.errout.debug >= LOG_PROG)
-		    GPSD_LOG(LOG_PROG, &context.errout,
-			     "Changed mask: %s with %sreliable "
-                             "cycle detection\n",
-			     gps_maskdump(changed),
-			     device->cycle_end_reliable ? "" : "un");
+                GPSD_LOG(LOG_PROG, &context.errout,
+                         "Changed mask: %s with %sreliable "
+                         "cycle detection\n",
+                         gps_maskdump(changed),
+                         device->cycle_end_reliable ? "" : "un");
 		if ((changed & REPORT_IS) != 0)
 		    GPSD_LOG(LOG_PROG, &context.errout,
 			     "time to report a fix\n");
@@ -1667,8 +1671,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
 		if (sub->policy.nmea)
 		    pseudonmea_report(sub, changed, device);
 
-		if (sub->policy.json)
-		{
+		if (sub->policy.json) {
 		    char buf[GPS_JSON_RESPONSE_MAX * 4];
 
 		    if ((changed & AIS_SET) != 0)
@@ -1677,8 +1680,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
 			    && !sub->policy.split24)
 			    continue;
 
-		    json_data_report(changed,
-				     device, &sub->policy,
+		    json_data_report(changed, device, &sub->policy,
 				     buf, sizeof(buf));
 		    if (buf[0] != '\0')
 			(void)throttled_write(sub, buf, strlen(buf));
@@ -1889,9 +1891,13 @@ int main(int argc, char *argv[])
 #endif /* SOCKET_EXPORT_ENABLE */
 #endif /* CONTROL_SOCKET_ENABLE */
 
-    while ((option = getopt(argc, argv, "F:D:S:bGhlNnrP:V")) != -1) {
+    while ((option = getopt(argc, argv, "bD:F:f:GhlNnP:rS:s:V")) != -1) {
 	switch (option) {
+	case 'b':
+	    context.readonly = true;
+	    break;
 	case 'D':
+            // accept decimal, octal and hex
 	    context.errout.debug = (int)strtol(optarg, 0, 0);
 #ifdef CLIENTDEBUG_ENABLE
 	    gps_enable_debug(context.errout.debug, stderr);
@@ -1902,11 +1908,22 @@ int main(int argc, char *argv[])
 	    control_socket = optarg;
 	    break;
 #endif /* CONTROL_SOCKET_ENABLE */
-	case 'N':
-	    go_background = false;
-	    break;
-	case 'b':
-	    context.readonly = true;
+	case 'f':
+            // framing
+            if (3 == strlen(optarg) &&
+                ('7' == optarg[0] || '8' == optarg[0]) &&
+                ('E' == optarg[1] || 'N' == optarg[1] ||
+                 'O' == optarg[1]) &&
+                ('0' <= optarg[2] && '2' >= optarg[2])) {
+                // [78][ENO][012]
+                (void)strlcpy(context.fixed_port_framing, optarg,
+                              sizeof(context.fixed_port_framing));
+            } else {
+                // invalid framing
+                GPSD_LOG(LOG_ERROR, &context.errout,
+                         "-f has invalid framing %s\n", optarg);
+                exit(1);
+            }
 	    break;
 #ifndef FORCE_GLOBAL_ENABLE
 	case 'G':
@@ -1916,25 +1933,45 @@ int main(int argc, char *argv[])
 	case 'l':		/* list known device types and exit */
 	    typelist();
 	    break;
+	case 'N':
+	    go_background = false;
+	    break;
+	case 'n':
+	    nowait = true;
+	    break;
+	case 'P':
+	    pid_file = optarg;
+	    break;
+	case 'r':
+	    batteryRTC = true;
+	    break;
 	case 'S':
 #ifdef SOCKET_EXPORT_ENABLE
 	    gpsd_service = optarg;
 #endif /* SOCKET_EXPORT_ENABLE */
 	    break;
-	case 'n':
-	    nowait = true;
-	    break;
-	case 'r':
-	    batteryRTC = true;
-	    break;
-	case 'P':
-	    pid_file = optarg;
+	case 's':
+            {
+                // accept decimal, octal and hex
+                long speed = strtol(optarg, 0, 0);
+                if (0 < speed) {
+                    // allow weird speeds
+                    context.fixed_port_speed = (speed_t)speed;
+                } else {
+                    // invalid speed
+                    GPSD_LOG(LOG_ERROR, &context.errout,
+                             "-s has invalid speed %ld\n", speed);
+                    exit(1);
+                }
+            }
 	    break;
 	case 'V':
 	    (void)printf("%s: %s (revision %s)\n", argv[0], VERSION, REVISION);
 	    exit(EXIT_SUCCESS);
 	case 'h':
+            // FALLTHROUGH
 	case '?':
+            // FALLTHROUGH
 	default:
 	    usage();
 	    exit(EXIT_SUCCESS);
@@ -2020,6 +2057,7 @@ int main(int argc, char *argv[])
     }
 #endif /* defined(CONTROL_SOCKET_ENABLE) || defined(SYSTEMD_ENABLE) */
 
+    // TODO, a dump of all options here at LOG_xx would be nice.
 
     /* might be time to daemonize */
     if (go_background) {
@@ -2242,6 +2280,7 @@ int main(int argc, char *argv[])
     while (0 == signalled) {
 	fd_set efds;
 
+        GPSD_LOG(LOG_RAW + 1, &context.errout, "await data\n");
 	switch(gpsd_await_data(&rfds, &efds, maxfd, &all_fds, &context.errout))
 	{
 	case AWAIT_GOT_INPUT:
@@ -2249,7 +2288,7 @@ int main(int argc, char *argv[])
 	case AWAIT_NOT_READY:
 	    for (device = devices; device < devices + MAX_DEVICES; device++)
 		/*
-		 * The file descriptor validity check is reqiured on some ARM
+		 * The file descriptor validity check is required on some ARM
 		 * platforms to prevent a core dump.  This may be due to an
 		 * implimentation error in FD_ISSET().
 		 */
@@ -2274,7 +2313,7 @@ int main(int argc, char *argv[])
 
 		if (BAD_SOCKET(ssock))
 		    GPSD_LOG(LOG_ERROR, &context.errout,
-			     "accept: %s\n", strerror(errno));
+			     "accept: fail: %s\n", strerror(errno));
 		else {
 		    struct subscriber_t *client = NULL;
 		    int opts = fcntl(ssock, F_GETFL);
@@ -2339,6 +2378,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* read any commands that came in over the control socket */
+        GPSD_LOG(LOG_RAW + 1, &context.errout, "read control commands");
 	for (cfd = 0; cfd < (int)FD_SETSIZE; cfd++)
 	    if (FD_ISSET(cfd, &control_fds)) {
 		char buf[BUFSIZ];
@@ -2361,6 +2401,7 @@ int main(int argc, char *argv[])
 #endif /* CONTROL_SOCKET_ENABLE */
 
 	/* poll all active devices */
+        GPSD_LOG(LOG_RAW + 1, &context.errout, "poll active devices");
 	for (device = devices; device < devices + MAX_DEVICES; device++)
 	    if (allocated_device(device) && device->gpsdata.gps_fd > 0)
 		switch (gpsd_multipoll(FD_ISSET(device->gpsdata.gps_fd, &rfds),

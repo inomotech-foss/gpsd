@@ -93,23 +93,23 @@ PERMISSIONS
  * application, they'd just add complexity.
  *
  * The NMEA portion of the state machine allows the following talker IDs:
- *      $GP -- Global Positioning System.
+ *      $BD -- Beidou
+ *      $EC -- Electronic Chart Display & Information System (ECDIS)
+ *      $GA -- Galileo
+ *      $GB -- Beidou
  *      $GL -- GLONASS, according to IEIC 61162-1
  *      $GN -- Mixed GPS and GLONASS data, according to IEIC 61162-1
- *      $BD -- Beidou
- *      $GB -- Beidou
- *      $GA -- Galileo
- *      $QZ -- QZSS GPS augmentation system
+ *      $GP -- Global Positioning System.
+ *      $HC -- Heading/compass (Airmar PB200).
  *      $II -- Integrated Instrumentation (Raytheon's SeaTalk system).
  *      $IN -- Integrated Navigation (Garmin uses this).
- *      $WI -- Weather instrument (Airmar PB200, Radio Ocean ROWIND, Vaisala WXT520).
- *      $HC -- Heading/compass (Airmar PB200).
- *      $TI -- Turn indicator (Airmar PB200).
- *      $EC -- Electronic Chart Display & Information System (ECDIS)
+ *      $P  -- Vendor-specific sentence
+ *      $QZ -- QZSS GPS augmentation system
  *      $SD -- Depth Sounder
  *      $ST -- $STI, Skytraq Debug Output
+ *      $TI -- Turn indicator (Airmar PB200).
+ *      $WI -- Weather instrument (Airmar PB200, Radio Ocean ROWIND, Vaisala WXT520).
  *      $YX -- Transducer (used by some Airmar equipment including PB100)
- *      $P  -- Vendor-specific sentence
  *
  *      !AB -- NMEA 4.0 Base AIS station
  *      !AD -- MMEA 4.0 Dependent AIS Base Station
@@ -2487,6 +2487,8 @@ ssize_t packet_get(int fd, struct gps_lexer_t *lexer)
     ssize_t recvd;
 
     errno = 0;
+    /* O_NONBLOCK set, so this should not block.
+     * Best not to block on an unresponsive GNSS receiver */
     recvd = read(fd, lexer->inbuffer + lexer->inbuflen,
 		 sizeof(lexer->inbuffer) - (lexer->inbuflen));
     if (recvd == -1) {

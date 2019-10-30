@@ -30,6 +30,7 @@ extern "C" {
 
 #include "gps.h"
 #include "os_compat.h"
+#include "ppsthread.h"
 #include "timespec.h"
 
 /*
@@ -75,6 +76,9 @@ extern "C" {
  *      Remove gpsd_gpstime_resolve()
  *      Changed order of gpsd_log() arguments.  Add GPSD_LOG().
  *      Remove gps_device_t.back_to_nmea.
+ *      Add fixed_port_speed, fixed_port_framing to gps_context_t.
+ *      change tsip.superpkt from bool to int.
+ *      Add tsip.machine_id and tsip.hardware_code
  */
 /* Keep in sync with api_major_version and api_minor gps/__init__.py */
 #define GPSD_PROTO_MAJOR_VERSION	3   /* bump on incompatible changes */
@@ -167,12 +171,12 @@ enum isgpsstat_t {
  * choosing this as the cutoff, we'll never reject historical GPS logs
  * that are actually valid.
  */
-#define GPS_EPOCH	315964800	/* 6 Jan 1980 00:00:00 UTC */
+#define GPS_EPOCH	((time_t)315964800)   /* 6 Jan 1980 00:00:00 UTC */
 
 /* time constant */
-#define SECS_PER_DAY	(60*60*24)		/* seconds per day */
-#define SECS_PER_WEEK	(7*SECS_PER_DAY)	/* seconds per week */
-#define GPS_ROLLOVER	(1024*SECS_PER_WEEK)	/* rollover period */
+#define SECS_PER_DAY	((time_t)(60*60*24))  /* seconds per day */
+#define SECS_PER_WEEK	(7*SECS_PER_DAY)        /* seconds per week */
+#define GPS_ROLLOVER	(1024*SECS_PER_WEEK)    /* rollover period */
 
 struct gpsd_errout_t {
     int debug;				/* lexer debug level */
@@ -289,6 +293,8 @@ struct gps_context_t {
 #define CENTURY_VALID		0x04	/* have received ZDA or 4-digit year */
     struct gpsd_errout_t errout;		/* debug verbosity level and hook */
     bool readonly;			/* if true, never write to device */
+    speed_t fixed_port_speed;           // Fixed port speed, if non-zero
+    char fixed_port_framing[4];         // Fixed port framing, if non-blank
     /* DGPS status */
     int fixcnt;				/* count of good fixes seen */
     /* timekeeping */
@@ -493,8 +499,6 @@ struct ntrip_stream_t
     int bitrate;
 };
 
-#include "ppsthread.h"
-
 struct gps_device_t {
 /* session object, encapsulates all global state */
     struct gps_data_t gpsdata;
@@ -513,9 +517,7 @@ struct gps_device_t {
 #ifdef HAVE_TERMIOS_H
     struct termios ttyset, ttyset_old;
 #endif
-#ifndef FIXED_PORT_SPEED
     unsigned int baudindex;
-#endif /* FIXED_PORT_SPEED */
     int saved_baud;
     struct gps_lexer_t lexer;
     int badcount;
@@ -652,7 +654,11 @@ struct gps_device_t {
 #ifdef TSIP_ENABLE
 	struct {
 	    unsigned short sats_used[MAXCHANNELS];
-	    bool superpkt;		/* Super Packet mode requested */
+            /* Super Packet mode requested.
+             * 0 = None, 1 = old superpacket, 2 = new superpacket (SMT 360) */
+	    uint8_t superpkt;
+	    uint8_t machine_id;         // from 0x4b
+	    uint16_t hardware_code;     // from 0x1c-83
 	    time_t last_41;		/* Timestamps for packet requests */
 	    time_t last_48;
 	    time_t last_5c;

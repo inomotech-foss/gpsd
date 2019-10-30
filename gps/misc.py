@@ -13,6 +13,19 @@ import io
 import math
 import time
 
+def monotonic():
+    """return monotonic seconds, of unknown epoch.
+    Python 2 to 3.7 has time.clock(), deprecates in 3.3+, removed in 3.8
+    Python 3.5+ has time.monotonic()
+    This always works
+    """
+
+    if hasattr(time, 'monotonic'):
+        return time.monotonic()
+    # else
+    return time.clock()
+
+
 # Determine a single class for testing "stringness"
 try:
     STR_CLASS = basestring  # Base class for 'str' and 'unicode' in Python 2
@@ -251,12 +264,14 @@ def isotime(s):
     "Convert timestamps in ISO8661 format to and from Unix time."
     if isinstance(s, int):
         return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(s))
-    elif isinstance(s, float):
+
+    if isinstance(s, float):
         date = int(s)
         msec = s - date
         date = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(s))
         return date + "." + repr(msec)[3:]
-    elif isinstance(s, STR_CLASS):
+
+    if isinstance(s, STR_CLASS):
         if s[-1] == "Z":
             s = s[:-1]
         if "." in s:
@@ -267,7 +282,8 @@ def isotime(s):
         # Note: no leap-second correction!
         return calendar.timegm(
             time.strptime(date, "%Y-%m-%dT%H:%M:%S")) + float("0." + msec)
-    else:
-        raise TypeError
+
+    # else:
+    raise TypeError
 
 # End

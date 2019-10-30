@@ -361,31 +361,29 @@ timespec_t gpsd_gpstime_resolv(struct gps_device_t *session,
     if (week < 1024)
 	week += session->context->rollovers * 1024;
 
-#ifdef __UNUSED__
-    // this can not work because leap_seconds is set at build time
-    // need a way to know if leap seconds is default, or from GNSS receiver
-    // sanity check against leap seconds
+    // sanity check week number, GPS epoch, against leap seconds
     if (0 < session->context->leap_seconds &&
         19 > session->context->leap_seconds &&
         2180 < week) {
-        // assume leap second = 19 by 31 Dec 2022
+        /* assume leap second = 19 by 31 Dec 2022
+         * so week > 2180 is way in the future, do not allow it */
         week -= 1024;
 	GPSD_LOG(LOG_WARN, &session->context->errout,
-		 "GPS week confusion. Adjusting to %lld. week %u leap %d\n",
-                 (long long)t.tv_sec, week,
-	         session->context->leap_seconds);
+		 "GPS week confusion. Adjusted week %u for leap %d\n",
+                 week, session->context->leap_seconds);
     }
-#endif  // __UNUSED__
 
-    t.tv_sec = GPS_EPOCH + (week * SECS_PER_WEEK) + tow.tv_sec;
+    // gcc needs the (time_t)week to not overflow. clang got it right.
+    // if time_t is 32-bits, then still 2038 issues
+    t.tv_sec = GPS_EPOCH + ((time_t)week * SECS_PER_WEEK) + tow.tv_sec;
     t.tv_sec -= session->context->leap_seconds;
     t.tv_nsec = tow.tv_nsec;
 
-    // 2038 rollover hack for unsigned 32-bit time
+    // 2038 rollover hack for unsigned 32-bit time, assuming today is < 2038
     if (0 > t.tv_sec) {
         // recompute for previous EPOCH
         week -= 1024;
-	t.tv_sec = GPS_EPOCH + (week * SECS_PER_WEEK) + tow.tv_sec;
+	t.tv_sec = GPS_EPOCH + ((time_t)week * SECS_PER_WEEK) + tow.tv_sec;
 	t.tv_sec -= session->context->leap_seconds;
 	GPSD_LOG(LOG_WARN, &session->context->errout,
 		 "2038 rollover. Adjusting to %lld. week %u leap %d\n",

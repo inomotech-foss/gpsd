@@ -752,7 +752,7 @@ static gps_mask_t processGNS(int count UNUSED, char *field[],
     if ('\0' != field[11][0] &&
         '\0' != field[12][0]) {
         /* both, or neither */
-        session->newdata.dgps_age = atoi(field[11]);
+        session->newdata.dgps_age = safe_atof(field[11]);
         session->newdata.dgps_station = atoi(field[12]);
     }
 
@@ -827,7 +827,7 @@ static gps_mask_t processGGA(int c UNUSED, char *field[],
         break;
     case 3:
         /* GPS PPS, fix valid, could be 2D, 3D, GNSSDR */
-        newstatus = STATUS_FIX;
+        newstatus = STATUS_PPS_FIX;
         break;
     case 4:     /* RTK integer */
         newstatus = STATUS_RTK_FIX;

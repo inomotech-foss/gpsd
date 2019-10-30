@@ -11,14 +11,17 @@
 # Preserve this property!
 from __future__ import absolute_import, print_function, division
 
+import argparse
+import cairo
 from math import pi
 from math import cos
 from math import sin
 from math import sqrt
 from math import radians
+import os
 from socket import error as SocketError
+import sys
 
-import cairo
 
 # Gtk3 imports.  Gtk3 requires the require_version(), which then causes
 # pylint to complain about the subsequent "non-top" imports.
@@ -32,7 +35,6 @@ except ValueError:
 
 from gi.repository import Gtk      # pylint: disable=wrong-import-position
 from gi.repository import Gdk      # pylint: disable=wrong-import-position
-from gi.repository import GObject  # pylint: disable=wrong-import-position
 from gi.repository import GLib  # pylint: disable=wrong-import-position
 
 
@@ -598,7 +600,7 @@ class Main(object):
         self.window = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
         if not self.window.get_display():
             raise Exception("Can't open display")
-        if len(target):
+        if target:
             target = " " + target
         self.window.set_title('xgpsspeed' + target)
         self.window.connect("delete-event", self.delete_event)
@@ -784,8 +786,8 @@ class Main(object):
     def handle_hangup(self, _dummy, _unused):
         w = Gtk.MessageDialog(
             parent=self.window,
-            type=Gtk.MessageType.ERROR,
-            flags=Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            message_type=Gtk.MessageType.ERROR,
+            destroy_with_parent=True,
             buttons=Gtk.ButtonsType.OK
         )
         w.connect("destroy", lambda unused: Gtk.main_quit())
@@ -825,10 +827,6 @@ class Main(object):
                              (sys.argv[0], ver.proto_major, ver.proto_minor,
                               gps.api_major_version, gps.api_minor_version))
 
-    def delete_event(self, _widget, _event, _data=None):
-        # Someday, handle all cleanup operations here
-        return False
-
     def destroy(self, _unused, _empty=None):
         Gtk.main_quit()
 
@@ -845,8 +843,8 @@ class Main(object):
         except SocketError:
             w = Gtk.MessageDialog(
                 parent=self.window,
-                type=Gtk.MessageType.ERROR,
-                flags=Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                message_type=Gtk.MessageType.ERROR,
+                destroy_with_parent=True,
                 buttons=Gtk.ButtonsType.OK
             )
             w.set_title('socket error')
@@ -860,89 +858,91 @@ class Main(object):
 
 
 if __name__ == '__main__':
-    import sys
-    from os.path import basename
-    from optparse import OptionParser
-    prog = basename(sys.argv[0])
-    usage = ('%s [OPTIONS] [host [:port [:device]]]') % (prog)
-    epilog = 'BSD terms apply: see the file COPYING in the distribution root' \
-             ' for details.'
 
-    parser = OptionParser(usage=usage, epilog=epilog)
-    parser.add_option(
+    usage = '%(prog)s [OPTIONS] [host[:port[:device]]]'
+    epilog = ('BSD terms apply: see the file COPYING in the distribution root'
+              ' for details.')
+
+    parser = argparse.ArgumentParser(usage=usage, epilog=epilog)
+    parser.add_argument(
+        '-D',
         '--debug',
         dest='debug',
         default=0,
-        action='store',
-        type='int',
-        help='Set level of debug. Must be integer. [Default 0]'
+        type=int,
+        help='Set level of debug. Must be integer. [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
         '--device',
         dest='device',
-        default=None,
-        help='The device to connect. [Default None]'
+        default='',
+        help='The device to connect. [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
         '--host',
         dest='host',
-        default=None,
-        help='The host to connect. [Default localhost]'
+        default='localhost',
+        help='The host to connect. [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
         '--landspeed',
         dest='nautical',
         default=True,
         action='store_false',
         help='Enable dashboard-style speedometer.'
     )
-    parser.add_option(
+    parser.add_argument(
         '--maxspeed',
         dest='maxspeed',
         default='50',
-        help='Max speed of the speedmeter [Default 50]'
+        help='Max speed of the speedmeter [Default %(default)s]'
     )
-    parser.add_option(
+    parser.add_argument(
         '--nautical',
         dest='nautical',
         default=True,
         action='store_true',
         help='Enable nautical-style speed and track display.'
     )
-    parser.add_option(
+    parser.add_argument(
         '--port',
         dest='port',
-        default=None,
-        help='The port to connect. [Default %s]' % gps.GPSD_PORT
+        default=gps.GPSD_PORT,
+        help='The port to connect. [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
+        '-r',
         '--rotate',
         dest='rotate',
         default=0,
-        action='store',
-        type='float',
-        help='Rotation of skyview ("up" direction) in degrees. [Default 0]'
+        type=float,
+        help='Rotation of skyview ("up" direction) in degrees. '
+             ' [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
         '--speedunits',
         dest='speedunits',
         default='mph',
-        help='The unit of speed. Possible units are: mph, kmh, knots. '
-             '[Default mph]'
+        choices=['mph', 'kmh', 'knots'],
+        help='The unit of speed. [Default %(default)s)]'
     )
-    parser.add_option(
+    parser.add_argument(
         '-V', '--version',
-        action='store_true',
-        default=False,
+        action='version',
+        version="%(prog)s: Version " + gps_version + "\n",
         help='Output version to stderr, then exit'
     )
-    (options, args) = parser.parse_args()
-    if options.version:
-        sys.stderr.write("xgpsspeed: Version %s\n" % gps_version)
-        sys.exit(0)
+    parser.add_argument(
+        'target',
+        nargs='?',
+        help='[host[:port[:device]]]'
+    )
+    options = parser.parse_args()
 
-    if args:
-        arg = args[0].split(':')
+    # the options host, port, device are set by the defaults
+    if options.target:
+        # override with target
+        arg = options.target.split(':')
         len_arg = len(arg)
         if len_arg == 1:
             (options.host,) = arg
@@ -953,19 +953,18 @@ if __name__ == '__main__':
         else:
             parser.print_help()
             sys.exit(0)
-        target = ':'.join(args[0:])
-    elif options.host or options.port or options.device:
-        ltarget = [options.host or 'localhost']
-        if options.port or options.device:
-            ltarget += [options.port or '']
-        if options.device:
-            ltarget += [options.device]
-        target = ':'.join(ltarget)
-    else:
-        target = ""
+        target = ':'.join(options.target[0:])
+
+    ltarget = [options.host, options.port, options.device]
+    target = ':'.join(ltarget)
+
+    if 'DISPLAY' not in os.environ:
+        sys.stderr.write("xgps: ERROR: DISPLAY not set\n")
+        exit(1)
+
     Main(
-        host=options.host or 'localhost',
-        port=options.port or gps.GPSD_PORT,
+        host=options.host,
+        port=options.port,
         device=options.device,
         speed_unit=options.speedunits,
         maxspeed=options.maxspeed,
