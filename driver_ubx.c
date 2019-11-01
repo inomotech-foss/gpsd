@@ -51,6 +51,7 @@
 #define UBX_PREFIX_LEN          6
 #define UBX_CLASS_OFFSET        2
 #define UBX_TYPE_OFFSET         3
+#define UBX_PACKET_OVERHEAD     8
 
 /* because we hates magic numbers forever */
 #define USART1_ID               1
@@ -1712,6 +1713,10 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
     /* extract message id and length */
     msgid = (buf[2] << 8) | buf[3];
     data_len = (size_t) getles16(buf, 4);
+
+    /* check if we have a complete package before continuing */
+    if (len < data_len + UBX_PACKET_OVERHEAD)
+        return 0;
 
     switch (msgid) {
     case UBX_ACK_ACK:
