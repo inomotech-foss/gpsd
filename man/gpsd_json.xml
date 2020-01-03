@@ -159,6 +159,12 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
  mode is 3.  altMSL is altHAE - geoidSep.</entry>
 </row>
 <row>
+	<entry>alt</entry>
+	<entry>No</entry>
+	<entry>numeric</entry>
+        <entry>Deprecated.  Undefined.  Use altHAE or altMSL.</entry>
+</row>
+<row>
 	<entry>climb</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
@@ -1725,10 +1731,15 @@ backup battery.</para>
 </row>
 <row>
 	<entry>subtype</entry>
-	<entry>When the daemon sees a delayed response to a probe for
-	subtype or firmware-version information.</entry>
+	<entry>No</entry>
 	<entry>string</entry>
-	<entry>Whatever version information the device returned.</entry>
+	<entry>Whatever version information the device driver returned.</entry>
+</row>
+<row>
+	<entry>subtype1</entry>
+	<entry>No</entry>
+	<entry>string</entry>
+	<entry>More version information the device driver returned.</entry>
 </row>
 <row>
 	<entry>bps</entry>

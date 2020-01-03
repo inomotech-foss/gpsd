@@ -77,7 +77,6 @@
 
 #include "gps.h"
 #include "gpsdclient.h"
-#include "revision.h"
 #include "os_compat.h"
 
 static char *progname;
@@ -301,7 +300,7 @@ static void print_rinex_header(void)
         "3.03", "", "OBSERVATION DATA", "M: Mixed", "RINEX VERSION / TYPE");
     (void)fprintf(log_file,
         "%-20s%-20s%-20s%-20s\n",
-        "gpsrinex 3.19.1~dev", "", tmstr,
+        "gpsrinex " VERSION, "", tmstr,
         "PGM / RUN BY / DATE");
     (void)fprintf(log_file, "%-60s%-20s\n",
          "Source: gpsd live data", "COMMENT");

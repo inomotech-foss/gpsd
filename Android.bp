@@ -24,8 +24,6 @@ cc_binary {
 	vendor: true,
 	required: ["gpsd_wrapper"],
 	generated_headers: [
-		"gpsd_timebase_h",
-		"gpsd_revision_h",
 		"gpsd_config_h",
 		"gpsd_packet_names_h"
 	],
@@ -62,8 +60,6 @@ cc_library_shared {
 	vendor: true,
 	export_include_dirs: ["."],
 	generated_headers: [
-		"gpsd_timebase_h",
-		"gpsd_revision_h",
 		"gpsd_config_h",
 		"gpsd_packet_names_h"
 	],
@@ -97,8 +93,6 @@ cc_library_static {
         vendor: true,
         export_include_dirs: ["."],
 	generated_headers: [
-		"gpsd_timebase_h",
-		"gpsd_revision_h",
 		"gpsd_config_h",
 		"gpsd_packet_names_h"
 	],
@@ -140,31 +134,12 @@ genrule {
 	cmd: "cat $(in)/android/gpsd_config.in > $(out);" +
 		"grep \"^gpsd_version\" $(in)/SConstruct | " +
 		"cut -d\\= -f2 | sed -e 's/^/#define VERSION/'" +
+		">> $(out); " +
+		"grep \"^gpsd_version\" $(in)/SConstruct | " +
+		"cut -d\\= -f2 | sed -e 's/^/#define RELEASE/'" +
 		">> $(out)",
 	srcs: [""],
 	out: ["gpsd_config.h"]
-}
-
-genrule {
-	name: "gpsd_revision_h",
-	cmd: "grep \"^gpsd_version\" $(in) | cut -d\\= -f2 " +
-		"| sed -e 's/^/#define REVISION/' > $(out)",
-	srcs: ["SConstruct"],
-	out: ["revision.h"]
-}
-
-python_binary_host {
-	name: "leapsecond",
-	main: "leapsecond.py",
-	srcs: ["leapsecond.py"],
-}
-
-genrule {
-	name: "gpsd_timebase_h",
-	tools: ["leapsecond"],
-	cmd: "$(location leapsecond) -H $(in) > $(out)",
-	srcs: ["leapseconds.cache"],
-	out: ["timebase.h"]
 }
 
 python_binary_host {
@@ -186,8 +161,6 @@ cc_library_static {
         vendor: true,
         export_include_dirs: ["."],
         generated_headers: [
-                "gpsd_timebase_h",
-                "gpsd_revision_h",
                 "gpsd_config_h",
                 "gpsd_packet_names_h"
         ],

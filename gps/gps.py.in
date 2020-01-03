@@ -94,6 +94,7 @@ class gpsfix(object):
     def __init__(self):
         "Init class gpsfix"
 
+        self.altitude = NaN         # Meters DEPRECATED
         self.altHAE = NaN           # Meters
         self.altMSL = NaN           # Meters
         self.climb = NaN            # Meters per second
@@ -214,7 +215,7 @@ class gps(gpscommon, gpsdata, gpsjson):
     "Client interface to a running gpsd instance."
 
     # module version, would be nice to automate the version
-    __version__ = "3.19.1~dev"
+    __version__ = "@VERSION@"
 
     def __init__(self, host="127.0.0.1", port=GPSD_PORT, verbose=0, mode=0,
                  reconnect=False):
@@ -266,6 +267,7 @@ class gps(gpscommon, gpsdata, gpsjson):
                 # self.utc is always iso 8601 string
                 # just copy to fix.time
                 self.fix.time = self.utc
+            self.fix.altitude = default("alt", NaN, ALTITUDE_SET)  # DEPRECATED
             self.fix.altHAE = default("altHAE", NaN, ALTITUDE_SET)
             self.fix.altMSL = default("altMSL", NaN, ALTITUDE_SET)
             self.fix.climb = default("climb", NaN, CLIMB_SET)

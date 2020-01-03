@@ -29,7 +29,6 @@ PERMISSIONS
 #ifdef SOCKET_EXPORT_ENABLE
 #include "gps_json.h"
 #include "timespec.h"
-#include "revision.h"
 
 /* *INDENT-OFF* */
 #define JSON_BOOL(x)	((x)?"true":"false")
@@ -157,18 +156,30 @@ void json_tpv_dump(const struct gps_device_t *session,
      * chips, which are quite common.
      */
     if (gpsdata->fix.mode >= MODE_2D) {
+        double altitude = NAN;
+
 	if (isfinite(gpsdata->fix.latitude) != 0)
 	    str_appendf(reply, replylen,
 			   "\"lat\":%.9f,", gpsdata->fix.latitude);
 	if (isfinite(gpsdata->fix.longitude) != 0)
 	    str_appendf(reply, replylen,
 			   "\"lon\":%.9f,", gpsdata->fix.longitude);
-	if (0 != isfinite(gpsdata->fix.altHAE))
+	if (0 != isfinite(gpsdata->fix.altHAE)) {
+	    altitude = gpsdata->fix.altHAE;
 	    str_appendf(reply, replylen,
 			   "\"altHAE\":%.3f,", gpsdata->fix.altHAE);
-	if (0 != isfinite(gpsdata->fix.altMSL))
+        }
+	if (0 != isfinite(gpsdata->fix.altMSL)) {
+	    altitude = gpsdata->fix.altMSL;
 	    str_appendf(reply, replylen,
 			   "\"altMSL\":%.3f,", gpsdata->fix.altMSL);
+        }
+	if (0 != isfinite(altitude)) {
+            // DEPRECATED, undefined
+	    str_appendf(reply, replylen,
+			   "\"alt\":%.3f,", altitude);
+        }
+
 	if (isfinite(gpsdata->fix.epx) != 0)
 	    str_appendf(reply, replylen, "\"epx\":%.3f,", gpsdata->fix.epx);
 	if (isfinite(gpsdata->fix.epy) != 0)
@@ -435,6 +446,13 @@ void json_device_dump(const struct gps_device_t *device,
 	(void)strlcat(reply, "\"subtype\":\"", replylen);
 	(void)strlcat(reply,
 		      json_stringify(buf1, sizeof(buf1), device->subtype),
+		      replylen);
+	(void)strlcat(reply, "\",", replylen);
+    }
+    if (device->subtype1[0] != '\0') {
+	(void)strlcat(reply, "\"subtype1\":\"", replylen);
+	(void)strlcat(reply,
+		      json_stringify(buf1, sizeof(buf1), device->subtype1),
 		      replylen);
 	(void)strlcat(reply, "\",", replylen);
     }

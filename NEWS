@@ -1,6 +1,11 @@
 			GPSD project news
 
-3.19.1: Dev branch in process
+3.20.1~dev: In process
+  Create python programs from .in files to allow macro substitution.
+  Finally clean .sconsign*.dblite with "scons -c"
+  Remove revision.h.  Move REVISION into gpsd_config.h
+
+3.20: 2019-12-31
   Change README into an asciidoc file and publish HTML from it
   Add NED and geoid_sep to gps_fix_t and TPV JSON.
   Add "-e NED" to ubxtool to enable NED messages.
@@ -11,8 +16,8 @@
   add health variable to satellite_t
   change satellite_t elevation and azimuth to double
   satellite_t elevation, azimuth, and ss use NAN for unknown value.
-  add altMSL, and depth, to gps_fix_t
-  change altitude to altHAE to gps_fix_t
+  add altMSL, altHAE, and depth, to gps_fix_t
+  altitude in gps_fix_t is deprecated and undefined
   wgs84_separation() now return EGM2008 computed from 5x5 degree base data.
      The best results are close to cm, the worst off up to 12m.
   Move mag_var from gps_device_t to magnetic_var gps_data_t.
@@ -25,6 +30,10 @@
   Convert all timestamp_t to timespec_t.
   Remove FIXED_PORT_SPEED and FIXED_STOP_BITS build options.
   Add -s [speed] and -f [framing] runtime options to gpsd.
+  A working CC and termios.h are mandatory.
+  use the current leap second to determine the current GPS epoch.
+  leapfetch.py, leapseconds.cache, timebase.h and leapfetch option gone.
+  See also change histories in gps.h and gpsd.h
 
 3.19: 2019-07-01
   Rearrange rawdata_t.  Bump the API because gps_data_t changed.

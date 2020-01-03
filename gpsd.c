@@ -43,7 +43,6 @@
 
 #include "gpsd.h"
 #include "gps_json.h"         /* needs gpsd.h */
-#include "revision.h"
 #include "sockaddr.h"
 #include "strfuncs.h"
 
@@ -241,6 +240,11 @@ in which case it specifies an input source for device, DGPS or ntrip data.\n"
 The following driver types are compiled into this gpsd instance:\n",
 		 DEFAULT_GPSD_PORT);
     typelist();
+    if (8 > sizeof(time_t)) {
+	(void)printf("\nWARNING: This system has a 32-bit time_t.\n"
+		     "WARNING: This gpsd will fail at 2038-01-19T03:14:07Z.\n");
+    }
+
 }
 
 #ifdef CONTROL_SOCKET_ENABLE
@@ -653,24 +657,19 @@ static void deactivate_device(struct gps_device_t *device)
     }
 }
 
-#if defined(SOCKET_EXPORT_ENABLE) || defined(CONTROL_SOCKET_ENABLE)
-/* *INDENT-OFF* */
-static struct gps_device_t *find_device(const char
-								 *device_name)
 /* find the device block for an existing device name */
+static struct gps_device_t *find_device(const char *device_name)
 {
     struct gps_device_t *devp;
 
-    for (devp = devices; devp < devices + MAX_DEVICES; devp++)
-    {
+    for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
         if (allocated_device(devp) && NULL != device_name &&
-            strcmp(devp->gpsdata.dev.path, device_name) == 0)
+            strcmp(devp->gpsdata.dev.path, device_name) == 0) {
             return devp;
+        }
     }
     return NULL;
 }
-/* *INDENT-ON* */
-#endif /* defined(SOCKET_EXPORT_ENABLE) || defined(CONTROL_SOCKET_ENABLE) */
 
 static bool open_device( struct gps_device_t *device)
 /* open the input device
@@ -1987,9 +1986,8 @@ int main(int argc, char *argv[])
 
     if (8 > sizeof(time_t)) {
 	GPSD_LOG(LOG_WARN, &context.errout,
-		 "This system has a 32-bit time_t.\n");
-	GPSD_LOG(LOG_WARN, &context.errout,
-		 "This gpsd will fail on 2038-01-19T03:14:07Z.\n");
+		 "This system has a 32-bit time_t.  "
+		 "This gpsd will fail at 2038-01-19T03:14:07Z.\n");
     }
 
 #if defined(SYSTEMD_ENABLE) && defined(CONTROL_SOCKET_ENABLE)

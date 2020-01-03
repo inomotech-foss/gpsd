@@ -18,9 +18,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#ifdef HAVE_TERMIOS_H
 #include <termios.h>
-#endif
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>      /* for fd_set */
 #else /* !HAVE_WINSOCK2_H */
@@ -63,7 +61,7 @@ extern "C" {
  *      Add ubx.protver, ubx.last_msgid and more to gps_device_t.ubx
  *      MAX_PACKET_LENGTH 516 -> 9216
  *      Add stuff to gps_device_t.nmea for NMEA 4.1
- * 3.19.1
+ * 3.20
  *      Remove TIMEHINT_ENABLE.  It only worked when enabled.
  *      Remove NTP_ENABLE and NTPSHM_ENABLE.  It only worked when enabled.
  *      Change gps_type_t.min_cycle from double to timespec_t
@@ -78,13 +76,20 @@ extern "C" {
  *      Remove gps_device_t.back_to_nmea.
  *      Add fixed_port_speed, fixed_port_framing to gps_context_t.
  *      change tsip.superpkt from bool to int.
- *      Add tsip.machine_id and tsip.hardware_code
+ *      Add tsip  .machine_id, .hardware_code, .last_tow, last_chan_seen
+ *      Split gps_device_t.subtype into subtype and subtype1
+ * 3.20.1
+ *
  */
 /* Keep in sync with api_major_version and api_minor gps/__init__.py */
 #define GPSD_PROTO_MAJOR_VERSION	3   /* bump on incompatible changes */
 #define GPSD_PROTO_MINOR_VERSION	14  /* bump on compatible changes */
 
 #define JSON_DATE_MAX	24	/* ISO8601 timestamp with 2 decimal places */
+
+// be sure to change BUILD_LEAPSECONDS as needed.
+#define BUILD_CENTURY 2000
+#define BUILD_LEAPSECONDS 18
 
 #ifndef DEFAULT_GPSD_SOCKET
 #define DEFAULT_GPSD_SOCKET	"/var/run/gpsd.sock"
@@ -404,13 +409,11 @@ struct gps_type_t {
     void (*init_query)(struct gps_device_t *session);
     void (*event_hook)(struct gps_device_t *session, event_t event);
 #ifdef RECONFIGURE_ENABLE
-#ifdef HAVE_TERMIOS_H
     bool (*speed_switcher)(struct gps_device_t *session,
 				     speed_t speed, char parity, int stopbits);
     void (*mode_switcher)(struct gps_device_t *session, int mode);
     bool (*rate_switcher)(struct gps_device_t *session, double rate);
     timespec_t min_cycle;
-#endif /* HAVE_TERMIOS_H */
 #endif /* RECONFIGURE_ENABLE */
 #ifdef CONTROLSEND_ENABLE
     ssize_t (*control_send)(struct gps_device_t *session, char *buf, size_t buflen);
@@ -422,7 +425,7 @@ struct gps_type_t {
  * Each input source has an associated type.  This is currently used in two
  * ways:
  *
- * (1) To determince if we require that gpsd be the only process opening a
+ * (1) To determine if we require that gpsd be the only process opening a
  * device.  We make an exception for PTYs because the master side has to be
  * opened by test code.
  *
@@ -514,9 +517,7 @@ struct gps_device_t {
     sourcetype_t sourcetype;
     servicetype_t servicetype;
     int mode;
-#ifdef HAVE_TERMIOS_H
     struct termios ttyset, ttyset_old;
-#endif
     unsigned int baudindex;
     int saved_baud;
     struct gps_lexer_t lexer;
@@ -524,6 +525,7 @@ struct gps_device_t {
     int subframe_count;
     /* firmware version or subtype ID, 96 too small for ZED-F9 */
     char subtype[128];
+    char subtype1[128];
     time_t opentime;
     time_t releasetime;
     bool zerokill;
@@ -545,7 +547,7 @@ struct gps_device_t {
     bool cycle_end_reliable;		/* does driver signal REPORT_MASK */
     int fixcnt;				/* count of fixes from this device */
     struct gps_fix_t newdata;		/* where drivers put their data */
-    struct gps_fix_t lastfix;		/* not qute yet ready for oldfix */
+    struct gps_fix_t lastfix;		/* not quite yet ready for oldfix */
     struct gps_fix_t oldfix;		/* previous fix for error modeling */
 #ifdef NMEA0183_ENABLE
     struct {
@@ -667,9 +669,15 @@ struct gps_device_t {
 	    time_t req_compact;
 	    unsigned int stopbits; /* saved RS232 link parameter */
 	    char parity;
-	    int subtype;
-#define TSIP_UNKNOWN    	0
-#define TSIP_ACCUTIME_GOLD	1
+	    int subtype;                // hardware ID, sort of
+#define TSIP_UNKNOWN            0
+#define TSIP_ACUTIME_GOLD       3001
+#define TSIP_RESSMT360          3023
+#define TSIP_ICMSMT360          3026
+#define TSIP_RES36017x22        3031
+            uint8_t alt_is_msl;         // 0 if alt is HAE, 1 if MSL
+            timespec_t last_tow;        // used to find cycle start
+            int last_chan_seen;         // from 0x5c or 0x5d
 	} tsip;
 #endif /* TSIP_ENABLE */
 #ifdef GARMIN_ENABLE	/* private housekeeping stuff for the Garmin driver */
@@ -787,7 +795,7 @@ struct gps_device_t {
 };
 
 /*
- * These are used where a file descriptor of 0 or greater indicaes open device.
+ * These are used where a file descriptor of 0 or greater indicates open device.
  */
 #define UNALLOCATED_FD	-1	/* this slot is available for reallocation */
 #define PLACEHOLDING_FD	-2	/* this slot *not* available for reallocation */
@@ -871,11 +879,9 @@ extern ssize_t gpsd_serial_write(struct gps_device_t *,
 				 const char *, const size_t);
 extern bool gpsd_next_hunt_setting(struct gps_device_t *);
 extern int gpsd_switch_driver(struct gps_device_t *, char *);
-#ifdef HAVE_TERMIOS_H
 extern void gpsd_set_speed(struct gps_device_t *, speed_t, char, unsigned int);
 extern speed_t gpsd_get_speed(const struct gps_device_t *);
 extern speed_t gpsd_get_speed_old(const struct gps_device_t *);
-#endif /* HAVE_TERMIOS_H */
 extern int gpsd_get_stopbits(const struct gps_device_t *);
 extern char gpsd_get_parity(const struct gps_device_t *);
 extern void gpsd_assert_sync(struct gps_device_t *);

@@ -53,6 +53,8 @@ static int json_tpv_read(const char *buf, struct gps_data_t *gpsdata,
                                  .dflt.real = NAN},
         {"lat",    t_real,    .addr.real = &gpsdata->fix.latitude,
                                  .dflt.real = NAN},
+        {"alt",    t_real,    .addr.real = &gpsdata->fix.altitude,
+                                 .dflt.real = NAN}, // DEPRECATED, undefined
         {"altHAE",    t_real,  .addr.real = &gpsdata->fix.altHAE,
                                  .dflt.real = NAN},
         {"altMSL", t_real,    .addr.real = &gpsdata->fix.altMSL,
@@ -379,7 +381,9 @@ static int json_devicelist_read(const char *buf, struct gps_data_t *gpsdata,
         {"hexdata",    t_string,     STRUCTOBJECT(struct devconfig_t, hexdata),
                                         .len = sizeof(gpsdata->devices.list[0].hexdata)},
         {"subtype",    t_string,     STRUCTOBJECT(struct devconfig_t, subtype),
-                                        .len = sizeof(gpsdata->devices.list[0].subtype)},
+                            .len = sizeof(gpsdata->devices.list[0].subtype)},
+        {"subtype1",   t_string,     STRUCTOBJECT(struct devconfig_t, subtype1),
+                            .len = sizeof(gpsdata->devices.list[0].subtype1)},
         {"native",     t_integer,    STRUCTOBJECT(struct devconfig_t, driver_mode),
                                         .dflt.integer = -1},
         {"bps",        t_uinteger,   STRUCTOBJECT(struct devconfig_t, baudrate),
@@ -392,6 +396,8 @@ static int json_devicelist_read(const char *buf, struct gps_data_t *gpsdata,
                                         .dflt.real = NAN},
         {"mincycle",   t_real,       STRUCTOBJECT(struct devconfig_t, mincycle),
                                         .dflt.real = NAN},
+        // ignore unkown keys, for cross-version compatibility
+        {"", t_ignore},
         {NULL},
         /* *INDENT-ON* */
     };
@@ -596,10 +602,12 @@ int libgps_json_unpack(const char *buf,
             gpsdata->set |= TIMERR_SET;
         if (isfinite(gpsdata->fix.longitude) != 0)
             gpsdata->set |= LATLON_SET;
-        if (0 != isfinite(gpsdata->fix.altHAE) ||
+        if (0 != isfinite(gpsdata->fix.altitude) ||
+            0 != isfinite(gpsdata->fix.altHAE) ||
             0 != isfinite(gpsdata->fix.depth) ||
-            0 != isfinite(gpsdata->fix.altMSL))
+            0 != isfinite(gpsdata->fix.altMSL)) {
             gpsdata->set |= ALTITUDE_SET;
+        }
         if (isfinite(gpsdata->fix.epx) != 0 && isfinite(gpsdata->fix.epy) != 0)
             gpsdata->set |= HERR_SET;
         if (isfinite(gpsdata->fix.epv) != 0)

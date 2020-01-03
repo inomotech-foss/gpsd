@@ -88,19 +88,33 @@ absolutely needs is the C runtime support. The test clients and
 various additional features have additional prerequisites:
 
 |===============================================================================
-|pthreads library             | support for PPS timekeeping on serial GPSes
-|DBUS                         | gpsd will issue DBUS notifications
-|ncurses                      | a test client and the GPS monitor depend on this
-|libtinfo5                    | shared low-level terminfo library (see below)
-|libusb-1.0.x or later        | better USB device discovery
-|Qt + qmake                   | libQgpsmm depends on this
+|pps-tools                    | for PPS time keeping
+|dbus                         | gpsd will issue DBUS notifications
+|ncurses                      | for cgps and gpsmon clients
+|libtinfo5                    | low-level terminfo library (see below)
+|libusb-1.0.x or later        | for older Garmin USB devices
+|Qt                           | libQgpsmm depends on this
 |python2.x(x>=6) or 3.y(y>=2) | required for various clients and utilities
-|python-GI bindings           | the test clients xgps and xgpsspeed, need this
+|PyGObject                    | for xps and xgpsspeed clients (see below)
+|python-cairo                 | for python-GI
+|GTK                          | for python-GI
 |pyserial                     | for ubxtool and zerk in direct-serial mode
+|gnuplot                      | to plot gpsprof output.
 |===============================================================================
 
 Some ncurses packages contain the terminfo library; some break it out
 separately as libtinfo5 or libtinfo.
+
+The PyGObject package goes by several names, and is split up into sub
+packages different ways, depending on the distribution.  Sometimes
+python-gi, python-gobject, python-cairo, etc.  The packages also need
+the underlying system libraries (GTK, GLib, etc.)
+
+The asynchronous python module (gps/aiogps.py) and its example client
+(example_aiogps.py) require Python 3.6+.
+
+See below for more specific module requirements in the individual
+distribution instructions.
 
 == Installing gpsd ==
 
@@ -198,6 +212,21 @@ xmlto to build the documentation.
 # port install xmlto
 --------------------------------------------------------------
 
+Currently the osX port does not work with Qt5.  To see the build
+failure:
+
+--------------------------------------------------------------
+# port install qt5
+# scons --config=force qt_versioned=5
+--------------------------------------------------------------
+
+If you have Qt5 installed, and want to avoid the build failure, bui.d
+this way:
+
+--------------------------------------------------------------
+# scons --config=force qt=no
+--------------------------------------------------------------
+
 While running gpsd, or scons check, you may run out of shared memory
 segments.  If so, you will see this error message:
 
@@ -249,21 +278,82 @@ is strongly recommended.
 # apt-get install git-core
 --------------------------------------------------------------
 
-Git-core is only required to build from a git repository.  pps-tools is for
-testing PPS inputs.
+Git-core is required to build from a git repository.  pps-tools is for
+PPS timing.
 
 The rest of the installation is just as for any other source based
 install, as noted in the file *build.adoc* .
 
 === Other Debian derivatives (including stock) ===
-==== Jessie ====
+==== Buster (10) with python2 ====
+--------------------------------------------------------------
+# apt-get update
+# apt-get dist-upgrade
+# reboot
+# apt-get install scons libncurses-dev python-dev pps-tools
+# apt-get install git-core
+# apt-get install build-essential manpages-dev pkg-config
+--------------------------------------------------------------
+
+If "apt-get install scons" fails, check the file "/etc/apt/sources.list".
+
+Git-core is required to build from a git repository.
+pps-tools is for PPS timing.
+Build-essential installs the compiler and associated tools.
+Manpages-dev is the associated man pages.
+Pkg-config is a helper for scons.
+
+Gtk3 is only required to run xgps and xgpsspeed.  You do not need a local
+X11 server installed, but it still pulls in a lot of packages.
+
+--------------------------------------------------------------
+# apt-get install python-gi-dev python-cairo-dev
+# apt-get install python-gobject-dev libgtk-3-dev
+--------------------------------------------------------------
+
+Ubxtool and zerk may optionally use the pyserial module for
+direct connection to the GNSS receiver:
+
+--------------------------------------------------------------
+# apt-get install python-serial
+--------------------------------------------------------------
+
+gpsd may optional connect to dbus with the libdbus package:
+
+--------------------------------------------------------------
+# apt-get install libdbus-1-dev
+--------------------------------------------------------------
+
+Some very old Garmin USB devices need libusb:
+
+--------------------------------------------------------------
+# apt-get install libusb-1.0-0-dev
+--------------------------------------------------------------
+
+If you wish to build the documentation, be warned it pull in a
+lot of packages.  To build the doc install:
+
+--------------------------------------------------------------
+apt-get install xsltproc docbook-xsl xmlto asciidoc
+--------------------------------------------------------------
+
+The rest of the installation is just as for any other source based
+install, as noted in the file *build.adoc* .
+
+--------------------------------------------------------------
+# git clone https://gitlab.com/gpsd/gpsd.git
+# cd gpsd
+# scons --config=force && scons install
+--------------------------------------------------------------
+
+==== Jessie (8) ====
 --------------------------------------------------------------
 # apt-get install scons libncurses5-dev python-dev pps-tools
 # apt-get install git-core
 --------------------------------------------------------------
 
-Git-core is only required to build from a git repository.  pps-tools is for
-testing PPS inputs.
+Git-core is required to build from a git repository.  pps-tools is for
+PPS timing.
 
 The rest of the installation is just as for any other source based
 install, as noted in the file *build.adoc* .
@@ -327,8 +417,28 @@ and other tools:
 # apt-get install git-core
 --------------------------------------------------------------
 
-Git-core is only required to build from a git repository.  pps-tools is for
-testing PPS inputs.
+Git-core is required to build from a git repository.  pps-tools is for
+PPS timing.
+
+The rest of the installation is just as for any other source based
+install, as noted in the file *build.adoc* .
+
+==== Ubuntu 18.04 LTS ====
+
+Preliminary install notes.
+
+--------------------------------------------------------------
+apt install gcc scons python-gi python-gi-cairo g++
+apt install libncurses5-dev pps-tools
+apt install gir1.2-gtk-3.0
+--------------------------------------------------------------
+
+If you wish to build the documentation, be warned it pull in a
+lot of packages.  To build the doc install:
+
+--------------------------------------------------------------
+apt install xsltproc docbook-xsl xmlto asciidoc
+--------------------------------------------------------------
 
 The rest of the installation is just as for any other source based
 install, as noted in the file *build.adoc* .
@@ -411,22 +521,34 @@ https://learn.adafruit.com/adafruit-ultimate-gps-hat-for-raspberry-pi/
 You will need to dig deeper to make the PPS work, here is a good reference:
 http://www.satsignal.eu/ntp/Raspberry-Pi-NTP.html
 
-== Special Notes for FreeBSD Installation ==
+== BSD derivatives ==
+=== Special Notes for FreeBSD Installation ==+
 
 gpsd will build, install and run on FreeBSD.
+Due to the missing CAN bus support (linux/can.h), NMEA2000/CAN
+is not supporten on FreeBSD.
 
 Use their pkg command to install scons, and optionally git if you
 want to access the development source.
 
+If you want to build the QT bindings, you'll also need the
+qt5-network and pkgconf packages.
+
 --------------------------------------------------------------
 # pkg install scons
 # pkg install git
+# ln -s /usr/local/bin/python2.7 /usr/local/bin/python
+# ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
+# ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 # git clone https://gitlab.com/gpsd/gpsd.git
 # cd gpsd
 # scons --config=force && scons install
 --------------------------------------------------------------
 
-== Special Notes for NetBSD 8.1 Installation ==
+FreeBSD fails to create the python links as required by PEP394.
+So you need to add them yourself, as above.
+
+=== Special Notes for NetBSD 8.1 Installation ===
 
 gpsd will build, install and run on NetBSD.
 
@@ -453,7 +575,29 @@ install the required tools.
 # scons --config=force && scons install
 --------------------------------------------------------------
 
-== Special Notes for CentOS 7 Installation ==
+=== Special Notes for OpenBSD 6.6 Installation ===
+
+gpsd will build, install and run on NetBSD.
+
+All you need for a basic gpsd install is scons and git.  Then
+create the missing python link.
+
+--------------------------------------------------------------
+# pkg_add scons
+# pkg_add git
+# ln -s /usr/local/bin/python2 /usr/local/bin/python
+--------------------------------------------------------------
+
+Then install the normal way.
+
+--------------------------------------------------------------
+# git clone https://gitlab.com/gpsd/gpsd.git
+# cd gpsd
+# scons --config=force && scons install
+--------------------------------------------------------------
+
+== Special Notes for Fedora derivatives ==
+=== Special Notes for CentOS 7 Installation ===
 
 gpsd currently will build, install and run on CentOS 7.
 

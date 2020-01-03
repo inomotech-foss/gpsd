@@ -199,6 +199,12 @@ static int merge_ddmmyy(char *ddmmyy, struct gps_device_t *session)
         session->nmea.date.tm_mon = mon - 1;
         session->nmea.date.tm_mday = mday;
     }
+    GPSD_LOG(LOG_RAW, &session->context->errout,
+             "merge_ddmmyy(%s) %d %d %d\n",
+             ddmmyy,
+             session->nmea.date.tm_mon,
+             session->nmea.date.tm_mday,
+             session->nmea.date.tm_year);
     return 0;
 }
 
@@ -399,7 +405,7 @@ static gps_mask_t processRMC(int count, char *field[],
      * 5,6   12311.12,W   Longitude 123 deg. 11.12 min West
      * 7     000.5        Speed over ground, Knots
      * 8     054.7        Course Made Good, True north
-     * 9     181194       Date of fix  18 November 1994
+     * 9     181194       Date of fix ddmmyy.  18 November 1994
      * 10,11 020.3,E      Magnetic variation 20.3 deg East
      * 12    A            FAA mode indicator (NMEA 2.3 and later)
      *                     see faa_mode() for possible mode values
@@ -1500,8 +1506,9 @@ static gps_mask_t processGSA(int count, char *field[],
 #ifdef __UNUSED__
             /* debug */
             GPSD_LOG(LOG_ERROR, &session->context->errout,
-                     "%s nmeaid_to_prn: nmea_gnssid %d nmea_satnum %d ubx_gnssid %d "
-                     "ubx_svid %d nmea2_prn %d\n", field[0],
+                     "%s nmeaid_to_prn: nmea_gnssid %d nmea_satnum %d "
+                     "ubx_gnssid %d ubx_svid %d nmea2_prn %d\n",
+                     field[0],
                      nmea_gnssid, nmea_satnum, ubx_gnssid, ubx_svid, prn);
             GPSD_LOG(LOG_ERROR, &session->context->errout,
                      "%s count %d\n", field[0], count);
@@ -1929,19 +1936,42 @@ static gps_mask_t processPGRMF(int c UNUSED, char *field[],
   * 15 = dop, 0 to 9
   */
     gps_mask_t mask = ONLINE_SET;
+    unsigned short week = 0;
+    time_t tow = 0;
+    timespec_t ts_tow = {0, 0};
 
-    if (0 == merge_hhmmss(field[4], session) &&
-        0 == merge_ddmmyy(field[3], session)) {
-        /* got a good data/time */
+    /* Some garmin fail due to GPS Week Roll Over
+     * Ignore their UTC date/time, use their GPS week, GPS tow and
+     * leap seconds to decide the correct time */
+    if (isdigit((int)field[5][0])) {
+        session->context->leap_seconds = atoi(field[5]);
+        session->context->valid = LEAP_SECOND_VALID;
+    }
+    if (isdigit((int)field[1][0]) &&
+        isdigit((int)field[2][0]) &&
+        0 < session->context->leap_seconds) {
+        // have GPS week, tow and leap second
+        week = atol(field[1]);
+        ts_tow.tv_sec = tow = atol(field[2]);
+        ts_tow.tv_nsec = 0;
+        session->newdata.time = gpsd_gpstime_resolv(session, week, ts_tow);
+        mask |= TIME_SET;
+        // (long long) cast for 32/64 bit compat
+        GPSD_LOG(LOG_SPIN, &session->context->errout,
+                 "PGRMF gps time %lld\n",
+                 (long long)session->newdata.time.tv_sec);
+    } else if (0 == merge_hhmmss(field[4], session) &&
+               0 == merge_ddmmyy(field[3], session)) {
+        // fall back to UTC if we need and can
+        // (long long) cast for 32/64 bit compat
+        GPSD_LOG(LOG_SPIN, &session->context->errout,
+                 "PGRMF gps time %lld\n",
+                 (long long)session->newdata.time.tv_sec);
         mask |= TIME_SET;
     }
     if ('A' != field[10][0]) {
         /* Huh? */
         return mask;
-    }
-    if ('\0' != field[5][0]) {
-        session->context->leap_seconds = atoi(field[5]);
-        session->context->valid = LEAP_SECOND_VALID;
     }
     if (0 == do_lat_lon(&field[6], &session->newdata)) {
         mask |= LATLON_SET;
@@ -3243,6 +3273,8 @@ gps_mask_t nmea_parse(char *sentence, struct gps_device_t * session)
         {"PSTI", 2, false, processPSTI},        /* $PSTI Skytraq */
         {"STI", 2, false, processSTI},          /* $STI  Skytraq */
 #endif /* SKYTRAQ_ENABLE */
+        // $PSTM ST Micro STA8088xx/STA8089xx/STA8090xx
+        {"PSTM", 0, false, NULL},
         /* ignore Recommended Minimum Navigation Info, waypoint */
         {"RMB", 0,  false, NULL},
         {"RMC", 8,  false, processRMC},
@@ -3454,7 +3486,7 @@ gps_mask_t nmea_parse(char *sentence, struct gps_device_t * session)
                 0 == (session->nmea.cycle_enders & lasttag_mask) &&
                 !session->nmea.cycle_continue) {
                 session->nmea.cycle_enders |= lasttag_mask;
-                /* cast for 32/64 bit compat */
+                /* (long long) cast for 32/64 bit compat */
                 GPSD_LOG(LOG_PROG, &session->context->errout,
                          "tagged %s as a cycle ender. %#llx\n",
                          nmea_phrase[lasttag - 1].name,
@@ -3549,3 +3581,5 @@ ssize_t nmea_send(struct gps_device_t * session, const char *fmt, ...)
     va_end(ap);
     return nmea_write(session, buf, strlen(buf));
 }
+
+// vim: set expandtab shiftwidth=4

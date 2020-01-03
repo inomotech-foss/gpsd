@@ -17,12 +17,27 @@ rtcmdecode
 contrib/clock_test
 *.exe
 # These are built from .in files
-jsongen.py
-maskaudit.py
+android/gpsd_config
+contrib/ntpshmviz
+contrib/skyview2svg.py
+contrib/webgps
 control
-upload
+gegps
+gps/__init__.py
+gps/gps.py
+gpscat
 gpsd.php
+gpsfake
+gpsprof
+jsongen
+maskaudit.py
+ubxtool
+ubxtool
+upload
 valgrind-audit.py
+xgps
+xgpsspeed
+zerk
 # Unit tests
 test_bits
 test_float
@@ -107,6 +122,7 @@ CHECK.*
 # SCons cruft
 config.log
 .sconsign.dblite
+.sconsign.*.dblite
 .sconf_temp
 .scons-option-cache
 stamp-python
@@ -149,6 +165,7 @@ www/ppscheck.html
 www/protocol-evolution.html
 www/protocol-transition.html
 www/pydoc
+www/README.html
 www/replacing-nmea.html
 www/srec.html
 www/time-service-intro.html
