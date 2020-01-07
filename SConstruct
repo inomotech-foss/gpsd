@@ -2555,7 +2555,7 @@ if env.WhereIs('asciidoctor'):
                     ['asciidoctor -a compat -b html5 -a toc -o www/%s.html %s.adoc'
                      % (leaf, stem)])
 else:
-    announce("Part of the website build requires asciidoc, not installed.")
+    announce("INSTALL, README and part of the website build requires asciidoctor, not installed.")
 
 # Non-asciidoc webpages only
 htmlpages = Split('''
