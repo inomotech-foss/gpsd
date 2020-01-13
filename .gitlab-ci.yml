@@ -99,6 +99,10 @@ fedora-latest:
   - .ci-build/build.sh
 
 
+# Limit FreeBSD runner to branch(es) at gpsd/gpsd
+# because GitLab seems to not provision non-Linux runners
+# the specific implementation copied from NTPsec
+# Documentation: https://docs.gitlab.com/ee/ci/yaml/README.html#onlyexcept-basic
 freebsd:
   stage: advanced_build
   variables:
@@ -107,6 +111,8 @@ freebsd:
   - freebsd
   script:
   - .ci-build/build.sh
+  except:
+  - branches@jamesb_fe80/gpsd
 
 
 scan-build:
