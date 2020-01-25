@@ -144,27 +144,27 @@ class stats(object):
                 (self.min, self.max, self.mean, self.median,
                  self.sigma, self.skewness, self.kurtosis))
 
-    def min_max_mean(self, fixes, index):
-        "Find min, max, and mean of fixes[index]"
+    get fix_getter(index):
+        if index is None:
+            return lambda f: f
+        return lambda f: f[index]
+
+    def min_max_mean(self, fixes, index=None):
+        "Find min, max, and mean of fixes[index]. If index is None,
+        fixes must be a list of values, not a list of tuples."
 
         if not fixes:
             return
 
-        # might be fast to go through list once?
-        if isinstance(fixes[0], tuple):
-            self.mean = (sum([x[index] for x in fixes]) / len(fixes))
-            self.min = min([x[index] for x in fixes])
-            self.max = max([x[index] for x in fixes])
-        else:
-            # must be float
-            self.mean = (sum([x for x in fixes]) / len(fixes))
-            self.min = min([x for x in fixes])
-            self.max = max([x for x in fixes])
+        _get = fix_getter(index)
+        self.mean = sum([_get(x) for x in fixes]) / len(fixes)
+        self.min = min([_get(x) for x in fixes])
+        self.max = max([_get(x) for x in fixes])
 
-        return
-
-    def moments(self, fixes, index):
-        "Find and set the (sigma, skewness, kurtosis) of fixes[index]"
+    def moments(self, fixes, index=None):
+        "Find and set the (sigma, skewness, kurtosis) of fixes[index].
+        If index is None, fixes must be a list of values, not a list of
+        tuples."
 
         # The skewness of a random variable X is the third standardized
         # moment and is a dimension-less ratio. ntpviz uses the Pearson's
@@ -185,19 +185,12 @@ class stats(object):
 
         m3 = 0.0
         m4 = 0.0
-        if isinstance(fixes[0], tuple):
-            sum_squares = [(x[index] - self.mean) ** 2 for x in fixes]
-            sigma = math.sqrt(sum(sum_squares) / (len(fixes) - 1))
-            for fix in fixes:
-                m3 += pow(fix[index] - sigma, 3)
-                m4 += pow(fix[index] - sigma, 4)
-        else:
-            # must be float
-            sum_squares = [(x - self.mean) ** 2 for x in fixes]
-            sigma = math.sqrt(sum(sum_squares) / (len(fixes) - 1))
-            for fix in fixes:
-                m3 += pow(fix - sigma, 3)
-                m4 += pow(fix - sigma, 4)
+        _get = fix_getter(index)
+        sigma = math.sqrt(sum((_get(x) - self.mean) ** 2 for x in fixes) /
+                          len(fixes))
+        for fix in fixes:
+            m3 += pow(_get(fix) - sigma, 3)
+            m4 += pow(_get(fix) - sigma, 4)
 
         self.sigma = sigma
         if sigma > 0.0001:
@@ -279,10 +272,9 @@ class plotter(object):
                                          "you must explicitly specify the "
                                          "device.\n")
                         sys.exit(1)
-                    for i in range(len(self.session.data["devices"])):
-                        self.device = copy.copy(
-                            self.session.data["devices"][i])
-                        if self.device['path'] == device:
+                    for dev in self.session.data["devices"]:
+                        if dev['path'] == device:
+                            self.device = copy.copy(dev)
                             break
                 if self.session.data["class"] == "WATCH":
                     if ((self.requires_time and
@@ -351,20 +343,12 @@ class spaceplot(plotter):
         "Grab samples"
 
         # Watch out for the NaN value from gps.py.
-        if (((self.in_replot or self.session.valid) and
-             self.session.data["class"] == "TPV")):
-            # get sat used count
-            sats_used = 0
-            for sat in self.session.satellites:
-                if sat.used:
-                    sats_used += 1
-
-            if 'altHAE' not in self.session.data:
-                self.session.data['altHAE'] = gps.NaN
-
+        if ((self.in_replot or self.session.valid) and
+                self.session.data["class"] == "TPV"):
             self.fixes.append((self.session.data['lat'],
                                self.session.data['lon'],
-                               self.session.data['altHAE'], sats_used))
+                               self.session.data.get('altHAE', gps.NaN),
+                               sum(s.used for s in self.session.satellites)))
         return True
 
     def header(self):
@@ -377,13 +361,10 @@ class spaceplot(plotter):
 
     def data(self):
         "Format data for dump"
-        res = ""
-        for i in range(len(self.recentered)):
-            (lat, lon) = self.recentered[i][:2]
-            (raw1, raw2, alt) = self.fixes[i]
-            res += "%.9f\t%.9f\t%.9f\t%.9f\t%.9f\n" \
-                % (lat, lon, raw1, raw2, alt)
-        return res
+        return "".join(
+            "%.9f\t%.9f\t%.9f\t%.9f\t%.9f\n" %
+            (r[0], r[1], self.fixes[i][0], self.fixes[i][1], self.fixes[i][2])
+            for i, r in enumerate(self.recentered))
 
     def plot(self):
         "Plot the data"
@@ -396,15 +377,12 @@ class spaceplot(plotter):
         stat_lon_r = stats()
         stat_alt_r = stats()
 
-        sats_used = []
-        for x in self.fixes:
-            # skip missing sats, if any, often missing at start
-            if x[3] != 0:
-                sats_used.append(x[3])
+        # skip missing sats, if any, often missing at start
+        sats_used = [x[3] for x in self.fixes if x[3] != 0]
 
         # calc sats used data: mean, min, max, sigma
-        stat_used.min_max_mean(sats_used, 0)
-        stat_used.moments(sats_used, 0)
+        stat_used.min_max_mean(sats_used)
+        stat_used.moments(sats_used)
 
         # find min, max and mean of lat/lon
         stat_lat.min_max_mean(self.fixes, 0)
@@ -481,9 +459,9 @@ class spaceplot(plotter):
         calc_mrse = gps.NaN
 
         # grab and format the fixes as gnuplot will use them
-        for i in range(len(self.recentered)):
+        for i, r in enumerate(self.recentered):
             # grab valid lat/lon data, recentered and raw
-            (lat, lon) = self.recentered[i][:2]
+            (lat, lon) = r[:2]
             alt = self.fixes[i][2]
             latlon_data += "%.9f\t%.9f\n" % (lat, lon)
 
@@ -500,13 +478,13 @@ class spaceplot(plotter):
             alt_data_centered = ""
 
             # find min, max and mean of altitude
-            stat_alt.min_max_mean(alt_fixes, 0)
+            stat_alt.min_max_mean(alt_fixes)
             for alt in alt_fixes:
                 alt_fixes_r.append(alt - stat_alt.mean)
                 alt_data_centered += "%.6f\n" % (alt - stat_alt.mean)
 
-            stat_alt_r.min_max_mean(alt_fixes_r, 0)
-            stat_alt_r.moments(alt_fixes_r, 0)
+            stat_alt_r.min_max_mean(alt_fixes_r)
+            stat_alt_r.moments(alt_fixes_r)
 
             # centroid in ECEF
             self.centroid_ecef = wgs84_to_ecef([stat_lat.mean,
@@ -514,12 +492,11 @@ class spaceplot(plotter):
                                                 stat_alt.mean])
 
             # once more through the data, looking for 3D max
-            for fix_lla in self.fixes:
-                if not math.isnan(fix_lla[2]):
-                    fix_ecef = wgs84_to_ecef(fix_lla[:3])
-                    dist3d = dist_3d(self.centroid_ecef, fix_ecef)
-                    if dist_3d_max < dist3d:
-                        dist_3d_max = dist3d
+            if self.fixes:
+                dist_3d_max = max(dist_3d(self.centroid_ecef,
+                                          wgs84_to_ecef(f[:3]))
+                                  for f in self.fixes
+                                  if not math.isnan(f[2]))
 
             # Sort fixes by distance from average altitude
             alt_fixes_r.sort(key=lambda a: abs(a))
@@ -618,67 +595,47 @@ class spaceplot(plotter):
         fmt += ('set label 13 at screen 0.06, screen 0.12 '
                 '"\\n'
                 '        mean\\n'
-                '%s\\n'
-                '%s\\n'
-                '%s\\n'
-                '%s"\n'
-                ) % ('{:>15}'.format(latstring),
-                     '{:>15}'.format(lonstring),
-                     '{:>15.3f}'.format(stat_alt.mean),
-                     '{:>15.1f}'.format(stat_used.mean))
+                '{:15}\\n'
+                '{:15}\\n'
+                '{:15.3f}\\n'
+                '{:15.3f}"\n'
+                ).format(latstring, lonstring, stat_alt.mean, stat_used.mean)
 
         fmt += ('set label 14 at screen 0.23, screen 0.12 '
                 '"\\n'
                 '        min        max      sigma              '
                 'skewness kurtosis\\n'
-                '%s %s %s meters %s %s\\n'
-                '%s %s %s meters %s %s\\n'
-                '%s %s %s meters %s %s\\n'
-                '%12d %12d %s sats"\n'
-                ) % ('{:>10.3f}'.format(lat_min_o),
-                     '{:>10.3f}'.format(lat_max_o),
-                     '{:>10.3f}'.format(stat_lat_r.sigma),
-                     '{:>10.1f}'.format(stat_lat_r.skewness),
-                     '{:>10.1f}'.format(stat_lat_r.kurtosis),
-                     '{:>10.3f}'.format(lon_min_o),
-                     '{:>10.3f}'.format(lon_max_o),
-                     '{:>10.3f}'.format(stat_lon_r.sigma),
-                     '{:>10.1f}'.format(stat_lon_r.skewness),
-                     '{:>10.1f}'.format(stat_lon_r.kurtosis),
-                     '{:>10.3f}'.format(stat_alt_r.min),
-                     '{:>10.3f}'.format(stat_alt_r.max),
-                     '{:>10.3f}'.format(stat_alt_r.sigma),
-                     '{:>10.1f}'.format(stat_alt_r.skewness),
-                     '{:>10.1f}'.format(stat_alt_r.kurtosis),
-                     stat_used.min,
-                     stat_used.max,
-                     '{:>10.1f}'.format(stat_used.sigma))
+                '{:10.3f} {:10.3f} {:10.3f} meters {:10.1f} {:10.1f}\\n'
+                '{:10.3f} {:10.3f} {:10.3f} meters {:10.1f} {:10.1f}\\n'
+                '{:10.3f} {:10.3f} {:10.3f} meters {:10.1f} {:10.1f}\\n'
+                '{:12} {:12} {:10.1f} sats"\n'
+                ).format(
+                    lat_min_o, lat_max_o, stat_lat_r.sigma,
+                    stat_lat_r.skewness, stat_lat_r.kurtosis,
+                    lon_min_o, lon_max_o, stat_lon_r.sigma,
+                    stat_lon_r.skewness, stat_lon_r.kurtosis,
+                    stat_alt_r.min, stat_alt_r.max, stat_alt_r.sigma,
+                    stat_alt_r.skewness, stat_alt_r.kurtosis,
+                    stat_used.min, stat_used.max, stat_used.sigma)
 
         if debug:
             fmt += ('set label 15 at screen 0.6, screen 0.12 '
                     '"\\n'
                     '      min\\n'
-                    '%s\\n'
-                    '%s\\n'
-                    '%s"\n'
-                    ) % ('{:>15.9f}'.format(stat_lat_r.min),
-                         '{:>15.9f}'.format(stat_lon_r.min),
-                         '{:>15.3f}'.format(stat_alt.min))
+                    '{:15.9f}\\n'
+                    '{:15.9f}\\n'
+                    '{:15.3f}"\n'
+                    ).format(stat_lat_r.min, stat_lon_r.min, stat_alt.min)
 
             fmt += ('set label 16 at screen 0.75, screen 0.12 '
                     '"\\n'
                     '      max\\n'
-                    '%s\\n'
-                    '%s\\n'
-                    '%s"\n'
-                    ) % ('{:>15.9f}'.format(stat_lat_r.max),
-                         '{:>15.9f}'.format(stat_lon_r.max),
-                         '{:>15.3f}'.format(stat_alt.max))
+                    '{:15.9f}\\n'
+                    '{:15.9f}\\n'
+                    '{:15.3f}"\n'
+                    ).format(stat_lat_r.max, stat_lon_r.max, stat_alt.max)
 
-        if len(self.fixes) > 1000:
-            plot_style = 'dots'
-        else:
-            plot_style = 'points'
+        plot_style = 'dots' if len(self.fixes) > 1000 else 'points'
 
         # got altitude data?
         if not math.isnan(stat_alt.mean):
@@ -764,20 +721,18 @@ class polarplot(plotter):
         "Grab samples"
         if self.session.data["class"] == "SKY":
             sats = self.session.data['satellites']
-            seen = 0
             used = 0
             for sat in sats:
-                seen += 1
                 # u'ss': 42, u'el': 15, u'PRN': 18, u'az': 80, u'used': True
-                if sat['used'] is True:
+                if sat['used']:
                     used += 1
                     if 'polarunused' == self.name:
                         continue
-                if (('polarused' == self.name) and (sat['used'] is False)):
+                elif 'polarused' == self.name:
                     continue
                 self.fixes.append((sat['PRN'], sat['ss'], sat['az'],
-                                  sat['el'], sat['used']))
-            self.seen_used.append((seen, used))
+                                   sat['el'], sat['used']))
+            self.seen_used.append((len(sats), used))
 
         return True
 
@@ -791,10 +746,8 @@ class polarplot(plotter):
 
     def data(self):
         "Format data for dump"
-        res = ""
-        for (prn, ss, az, el, used) in self.fixes:
-            res += "%d\t%d\t%d\t%d\t%s\n" % (prn, ss, az, el, used)
-        return res
+        return "".join("%d\t%d\t%d\t%d\t%s\n" % (prn, ss, az, el, used)
+                       for (prn, ss, az, el, used) in self.fixes)
 
     def plot(self):
         "Format data for dump"
@@ -878,11 +831,10 @@ set colorbox user origin .92, .15 size .03, .6
 set label 10 at screen 0.89, screen 0.13 "SNR dBHz"
 '''
 
-        count = len(self.fixes)
         fmt += '''\
 set label 11 at screen 0.01, screen 0.15 "%s plot, samples %d"
 set label 12 at screen 0.01, screen 0.10 "\\nSS\\nSeen\\nUsed"
-''' % (self.name, count)
+''' % (self.name, len(self.fixes))
 
         fmt += '''\
 set label 13 at screen 0.11, screen 0.10 "min\\n%d\\n%d\\n%d" right
@@ -906,7 +858,6 @@ set label 16 at screen 0.41, screen 0.10 "sigma\\n%.1f\\n%.1f\\n%.1f" right
 # plot "-" u (90 - $3):4 t "Sat" with points ls 11
 plot "-" u (90 - $3):4:(1):($2) t "Sat" w circles lc palette
 '''
-        # return fmt + self.header() + self.data()
         return self.header() + fmt + self.data()
 
 
@@ -948,11 +899,10 @@ class timeplot(plotter):
 
     def data(self):
         "Format data for dump"
-        res = ""
-        for (real_sec, real_nsec, clock_sec, clock_nsec) in self.fixes:
-            res += "%d\t%d\t%d\t%d\n" % (real_sec, real_nsec, clock_sec,
-                                         clock_nsec)
-        return res
+        return "".join("%d\t%d\t%d\t%d\n" %
+                       (real_sec, real_nsec, clock_sec, clock_nsec)
+                       for (real_sec, real_nsec, clock_sec, clock_nsec)
+                       in self.fixes)
 
     def plot(self):
         "Format data for dump"
@@ -993,10 +943,7 @@ class uninstrumented(plotter):
 
     def data(self):
         "Format data for dump"
-        res = ""
-        for seconds in self.fixes:
-            res += "%2.6lf\n" % seconds
-        return res
+        return "".join("%2.6lf\n" % seconds for seconds in self.fixes)
 
     def plot(self):
         "Plot the data"
@@ -1025,7 +972,7 @@ class instrumented(plotter):
 
         if 'rtime' in self.session.data:
             self.fixes.append((gps.misc.isotime(self.session.data['time']),
-                               self.session.data["chars"],
+                               self.session.data['chars'],
                                self.session.data['sats'],
                                self.session.data['sor'],
                                self.session.data['rtime'],
