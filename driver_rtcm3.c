@@ -79,7 +79,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
     int bitcount = 0;
     unsigned int i;
     signed long temp;
-    bool unknown = true;;
+    bool unknown = true;              // we don't know how to decode
+    const char *unknown_name = NULL;  // no decode, but maybe we know the name
 
 #define ugrab(width)    (bitcount += width, ubits((unsigned char *)buf, \
                          bitcount-width, width, false))
@@ -109,14 +110,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
     GPSD_LOG(LOG_RAW, &context->errout, "RTCM3: type %d payload length %d\n",
              rtcm->type, rtcm->length);
 
+    // RTCM3 message type numbers start at 1001
     switch (rtcm->type) {
-    case 63:
-        /* RTCM - 63
-         * BDS/BeiDou Ephemeris
-         * length 64
-         */
-        break;
-
     case 1001:
         /* GPS Basic RTK, L1 Only */
         rtcm->rtcmtypes.rtcm3_1001.header.station_id = (unsigned int)ugrab(12);
@@ -216,7 +211,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
         break;
 
     case 1005:
-        /* Stationary Antenna Reference Point, No Height Information */
+        /* Stationary Antenna Reference Point, No Height Information
+         * 19 bytes */
 #define R1005 rtcm->rtcmtypes.rtcm3_1005
         R1005.station_id = (unsigned short)ugrab(12);
         ugrab(6);               /* reserved */
@@ -233,7 +229,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
         break;
 
     case 1006:
-        /* Stationary Antenna Reference Point, with Height Information */
+        /* Stationary Antenna Reference Point, with Height Information
+         * 21 bytes */
 #define R1006 rtcm->rtcmtypes.rtcm3_1006
         R1006.station_id = (unsigned short)ugrab(12);
         (void)ugrab(6);         /* reserved */
@@ -251,7 +248,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
         break;
 
     case 1007:
-        /* Antenna Descriptor */
+        /* Antenna Description
+         * 5 to 36 bytes */
         rtcm->rtcmtypes.rtcm3_1007.station_id = (unsigned short)ugrab(12);
         n = (unsigned long)ugrab(8);
         (void)memcpy(rtcm->rtcmtypes.rtcm3_1007.descriptor, buf + 7, n);
@@ -262,7 +260,8 @@ void rtcm3_unpack(const struct gps_context_t *context,
         break;
 
     case 1008:
-        /* Antenna Descriptor & Serial Number */
+        /* Antenna Description & Serial Number
+         * 6 to 68 bytes */
         rtcm->rtcmtypes.rtcm3_1008.station_id = (unsigned short)ugrab(12);
         n = (unsigned long)ugrab(8);
         (void)memcpy(rtcm->rtcmtypes.rtcm3_1008.descriptor, buf + 7, n);
@@ -426,14 +425,18 @@ void rtcm3_unpack(const struct gps_context_t *context,
         /* RTCM 3.1
          * GPS Ionospheric Correction Differences for all satellites
          * between the master station and one auxiliary station
+         * 9 bytes minimum
          */
+        unknown_name = "GPS Ionospheric Correction Differences";
         break;
 
     case 1016:
         /* RTCM 3.1
          * GPS Geometric Correction Differences for all satellites between
          * the master station and one auxiliary station.
+         * 9 bytes minimum
          */
+        unknown_name = "GPS Geometric Correction Differences";
         break;
 
     case 1017:
@@ -441,82 +444,101 @@ void rtcm3_unpack(const struct gps_context_t *context,
          * GPS Combined Geometric and Ionospheric Correction Differences
          * for all satellites between one Aux station and the master station
          * (same content as both types 1015 and 1016 together, but less size)
+         * 9 bytes minimum
          */
+        unknown_name = "GPS Combined Geometric and Ionospheric "
+                       "Correction Differences";
         break;
 
     case 1018:
         /* RTCM 3.1
          * Reserved for alternative Ionospheric Correction Difference Message
          */
+        unknown_name = "Reserved for alternative Ionospheric Correction "
+                       "Differences";
         break;
 
     case 1019:
         /* RTCM 3.1 - 1020
          * GPS Ephemeris
-         * length 19
+         * 62 bytes
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GPS Ephemeris";
         break;
 
     case 1020:
         /* RTCM 3.1 - 1020
          * GLONASS Ephemeris
-         * length 45
+         * 45 bytes
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GLO Ephemeris";
         break;
 
     case 1021:
         /* RTCM 3.1
-         * Helmert / Abridged Molodenski transformation parameters
+         * Helmert / Abridged Molodenski Transformation parameters
          */
+        unknown_name = "Helmert / Abridged Molodenski Transformation "
+                       "parameters";
         break;
 
     case 1022:
         /* RTCM 3.1
          * Molodenski-Badekas transformation parameters
          */
+        unknown_name = "Molodenski-Badekas transformation parameters";
         break;
 
     case 1023:
         /* RTCM 3.1
-         * Transformation residual message, ellipsoidal grid representation
+         * Residuals Ellipsoidal Grid Representation
          */
+        unknown_name = "Residuals Ellipsoidal Grid Representation";
         break;
 
     case 1024:
         /* RTCM 3.1
-         * Transformation residual message, plane grid representation
+         * Residuals Plane Grid Representation
          */
+        unknown_name = "Residuals Plane Grid Representation";
         break;
 
     case 1025:
         /* RTCM 3.1
-         * Projection parameters, types other than LCC2SP, OM
+         * Projection Parameters, Projection Types other than LCC2SP
          */
+        unknown_name = "Projection Parameters, Projection Types other "
+                       "than LCC2SP";
         break;
 
     case 1026:
         /* RTCM 3.1
-         * Projection parameters, type LCC2SP (Lambert Conic Conformal)
+         * Projection Parameters, Projection Type LCC2SP
+         * (Lambert Conic Conformal)
          */
+        unknown_name = "Projection Parameters, Projection Type LCC2SP";
         break;
 
     case 1027:
         /* RTCM 3.1
-         * Projection parameters, type OM (Oblique Mercator)
+         * Projection Parameters, Projection Type OM (Oblique Mercator)
          */
+        unknown_name = "Projection Parameters, Projection Type OM";
         break;
 
     case 1028:
         /* RTCM 3.1
          * Reserved for global to plate fixed transformation
          */
+        unknown_name = "Reserved, Global to Plate Transformation";
         break;
 
     case 1029:
         /* Text in UTF8 format
-         *(max. 127 multibyte characters and max. 255 bytes)
+         * 9 bytes minimum
+         * (max. 127 multibyte characters and max. 255 bytes)
          */
         rtcm->rtcmtypes.rtcm3_1029.station_id = (unsigned short)ugrab(12);
         rtcm->rtcmtypes.rtcm3_1029.mjd = (unsigned short)ugrab(16);
@@ -530,20 +552,23 @@ void rtcm3_unpack(const struct gps_context_t *context,
 
     case 1030:
         /* RTCM 3.1
-         * GPS network-RTK residuals message
+         * GPS Network RTK Residual Message
          */
+        unknown_name = "GPS Network RTK Residual";
         break;
 
     case 1031:
         /* RTCM 3.1
-         * GLONASS network-RTK residuals message
+         * GLONASS Network RTK Residual Message
          */
+        unknown_name = "GLONASS Network RTK Residual";
         break;
 
     case 1032:
         /* RTCM 3.1
-         * Physical reference station position message
+         * Physical Reference Station Position message
          */
+        unknown_name = "Physical Reference Station Position";
         break;
 
     case 1033:                  /* see note in header */
@@ -575,11 +600,56 @@ void rtcm3_unpack(const struct gps_context_t *context,
         unknown = false;
         break;
 
+    case 1034:
+        /* RTCM 3.2
+         * GPS Network FKP Gradient Message
+         */
+        unknown_name = "GPS Network FKP Gradient";
+        break;
+
+    case 1035:
+        /* RTCM 3.2
+         * GLONASS Network FKP Gradient Message
+         */
+        unknown_name = "GLO Network FKP Gradient";
+        break;
+
+    case 1037:
+        /* RTCM 3.2
+         * GLONASS Ionospheric Correction Differences
+         */
+        unknown_name = "GLO Ionospheric Correction Differences";
+        break;
+
+    case 1038:
+        /* RTCM 3.2
+         * GLONASS Geometric Correction Differences
+         */
+        unknown_name = "GLO Geometric Correction Differences";
+        break;
+
+    case 1039:
+        /* RTCM 3.2
+         * GLONASS Combined Geometric and Ionospheric Correction Differences
+         */
+        unknown_name = "GLONASS Combined Geometric and Ionospheric "
+                       "Correction Differences";
+        break;
+
+    case 1042:
+        /* RTCM 3.x - 1043
+         * BeiDou Ephemeris
+         * length ?
+         */
+        unknown_name = "BD Ephemeris";
+        break;
+
     case 1043:
         /* RTCM 3.x - 1043
          * SBAS Ephemeris
          * length 29
          */
+        unknown_name = "SBAS Ephemeris";
         break;
 
     case 1044:
@@ -588,135 +658,717 @@ void rtcm3_unpack(const struct gps_context_t *context,
          * length 61
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "QZSS Ephemeris";
         break;
 
     case 1045:
-        /* RTCM 3.x - 1045
-         * Galileo Ephemeris FNAV data
-         * length 62
+        /* RTCM 3.2 - 1045
+         * Galileo F/NAV Ephemeris Data
+         * 64 bytes
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GAL F/NAV Ephemeris Data";
         break;
 
     case 1046:
         /* RTCM 3.x - 1046
-         * Galileo Ephemeris INAV data
+         * Galileo I/NAV Ephemeris Data
          * length 63
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GAL I/NAV Ephemeris Data";
+        break;
+
+    case 1057:
+        /* RTCM 3.2
+         * SSR GPS Orbit Correction
+         */
+        unknown_name = "SSR GPS Orbit Correction";
+        break;
+
+    case 1058:
+        /* RTCM 3.2
+         * SSR GPS Clock Correction
+         */
+        unknown_name = "SSR GPS Clock Correction";
+        break;
+
+    case 1059:
+        /* RTCM 3.2
+         * SSR GPS Code Bias
+         */
+        unknown_name = "SSR GPS Code Bias";
+        break;
+
+    case 1060:
+        /* RTCM 3.2
+         * SSR GPS Combined Orbit and Clock Correction
+         */
+        unknown_name = "SSR GPS Combined Orbit and Clock Correction";
+        break;
+
+    case 1061:
+        /* RTCM 3.2
+         * SSR GPS URA
+         */
+        unknown_name = "SSR GPS URA";
+        break;
+
+    case 1062:
+        /* RTCM 3.2
+         * SSR GPS High Rate Clock Correction
+         */
+        unknown_name = "SSR GPS High Rate Clock Correction";
+        break;
+
+    case 1063:
+        /* RTCM 3.2
+         * SSR GLO Orbit Correction
+         */
+        unknown_name = "SSR GLO Orbit Correction";
+        break;
+
+    case 1064:
+        /* RTCM 3.2
+         * SSR GLO Clock Correction
+         */
+        unknown_name = "SSR GLO Clock Correction";
+        break;
+
+    case 1065:
+        /* RTCM 3.2
+         * SSR GLO Code Correction
+         */
+        unknown_name = "SSR GLO ode Correction";
+        break;
+
+    case 1066:
+        /* RTCM 3.2
+         * SSR GLO Combined Orbit and Clock Correction
+         */
+        unknown_name = "SSR GLO Combined Orbit and Clock Correction";
+        break;
+
+    case 1067:
+        /* RTCM 3.2
+         * SSR GLO URA
+         */
+        unknown_name = "SSR GLO URA";
+        break;
+
+    case 1068:
+        /* RTCM 3.2
+         * SSR GPS High Rate Clock Correction
+         */
+        unknown_name = "SSR GLO High Rate Clock Correction";
+        break;
+
+    case 1070:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1071:
+        /* RTCM 3.2
+         * GPS Multi Signal Message 1
+         */
+        unknown_name = "GPS Multi Signal Message 1";
+        break;
+
+    case 1072:
+        /* RTCM 3.2
+         * GPS Multi Signal Message 2
+         */
+        unknown_name = "GPS Multi Signal Message 2";
+        break;
+
+    case 1073:
+        /* RTCM 3.2
+         * GPS Multi Signal Message 3
+         */
+        unknown_name = "GPS Multi Signal Message 3";
         break;
 
     case 1074:
-        /* RTCM 3.x
+        /* RTCM 3.2
          * GPS Multi Signal Message 4
          */
+        unknown_name = "GPS Multi Signal Message 4";
         break;
 
     case 1075:
-        /* RTCM 3.x
+        /* RTCM 3.2
          * GPS Multi Signal Message 5
          */
+        unknown_name = "GPS Multi Signal Message 5";
+        break;
+
+    case 1076:
+        /* RTCM 3.2
+         * GPS Multi Signal Message 6
+         */
+        unknown_name = "GPS Multi Signal Message 6";
         break;
 
     case 1077:
-        /* RTCM 3.x - 1077
+        /* RTCM 3.2 - 1077
          * GPS Multi Signal Message 7
          * Full GPS pseudo-ranges, carrier phases, Doppler and
          * signal strength (high resolution)
          * length 438
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GPS MSM7";
+        break;
+
+    case 1078:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1079:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1080:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1081:
+        /* RTCM 3.2
+         * GLONASS Multi Signal Message 1
+         */
+        unknown_name = "GLO Multi Signal Message 1";
+        break;
+
+    case 1082:
+        /* RTCM 3.2
+         * GLONASS Multi Signal Message 2
+         */
+        unknown_name = "GLO Multi Signal Message 2";
+        break;
+
+    case 1083:
+        /* RTCM 3.2
+         * GLONASS Multi Signal Message 4
+         */
+        unknown_name = "GLO Multi Signal Message 3";
         break;
 
     case 1084:
-        /* RTCM 3.x
-         * GLONASS  Multi Signal Message 4
+        /* RTCM 3.2
+         * GLONASS Multi Signal Message 4
          */
+        unknown_name = "GLO Multi Signal Message 4";
         break;
 
     case 1085:
-        /* RTCM 3.x
+        /* RTCM 3.2
          * GLONASS Multi Signal Message 5
          */
+        unknown_name = "GLO Multi Signal Message 5";
+        break;
+
+    case 1086:
+        /* RTCM 3.2
+         * GLONASS Multi Signal Message 6
+         */
+        unknown_name = "GLO Multi Signal Message 6";
         break;
 
     case 1087:
-        /* RTCM 3.x - 1087
+        /* RTCM 3.2 - 1087
          * GLONASS Multi Signal Message 7
          * Full GLONASS pseudo-ranges, carrier phases, Doppler and
          * signal strength (high resolution)
          * length 417 or 427
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GLO Multi Signal Message 7";
+        break;
+
+    case 1088:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1089:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1090:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1091:
+        /* RTCM 3.2
+         * Galileo Multi Signal Message 1
+         */
+        unknown_name = "GAL Multi Signal Message 1";
+        break;
+
+    case 1092:
+        /* RTCM 3.2
+         * Galileo Multi Signal Message 2
+         */
+        unknown_name = "GAL Multi Signal Message 2";
+        break;
+
+    case 1093:
+        /* RTCM 3.2
+         * Galileo Multi Signal Message 3
+         */
+        unknown_name = "GAL Multi Signal Message 3";
         break;
 
     case 1094:
-        /* RTCM 3.x
+        /* RTCM 3.2
          * Galileo Multi Signal Message 4
          */
+        unknown_name = "GAL Multi Signal Message 4";
         break;
 
     case 1095:
-        /* RTCM 3.x
+        /* RTCM 3.2
          * Galileo Multi Signal Message 5
          */
+        unknown_name = "GAL Multi Signal Message 5";
+        break;
+
+    case 1096:
+        /* RTCM 3.2
+         * Galileo Multi Signal Message 6
+         */
+        unknown_name = "GAL Multi Signal Message 6";
         break;
 
     case 1097:
-        /* RTCM 3.x - 1097
+        /* RTCM 3.2 - 1097
          * Galileo Multi Signal Message 7
          * Full Galileo pseudo-ranges, carrier phases, Doppler and
          * signal strength (high resolution)
          * length 96
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "GAL Multi Signal Message 7";
+        break;
+
+    case 1098:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1099:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1100:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1101:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 1
+         */
+        unknown_name = "SBAS Multi Signal Message 1";
+        break;
+
+    case 1102:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 2
+         */
+        unknown_name = "SBAS Multi Signal Message 2";
+        break;
+
+    case 1103:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 3
+         */
+        unknown_name = "SBAS Multi Signal Message 3";
+        break;
+
+    case 1104:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 4
+         */
+        unknown_name = "SBAS Multi Signal Message 4";
+        break;
+
+    case 1105:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 5
+         */
+        unknown_name = "SBAS Multi Signal Message 5";
+        break;
+
+    case 1106:
+        /* RTCM 3.3
+         * SBAS Multi Signal Message 6
+         */
+        unknown_name = "SBAS Multi Signal Message 6";
         break;
 
     case 1107:
-        /* RTCM 3.x - 1107
+        /* RTCM 3.3 - 1107
          * 'Multiple Signal Message
          * Full SBAS pseudo-ranges, carrier phases, Doppler and
          * signal strength (high resolution)
          * length 96
          */
         /* TODO: rtklib has C code for this one.  */
+        unknown_name = "SBAS Multi Signal Message 7";
+        break;
+
+    case 1108:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1109:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1110:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1111:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 1
+         */
+        unknown_name = "QZSS Multi Signal Message 1";
+        break;
+
+    case 1112:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 2
+         */
+        unknown_name = "QZSS Multi Signal Message 2";
+        break;
+
+    case 1113:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 3
+         */
+        unknown_name = "QZSS Multi Signal Message 3";
         break;
 
     case 1114:
-        /* RTCM 3.x
-         * QZSS Multi Signal Message
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 4
          */
+        unknown_name = "QZSS Multi Signal Message 4";
+        break;
+
+    case 1115:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 5
+         */
+        unknown_name = "QZSS Multi Signal Message 5";
+        break;
+
+    case 1116:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 6
+         */
+        unknown_name = "QZSS Multi Signal Message 6";
+        break;
+
+    case 1117:
+        /* RTCM 3.3
+         * QZSS Multi Signal Message 7
+         */
+        unknown_name = "QZSS Multi Signal Message 7";
+        break;
+
+    case 1118:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1119:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1120:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1121:
+        /* RTCM 3.2 A.1
+         * BD Multi Signal Message 1
+         */
+        unknown_name = "BD Multi Signal Message 1";
+        break;
+
+    case 1122:
+        /* RTCM 3.2 A.1
+         * BD Multi Signal Message 2
+         */
+        unknown_name = "BD Multi Signal Message 2";
+        break;
+
+    case 1123:
+        /* RTCM 3.2 A.1
+         * BD Multi Signal Message 3
+         */
+        unknown_name = "BD Multi Signal Message 3";
         break;
 
     case 1124:
-        /* RTCM 3.x
-         * BeiDou Multi Signal Message 4
+        /* RTCM 3.2 A.1
+         * BD Multi Signal Message 4
          */
+        unknown_name = "BD Multi Signal Message 4";
         break;
 
     case 1125:
-        /* RTCM 3.x
+        /* RTCM 3.2 A.1
          * BeiDou Multi Signal Message 5
          */
+        unknown_name = "BD Multi Signal Message 5";
+        break;
+
+    case 1126:
+        /* RTCM 3.2 A.1
+         * BeiDou Multi Signal Message 6
+         */
+        unknown_name = "BD Multi Signal Message 6";
         break;
 
     case 1127:
-        /* RTCM 3.x
+        /* RTCM 3.2 A.1
          * BeiDou Multi Signal Message 7
          */
+        unknown_name = "BD Multi Signal Message 7";
+        break;
+
+    case 1128:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
+        break;
+
+    case 1229:
+        /* RTCM 3.x
+         * Reserved for MSM
+         */
+        unknown_name = "Reserved for MSM";
         break;
 
     case 1230:
-        /* RTCM 3.x
-         * GLONASS L1 and L2 code-phase biases.
+        /* RTCM 3.2
+         * GLONASS L1 and L2 Code-Phase Biases.
          */
+        unknown_name = "GLO L1 and L2 Code-Phase Biases";
         break;
 
     case 4072:
         /* RTCM 3.x
+         * u-blox Proprietary
+         * Mitsubishi Electric Corp Proprietary
          * 4072.0 Reference station PVT (u-blox proprietary)
          * 4072.1 Additional reference station information (u-blox proprietary)
          */
+        unknown_name = "u-blox Proprietary";
+        break;
+
+    case 4073:
+        /* RTCM 3.x
+         * Unicore Communications Proprietary
+         */
+        unknown_name = "Alberding GmbH Proprietary";
+        break;
+
+    case 4075:
+        /* RTCM 3.x
+         * Alberding GmbH Proprietary
+         */
+        unknown_name = "Alberding GmbH Proprietary";
+        break;
+
+    case 4076:
+        /* RTCM 3.x
+         * International GNSS Service Proprietary
+         */
+        unknown_name = "International GNSS Service Proprietary";
+        break;
+
+    case 4077:
+        /* RTCM 3.x
+         * Hemisphere GNSS Proprietary
+         */
+        unknown_name = "Hemisphere GNSS Proprietary";
+        break;
+
+    case 4078:
+        /* RTCM 3.x
+         * ComNav Technology Proprietary
+         */
+        unknown_name = "ComNav Technology Proprietary";
+        break;
+
+    case 4079:
+        /* RTCM 3.x
+         * SubCarrier Systems Corp Proprietary
+         */
+        unknown_name = "SubCarrier Systems Corp Proprietary";
+        break;
+
+    case 4080:
+        /* RTCM 3.x
+         * NavCom Technology, Inc.
+         */
+        unknown_name = "NavCom Technology, Inc.";
+        break;
+
+    case 4081:
+        /* RTCM 3.x
+         * Seoul National Universtiry GNSS Lab Proprietary
+         */
+        unknown_name = "Seoul National Universtiry GNSS Lab Proprietery";
+        break;
+
+    case 4082:
+        /* RTCM 3.x
+         * Cooperative Research Centre for Spatial Information Proprietary
+         */
+        unknown_name = "Cooperative Research Centre for Spatial Information "
+                       "Proprietary";
+        break;
+
+    case 4083:
+        /* RTCM 3.x
+         * German Aerospace Center Proprietary
+         */
+        unknown_name = "German Aerospace Center Proprietary";
+        break;
+
+    case 4084:
+        /* RTCM 3.x
+         * Geodetics Inc Proprietary
+         */
+        unknown_name = "Geodetics Inc Proprietary";
+        break;
+
+    case 4085:
+        /* RTCM 3.x
+         * European GNSS Supervisory Authority Proprietary
+         */
+        unknown_name = "European GNSS Supervisory Authority Proprietary";
+        break;
+
+    case 4086:
+        /* RTCM 3.x
+         * InPosition GmbH Proprietary
+         */
+        unknown_name = "InPosition GmbH Proprietary";
+        break;
+
+    case 4087:
+        /* RTCM 3.x
+         * Fugro Proprietary
+         */
+        unknown_name = "Fugro Proprietary";
+        break;
+
+    case 4088:
+        /* RTCM 3.x
+         * IfEN GmbH Proprietary
+         */
+        unknown_name = "IfEN GmbH Proprietary";
+        break;
+
+    case 4089:
+        /* RTCM 3.x
+         * Septentrio Satellite Navigation Proprietary
+         */
+        unknown_name = "Septentrio Satellite Navigation Proprietary";
+        break;
+
+    case 4090:
+        /* RTCM 3.x
+         * Geo++ Proprietary
+         */
+        unknown_name = "Geo++ Proprietary";
+        break;
+
+    case 4091:
+        /* RTCM 3.x
+         * Topcon Positioning Systems Proprietary
+         */
+        unknown_name = "Topcon Positioning Systems Proprietary";
+        break;
+
+    case 4092:
+        /* RTCM 3.x
+         * Leica Geosystems Proprietary
+         */
+        unknown_name = "Leica Geosystems Proprietary";
+        break;
+
+    case 4093:
+        /* RTCM 3.x
+         * NovAtel Proprietary
+         */
+        unknown_name = "NovAtel Pr.orietary";
+        break;
+
+    case 4094:
+        /* RTCM 3.x
+         * Trimble Proprietary
+         */
+        unknown_name = "Trimble Proprietary";
+        break;
+
+    case 4095:
+        /* RTCM 3.x
+         * Ashtech/Magellan Proprietary
+         */
+        unknown_name = "Ashtech/Magellan Proprietary";
         break;
 
     default:
@@ -732,9 +1384,15 @@ void rtcm3_unpack(const struct gps_context_t *context,
          * The first 12 bits of the copied payload will be the type field.
          */
         memcpy(rtcm->rtcmtypes.data, buf+3, rtcm->length);
-        GPSD_LOG(LOG_PROG, &context->errout,
-                 "RTCM3: unknown type %d, length %d\n",
-                 rtcm->type, rtcm->length);
+        if (NULL == unknown_name) {
+	    GPSD_LOG(LOG_PROG, &context->errout,
+		     "RTCM3: unknown type %d, length %d\n",
+		     rtcm->type, rtcm->length);
+        } else {
+	    GPSD_LOG(LOG_PROG, &context->errout,
+		     "RTCM3: %s (type %d), length %d\n",
+                     unknown_name, rtcm->type, rtcm->length);
+        }
     }
 
 }

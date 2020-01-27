@@ -1,4 +1,4 @@
-# SCons build recipe for the GPSD project
+# see library directories " SCons build recipe for the GPSD project
 
 # Important targets:
 #
@@ -22,19 +22,18 @@
 # * Out-of-directory builds: see http://www.scons.org/wiki/UsingBuildDir
 # * Coveraging mode: gcc "-coverage" flag requires a hack
 #   for building the python bindings
-# * Python 3 compatibility in this recipe
-
-# Since SCons 3.0.0 forces print_function on us, it needs to be unconditional.
-# This is recognized to be a bug in SCons, but we need to live with it for now,
-# and we'll need this for eventual Python 3 compatibility, anyway.
-# Python requires this to precede any non-comment code.
+#
+# This file is Copyright (c) 2010-2020 by the GPSD project
+# SPDX-License-Identifier: BSD-2-clause
+#
+# This code runs compatibly under Python 2 and 3.x for x >= 2.
+# Preserve this property!
 from __future__ import print_function
 
 import ast
 import atexit      # for atexit.register()
 import functools
 import glob
-import imp         # for imp.find_module('gps'), imp deprecated in 3.4
 import operator
 import os
 import pickle
@@ -47,6 +46,21 @@ from distutils import sysconfig
 import SCons
 
 
+# ugly hack from http://www.catb.org/esr/faqs/practical-python-porting/
+# handle python2/3 strings
+def polystr(o):
+    if bytes is str:  # Python 2
+        return str(o)
+    else:             # python 3.
+        if isinstance(o, str):
+            return o
+        if isinstance(o, bytes) or isinstance(o, bytearray):
+            return str(o, encoding='latin1')
+        if isinstance(o, int):
+            return str(o)
+        raise ValueError
+
+
 # Helper functions for revision hackery
 def GetMtime(file):
     """Get mtime of given file, or 0."""
@@ -54,6 +68,7 @@ def GetMtime(file):
         return os.stat(file).st_mtime
     except OSError:
         return 0
+
 
 def FileList(patterns, exclusions=None):
     """Get list of files based on patterns, minus excluded files."""
@@ -65,6 +80,7 @@ def FileList(patterns, exclusions=None):
             pass
     return files
 
+
 def _getstatusoutput(cmd, nput=None, shell=True, cwd=None, env=None):
     pipe = subprocess.Popen(cmd, shell=shell, cwd=cwd, env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -72,6 +88,87 @@ def _getstatusoutput(cmd, nput=None, shell=True, cwd=None, env=None):
     status = pipe.returncode
     return (status, output)
 
+
+# TODO: this list is missing stuff.
+# built man pages found in all_manpages
+generated_sources = [
+    'ais_json.i',
+    'android/gpsd_config',
+    'contrib/ntpshmviz',
+    'contrib/skyview2svg.py',
+    'contrib/webgps',
+    'control',
+    'gegps',
+    'gpscat',
+    'gpsd_config.h',
+    'gpsd.php',
+    'gpsd.rules',
+    'gpsfake',
+    'gps/gps.py',
+    'gps/__init__.py',
+    'gps_maskdump.c',
+    'gpsprof',
+    'libgps.pc',
+    'libQgpsmm.prl',
+    'packaging/rpm/gpsd.spec',
+    'packet_names.h',
+    'Qgpsmm.pc',
+    'ubxtool',
+    'www/faq.html',
+    'www/gps_report.cgi',
+    'www/hacking.html',
+    'www/hardware-head.html',
+    'www/index.html',
+    'xgps',
+    'xgpsspeed',
+    'zerk',
+   ]
+
+# All installed python programs
+# All are templated
+python_progs = [
+    "gegps",
+    "gpscat",
+    "gpsfake",
+    "gpsprof",
+    "ubxtool",
+    "xgps",
+    "xgpsspeed",
+    "zerk",
+]
+
+# All man pages.  Always build them all.
+# Need the full list to complately clean them out.
+all_manpages = {
+    "man/cgps.1": "man/gps.xml",
+    "man/gegps.1": "man/gps.xml",
+    "man/gps.1": "man/gps.xml",
+    "man/gps2udp.1": "man/gps2udp.xml",
+    "man/gpscat.1": "man/gpscat.xml",
+    "man/gpsctl.1": "man/gpsctl.xml",
+    "man/gpsd.8": "man/gpsd.xml",
+    "man/gpsdctl.8": "man/gpsdctl.xml",
+    "man/gpsdecode.1": "man/gpsdecode.xml",
+    "man/gpsd_json.5": "man/gpsd_json.xml",
+    "man/gpsfake.1": "man/gpsfake.xml",
+    "man/gpsinit.8": "man/gpsinit.xml",
+    "man/gpsmon.1": "man/gpsmon.xml",
+    "man/gpspipe.1": "man/gpspipe.xml",
+    "man/gpsprof.1": "man/gpsprof.xml",
+    "man/gpsrinex.1": "man/gpsrinex.xml",
+    "man/gpxlogger.1": "man/gpxlogger.xml",
+    "man/lcdgps.1": "man/gps.xml",
+    "man/libgps.3": "man/libgps.xml",
+    "man/libgpsmm.3": "man/libgpsmm.xml",
+    "man/libQgpsmm.3": "man/libgpsmm.xml",
+    "man/ntpshmmon.1": "man/ntpshmmon.xml",
+    "man/ppscheck.8": "man/ppscheck.xml",
+    "man/srec.5": "man/srec.xml",
+    "man/ubxtool.1": "man/ubxtool.xml",
+    "man/xgps.1": "man/gps.xml",
+    "man/xgpsspeed.1": "man/gps.xml",
+    "man/zerk.1": "man/zerk.xml",
+}
 
 # Release identification begins here.
 #
@@ -85,16 +182,12 @@ def _getstatusoutput(cmd, nput=None, shell=True, cwd=None, env=None):
 # whether - separates components of the package name, separates the
 # name from the version, or separates version componnents.
 #
-# Keep in sync with gps/__init__.py
-# There are about 16 files with copies of the version number; make
-# sure to update all of them.
-#
 # package version
 gpsd_version = "3.20.1~dev"
 if 'dev' in gpsd_version:
     (st, gpsd_revision) = _getstatusoutput('git describe --tags')
     if st != 0:
-        # Use timestamp from latest relevant file
+        # Use timestamp from latest relevant file, ignoring generated files
         files = FileList(['*.c', '*.cpp', '*.h', '*.in', 'SConstruct'],
                          generated_sources)
         timestamps = map(GetMtime, files)
@@ -108,8 +201,12 @@ else:
     gpsd_revision = gpsd_version
 gpsd_revision = gpsd_revision.strip()
 
+# API (JSON) version
+api_version_major = 3
+api_version_minor = 14
+
 # client library version
-libgps_version_current = 25
+libgps_version_current = 27
 libgps_version_revision = 0
 libgps_version_age = 0
 libgps_version = "%d.%d.%d" % (libgps_version_current, libgps_version_age,
@@ -188,9 +285,10 @@ def filtered_spawn(sh, escape, cmd, args, env):
 #
 
 
-# without this, scons will not rebuild an existing target when the
-# source changes.
-Decider('timestamp-match')
+# Have scons rebuild an existing target when the source timestamp changes
+# and the MD5 changes.  To prevent rebuidling when gpsd_config.h rebuilt,
+# with no  changes.
+Decider('MD5-timestamp')
 
 # support building with various Python versions.
 sconsign_file = '.sconsign.{}.dblite'.format(pickle.HIGHEST_PROTOCOL)
@@ -285,7 +383,7 @@ boolopts = (
 for (name, default, helpd) in boolopts:
     opts.Add(BoolVariable(name, helpd, default))
 
-# Gentoo, Fedora, opensuse systems use uucp for ttyS* and ttyUSB*
+# Gentoo, Fedora, openSUSE systems use uucp for ttyS* and ttyUSB*
 if os.path.exists("/etc/gentoo-release"):
     def_group = "uucp"
 else:
@@ -430,8 +528,15 @@ for i in ["AR", "CC", "CXX", "LD",
         if i == "LD":
             i = "SHLINK"
         env[i] = os.getenv(j)
-for i in ["ARFLAGS", "CFLAGS", "CXXFLAGS", "LDFLAGS", "SHLINKFLAGS",
-          "CPPFLAGS", "CCFLAGS", "LINKFLAGS"]:
+for i in ["ARFLAGS",
+          "CCFLAGS",
+          "CFLAGS",
+          "CPPFLAGS",
+          "CXXFLAGS",
+          "LDFLAGS",
+          "LINKFLAGS",
+          "SHLINKFLAGS",
+          ]:
     if i in os.environ:
         env.MergeFlags(Split(os.getenv(i)))
 
@@ -457,9 +562,12 @@ if env.GetOption("silent"):
     env['REGRESSOPTS'] += " -Q"
 
 
-def announce(msg):
+def announce(msg, end=False):
     if not env.GetOption("silent"):
         print(msg)
+    if end:
+        # duplicate message at eexit
+        atexit.register(lambda: print(msg))
 
 
 # DESTDIR environment variable means user prefix the installation root.
@@ -512,14 +620,14 @@ else:
 devenv = (("ADDR2LINE", "addr2line"),
           ("AR", "ar"),
           ("AS", "as"),
+          ("CC", "gcc"),
+          ("CPP", "cpp"),
           ("CXX", "c++"),
           ("CXXFILT", "c++filt"),
-          ("CPP", "cpp"),
-          ("GXX", "g++"),
-          ("CC", "gcc"),
           ("GCCBUG", "gccbug"),
           ("GCOV", "gcov"),
           ("GPROF", "gprof"),
+          ("GXX", "g++"),
           ("LD", "ld"),
           ("NM", "nm"),
           ("OBJCOPY", "objcopy"),
@@ -528,7 +636,8 @@ devenv = (("ADDR2LINE", "addr2line"),
           ("READELF", "readelf"),
           ("SIZE", "size"),
           ("STRINGS", "strings"),
-          ("STRIP", "strip"))
+          ("STRIP", "strip"),
+          )
 
 if env['target']:
     for (name, toolname) in devenv:
@@ -561,7 +670,7 @@ values can be listed with 'scons -h'.
 def CheckPKG(context, name):
     context.Message('Checking pkg-config for %s... ' % name)
     ret = context.TryAction('%s --exists \'%s\''
-                            % (env['PKG_CONFIG'], name))[0]
+                            % (context.env['PKG_CONFIG'], name))[0]
     context.Result(ret)
     return ret
 
@@ -591,13 +700,15 @@ def CheckXsltproc(context):
     ofp.close()
     probe = ("xsltproc --encoding UTF-8 --output man/foo.1 --nonet "
              "--noout '%s' man/xmltest.xml" % (docbook_man_uri,))
-    ret = context.TryAction(probe)[0]
+    (ret, out) = context.TryAction(probe)
+    # out should be empty, don't bother to test.
     os.remove("man/xmltest.xml")
     if os.path.exists("man/foo.1"):
         os.remove("man/foo.1")
-    else:
-        # failed to create output
-        ret = False
+
+    # don't fail due to missing output file
+    # scons may return cached result, instead of running the probe
+
     context.Result(ret)
     return ret
 
@@ -618,75 +729,7 @@ def CheckCompilerOption(context, option):
     return ret
 
 
-def CheckHeaderDefines(context, file, define):
-    context.Message('Checking if %s supplies %s... ' % (file, define))
-    ret = context.TryLink("""
-        #include <%s>
-        #ifndef %s
-        #error %s is not defined
-        #endif
-        int main(int argc, char **argv) {
-            (void) argc; (void) argv;
-            return 0;
-        }
-    """ % (file, define, define), '.c')
-    context.Result(ret)
-    return ret
-
-
-def CheckSizeOf(context, type):
-    """Check sizeof 'type'"""
-    context.Message('Checking size of ' + type + '... ')
-
-    program = """
-#include <stdlib.h>
-#include <stdio.h>
-
-/*
- * The CheckSizeOf function does not have a way for the caller to
- * specify header files to be included to provide the type being
- * checked.  As a workaround until that is remedied, include the
- * header required for time_t, which is the sole current use of this
- * function.
- */
-#include <time.h>
-
-int main() {
-    printf("%d", (int)sizeof(""" + type + """));
-    return 0;
-}
-"""
-
-    # compile it
-    ret = context.TryCompile(program, '.c')
-    if 0 == ret:
-        announce('ERROR: TryCompile failed\n')
-        # fall back to sizeof(time_t) is 8
-        return '8'
-
-    # run it
-    ret = context.TryRun(program, '.c')
-    context.Result(ret[0])
-    return ret[1]
-
-
-def CheckCompilerDefines(context, define):
-    context.Message('Checking if compiler supplies %s... ' % (define,))
-    ret = context.TryLink("""
-        #ifndef %s
-        #error %s is not defined
-        #endif
-        int main(int argc, char **argv) {
-            (void) argc; (void) argv;
-            return 0;
-        }
-    """ % (define, define), '.c')
-    context.Result(ret)
-    return ret
-
 # Check if this compiler is C11 or better
-
-
 def CheckC11(context):
     context.Message('Checking if compiler is C11... ')
     ret = context.TryLink("""
@@ -703,25 +746,32 @@ def CheckC11(context):
 
 
 def GetPythonValue(context, name, imp, expr, brief=False):
-    context.Message('Obtaining Python %s... ' % name)
-    context.sconf.cached = 0  # Avoid bogus "(cached)"
-    if not env['target_python']:
-        status, value = 0, str(eval(expr))
+    """Get a value from the target python, not the running one."""
+    context.Message('Checking Python %s... ' % name)
+
+    if not context.env['target_python']:
+        # FIXME: this ignores imp
+        status = 1
+        value = str(eval(expr))
     else:
-        command = [target_python_path, '-c', '%s; print(%s)' % (imp, expr)]
-        try:
-            status, value = _getstatusoutput(command, shell=False)
-        except OSError:
-            status = -1
-        if status == 0:
-            value = value.strip()
-        else:
-            value = ''
-            announce('Python command "%s" failed - disabling Python.\n'
-                     'Python components will NOT be installed' %
-                     command[2])
-            env['python'] = False
-    context.Result('failed' if status else 'ok' if brief else value)
+        command = (context.env['target_python'] + " $SOURCE > $TARGET")
+        text = "%s; print(%s)" % (imp, expr)
+
+        # TryAction returns (1, outputStr), or (0, '') on fail
+        (status, value) = context.TryAction(command, text, '.py')
+
+        # do not disable python because this failed
+        # maybe testing for newer python feature
+
+    if 1 == status:
+        # we could convert to str(), but caching turns it into bytes anyway
+        value = value.strip()
+        if brief is True:
+            context.did_show_result = 1
+            print("ok")
+
+    context.Result(value)
+    # return value
     return value
 
 
@@ -738,14 +788,10 @@ env.Prepend(LIBPATH=[os.path.realpath(os.curdir)])
 # from scons 3.0.5, any changes to env after this, until after
 # config.Finish(), will be lost.  Use config.env until then.
 
-# CheckXsltproc works, but result is incorrectly saved as "no"
 config = Configure(env, custom_tests={
     'CheckC11': CheckC11,
-    'CheckCompilerDefines': CheckCompilerDefines,
     'CheckCompilerOption': CheckCompilerOption,
-    'CheckHeaderDefines': CheckHeaderDefines,
     'CheckPKG': CheckPKG,
-    'CheckSizeOf': CheckSizeOf,
     'CheckXsltproc': CheckXsltproc,
     'GetPythonValue': GetPythonValue,
     })
@@ -780,8 +826,10 @@ else:
 
     confdefs.append('#ifndef GPSD_CONFIG_H\n')
 
-    confdefs.append('#define VERSION "%s"\n' % gpsd_version)
-    confdefs.append('#define REVISION "%s"\n' % gpsd_revision)
+    confdefs.append('#define VERSION "%s"' % gpsd_version)
+    confdefs.append('#define REVISION "%s"' % polystr(gpsd_revision))
+    confdefs.append('#define GPSD_PROTO_VERSION_MAJOR %u' % api_version_major)
+    confdefs.append('#define GPSD_PROTO_VERSION_MINOR %u' % api_version_minor)
 
     confdefs.append('#define GPSD_URL "%s"\n' % website)
 
@@ -1018,7 +1066,7 @@ else:
     # check for C11 or better, and __STDC__NO_ATOMICS__ is not defined
     # before looking for stdatomic.h
     if ((config.CheckC11() and
-         not config.CheckCompilerDefines("__STDC_NO_ATOMICS__") and
+         not config.CheckDeclaration("__STDC_NO_ATOMICS__") and
          config.CheckHeader("stdatomic.h"))):
         confdefs.append("#define HAVE_STDATOMIC_H 1\n")
     else:
@@ -1032,9 +1080,9 @@ else:
 
     # endian.h is required for rtcm104v2 unless the compiler defines
     # __ORDER_BIG_ENDIAN__, __ORDER_LITTLE_ENDIAN__ and __BYTE_ORDER__
-    if config.CheckCompilerDefines("__ORDER_BIG_ENDIAN__") \
-       and config.CheckCompilerDefines("__ORDER_LITTLE_ENDIAN__") \
-       and config.CheckCompilerDefines("__BYTE_ORDER__"):
+    if ((config.CheckDeclaration("__ORDER_BIG_ENDIAN__") and
+         config.CheckDeclaration("__ORDER_LITTLE_ENDIAN__") and
+         config.CheckDeclaration("__BYTE_ORDER__"))):
         confdefs.append("#define HAVE_BUILTIN_ENDIANNESS 1\n")
         confdefs.append("/* #undef HAVE_ENDIAN_H */\n")
         confdefs.append("/* #undef HAVE_SYS_ENDIAN_H */\n")
@@ -1081,11 +1129,21 @@ else:
             confdefs.append("/* #undef HAVE_%s_H */\n"
                             % hdr.replace("/", "_").upper())
 
-    sizeof_time_t = config.CheckSizeOf("time_t")
+    if env['target']:
+        announce("Not checking sizeof(time_t) when cross-compiling")
+        sizeof_time_t = 8
+    else:
+        sizeof_time_t = config.CheckTypeSize('time_t',
+                                             includes='#include <time.h>\n')
+        if 0 < sizeof_time_t:
+            announce("sizeof(time_t) is %s" % sizeof_time_t)
+            if 4 >= sizeof_time_t:
+                announce("WARNING: time_t is too small.  It will fail in 2038")
+        else:
+            announce("WARNING: could not get sizeof(time_t)")
+            sizeof_time_t = 8
+
     confdefs.append("#define SIZEOF_TIME_T %s\n" % sizeof_time_t)
-    announce("sizeof(time_t) is %s" % sizeof_time_t)
-    if 4 >= int(sizeof_time_t):
-        announce("WARNING: time_t is too small.  It will fail in 2038")
 
     # check function after libraries, because some function require libraries
     # for example clock_gettime() require librt on Linux glibc < 2.17
@@ -1112,9 +1170,11 @@ else:
         if config.env["magic_hat"]:
             announce("Forcing magic_hat=no since RFC2783 API is unavailable")
             config.env["magic_hat"] = False
-    tiocmiwait = config.CheckHeaderDefines("sys/ioctl.h", "TIOCMIWAIT")
+    tiocmiwait = config.CheckDeclaration("TIOCMIWAIT",
+                                         "#include <sys/ioctl.h>")
     if not tiocmiwait and not kpps:
-        announce("Neither TIOCMIWAIT nor RFC2783 API is available)")
+        announce("WARNING: Neither TIOCMIWAIT (PPS) nor RFC2783 API (KPPS) "
+                 "is available.", end=True)
         if config.env["timeservice"]:
             announce("ERROR: timeservice specified, but no PPS available")
             Exit(1)
@@ -1242,108 +1302,120 @@ PYTHON_CONFIG_CALL = ('sysconfig.get_config_vars(%s)'
                       % ', '.join(PYTHON_CONFIG_QUOTED))
 
 
-# ugly hack from http://www.catb.org/esr/faqs/practical-python-porting/
-# handle python2/3 strings
-def polystr(o):
-    if isinstance(o, str):
-        return o
-    if isinstance(o, bytes):
-        return str(o, encoding='latin-1')
-    raise ValueError
+# flag that we have xgps* dependencies, so xgps* should run OK
+config.env['xgps_deps'] = False
 
-
-if helping:
-
+if cleaning or helping:
     # If helping just get usable config info from the local Python
     target_python_path = ''
     py_config_text = str(eval(PYTHON_CONFIG_CALL))
     python_libdir = str(eval(PYTHON_LIBDIR_CALL))
+    config.env['xgps_deps'] = False
+    python_config = []
 
-else:
-
-    if config.env['python'] and config.env['target_python']:
+elif config.env['python']:
+    target_python_path = None
+    if config.env['target_python']:
         try:
             config.CheckProg
-        except AttributeError:  # Older scons versions don't have CheckProg
+        except AttributeError:
+            # scons versions before Sep 2015 (2.4.0) don't have CheckProg
+            # gpsd only asks for 2.3.0 or higher
             target_python_path = config.env['target_python']
         else:
             target_python_path = config.CheckProg(config.env['target_python'])
         if not target_python_path:
             announce("Target Python doesn't exist - disabling Python.")
             config.env['python'] = False
+
     if config.env['python']:
-        # Maximize consistency by using the reported sys.executable
-        target_python_path = config.GetPythonValue('exe path',
-                                                   'import sys',
-                                                   'sys.executable',
-                                                   brief=cleaning)
+        if not target_python_path:
+            # Avoid double testing for target_python_path
+            # Maximize consistency by using the reported sys.executable
+            target_python_path = config.GetPythonValue('exe path',
+                                                       'import sys',
+                                                       'sys.executable')
+        target_python_path = polystr(target_python_path)
+        # python module directory
         if config.env['python_libdir']:
             python_libdir = config.env['python_libdir']
         else:
             python_libdir = config.GetPythonValue('lib dir',
                                                   PYTHON_SYSCONFIG_IMPORT,
-                                                  PYTHON_LIBDIR_CALL,
-                                                  brief=cleaning)
+                                                  PYTHON_LIBDIR_CALL)
             # follow FHS, put in /usr/local/libXX, not /usr/libXX
             # may be lib, lib32 or lib64
             python_libdir = polystr(python_libdir)
             python_libdir = python_libdir.replace("/usr/lib",
                                                   "/usr/local/lib")
+        python_module_dir = str(python_libdir) + os.sep
+        # Many systems can have a problem with the Python path
+        announce("Ensure your PYTHONPATH includes %s" % python_module_dir)
+        python_module_dir += 'gps'
 
         py_config_text = config.GetPythonValue('config vars',
                                                PYTHON_SYSCONFIG_IMPORT,
                                                PYTHON_CONFIG_CALL,
                                                brief=True)
+        py_config_text = polystr(py_config_text)
+        py_config_vars = ast.literal_eval(py_config_text)
+        py_config_vars = [[] if x is None else x for x in py_config_vars]
+        python_config = dict(zip(PYTHON_CONFIG_NAMES, py_config_vars))
+        # debug
+        # announce(python_config)
 
         # aiogps is only available on Python >= 3.6
-        # FIXME check target_python, not current python
-        if sys.version_info < (3, 6):
+        sysver = config.GetPythonValue('version',
+                                       'import sys',
+                                       '"%d.%d" % sys.version_info[0:2]')
+
+        if 3 > int(sysver[0]) or 6 > int(sysver[2]):
             config.env['aiogps'] = False
-            announce("WARNING: Python too old: "
-                     "gps/aiogps.py will not be installed\n")
+            announce("WARNING: Python%s too old (need 3.6): "
+                     "gps/aiogps.py will not be installed\n" %
+                     (sysver), end=True)
         else:
             config.env['aiogps'] = True
 
         # check for pyserial
-        try:
-            imp.find_module('serial')
-            announce("Python module serial (pyserial) found.")
-        except ImportError:
-            # no pycairo, don't build xgps, xgpsspeed
-            announce("WARNING: Python module serial (pyserial) not found.")
-            config.env['xgps'] = False
+        if not config.GetPythonValue('module serial (pyserial)',
+                                     'import serial', '"found"'):
+            # no pyserial, used by ubxtool and zerk
+            announce("WARNING: ubxtool and zerk are missing optional "
+                     "runtime module serial", end=True)
 
-        if config.env['xgps']:
-            # check for pycairo
-            try:
-                imp.find_module('cairo')
-                announce("Python module cairo (pycairo) found.")
-            except ImportError:
-                # no pycairo, don't build xgps, xgpsspeed
-                announce("WARNING: Python module cairo (pycairo) not found.")
-                config.env['xgps'] = False
+        config.env['xgps_deps'] = True
 
-            # check for pygobject
-            try:
-                imp.find_module('gi')
-                announce("Python module gi (pygobject) found.")
-            except ImportError:
-                # no pygobject, don't build xgps, xgpsspeed
-                announce("WARNING: Python module gi (pygobject) not found.")
-                config.env['xgps'] = False
+        # check for pycairo
+        if not config.GetPythonValue('module cairo (pycairo)',
+                                     'import cairo', '"found"'):
+            # no pycairo, used by xgps, xgpsspeed
+            config.env['xgps_deps'] = False
+            announce("WARNING: Python module cairo (pycairo) not found.")
 
-            if not config.CheckPKG('gtk+-3.0'):
-                config.env['xgps'] = False
+        # check for pycairo
+        if not config.GetPythonValue('module gi (pygobject)',
+                                     'import gi', '"found"'):
+            # no pycairo, used by xgps, xgpsspeed
+            config.env['xgps_deps'] = False
+            announce("WARNING: Python module gi (pygobject) not found.")
 
+        # gtk+ needed by pygobject
+        if not config.CheckPKG('gtk+-3.0'):
+            config.env['xgps_deps'] = False
+            announce("WARNING: gtk+-3.0 not found.")
 
-if config.env['python']:  # May have been turned off by error
-    config.env['PYTHON'] = polystr(target_python_path)
-    # For regress-driver
-    config.env['ENV']['PYTHON'] = polystr(target_python_path)
-    py_config_vars = ast.literal_eval(py_config_text.decode())
-    py_config_vars = [[] if x is None else x for x in py_config_vars]
-    python_config = dict(zip(PYTHON_CONFIG_NAMES, py_config_vars))
-    announce(python_config)
+        if not config.env['xgps_deps']:
+            announce("WARNING: xgps and xgpsspeed are missing runtime "
+                     "dependencies", end=True)
+
+        if not env['xgps']:
+            # xgps* turned off by option
+            config.env['xgps_deps'] = False
+
+        config.env['PYTHON'] = target_python_path
+        # For regress-driver
+        config.env['ENV']['PYTHON'] = target_python_path
 
 
 env = config.Finish()
@@ -1363,12 +1435,6 @@ if not (cleaning or helping):
                      % (name, env[name], env.subst(default), helpd))
     if not changelatch:
         announce("All configuration flags are defaulted.")
-
-    # Gentoo systems can have a problem with the Python path
-    if os.path.exists("/etc/gentoo-release"):
-        announce("This is a Gentoo system.")
-        announce("Adjust your PYTHONPATH to see library directories "
-                 "under /usr/local/lib")
 
 # Should we build the Qt binding?
 if env["qt"] and env["shared"]:
@@ -1644,10 +1710,11 @@ if env["timeservice"] or env["gpsdclients"]:
     if tiocmiwait:
         bin_binaries += [ppscheck]
 
-if env["ncurses"] and (env["timeservice"] or env["gpsdclients"]):
-    bin_binaries += [cgps, gpsmon]
-else:
-    announce("WARNING: not building cgps or gpsmon")
+    if env["ncurses"]:
+        bin_binaries += [cgps, gpsmon]
+    else:
+        announce("WARNING: ncurses not found, not building cgps or gpsmon.",
+                 end=True)
 
 # Test programs - always link locally and statically
 test_bits = env.Program('tests/test_bits', ['tests/test_bits.c'],
@@ -1706,15 +1773,11 @@ if env["libgpsmm"]:
     testprogs.append(test_gpsmm)
 
 # Python programs
-if not env['python']:
+if not env['python'] or cleaning or helping:
     python_built_extensions = []
-    python_manpages = []
     python_misc = []
-    python_progs = []
     python_targets = []
 else:
-    # installed python programs
-    python_progs = ["gegps", "gpscat", "gpsfake", "gpsprof", "ubxtool", "zerk"]
     python_deps = {'gpscat': 'packet'}
 
     # python misc helpers and stuff
@@ -1732,26 +1795,9 @@ else:
     if not helping and env['aiogps']:
         python_misc.extend(["example_aiogps.py", "example_aiogps_run"])
 
-    python_manpages = {
-        "man/gegps.1": "man/gps.xml",
-        "man/gpscat.1": "man/gpscat.xml",
-        "man/gpsfake.1": "man/gpsfake.xml",
-        "man/gpsprof.1": "man/gpsprof.xml",
-        "man/ubxtool.1": "man/ubxtool.xml",
-        "man/zerk.1": "man/zerk.xml",
-    }
-
-    if env['xgps']:
-        python_progs.extend(["xgps", "xgpsspeed"])
-        python_manpages.update({
-            "man/xgps.1": "man/gps.xml",
-            "man/xgpsspeed.1": "man/gps.xml",
-        })
-    else:
-        announce("WARNING: xgps and xgpsspeed will not be installed")
-
     # Glob() has to be run after all buildable objects defined
-    python_modules = Glob('gps/*.py', strings=True)
+    python_modules = Glob('gps/*.py', strings=True) + ['gps/__init__.py',
+                                                       'gps/gps.py']
 
     # Remove the aiogps module if not configured
     # Don't use Glob's exclude option, since it may not be available
@@ -1867,7 +1913,7 @@ Platform: UNKNOWN
                                           source=python_egg_info_source)
     python_built_extensions = list(python_compiled_libs.values())
     python_targets = (python_built_extensions + [python_egg_info] +
-                      python_progs)
+                      python_progs + python_modules)
 
 
 env.Command(target="packet_names.h", source="packet_states.h",
@@ -1890,9 +1936,6 @@ env.Command(target="ais_json.i", source="jsongen.py", action='''\
     $SC_PYTHON $SOURCE --ais --target=parser >$TARGET &&\
     chmod a-w $TARGET''')
 
-generated_sources = ['packet_names.h', "ais_json.i",
-                     'gps_maskdump.c', 'gpsd.php', 'gpsd_config.h']
-
 
 if env['systemd']:
     udevcommand = 'TAG+="systemd", ENV{SYSTEMD_WANTS}="gpsdctl@%k.service"'
@@ -1900,53 +1943,43 @@ else:
     udevcommand = 'RUN+="%s/gpsd.hotplug"' % (env['udevdir'], )
 
 
-# Instantiate some file templates.  We'd like to use the Substfile builtin
-# but it doesn't seem to work in scons 1.20
-def substituter(target, source, env):
-    substmap = (
-        ('@ANNOUNCE@',   annmail),
-        ('@BUGTRACKER@', bugtracker),
-        ('@CGIUPLOAD@',  cgiupload),
-        ('@CLONEREPO@',  clonerepo),
-        ('@DATE@',       time.asctime()),
-        ('@DEVMAIL@',    devmail),
-        ('@DOWNLOAD@',   download),
-        ('@FORMSERVER@', formserver),
-        ('@GITREPO@',    gitrepo),
-        ('@includedir@',     installdir('includedir', add_destdir=False)),
-        ('@IRCCHAN@',    ircchan),
-        ('@libdir@',     installdir('libdir', add_destdir=False)),
-        ('@LIBGPSVERSION@', libgps_version),
-        ('@MAILMAN@',    mailman),
-        ('@MAINPAGE@',   mainpage),
-        ('@MASTER@',     'DO NOT HAND_HACK! THIS FILE IS GENERATED'),
-        ('@prefix@',     env['prefix']),
-        ('@PROJECTPAGE@', projectpage),
-        ('@QTVERSIONED@', env['qt_versioned']),
-        ('@SCPUPLOAD@',  scpupload),
-        ('@SITENAME@',   sitename),
-        ('@SITESEARCH@', sitesearch),
-        ('@TIPLINK@',    tiplink),
-        ('@TIPWIDGET@',  tipwidget),
-        ('@udevcommand@',    udevcommand),
-        ('@USERMAIL@',   usermail),
-        ('@VERSION@',    gpsd_version),
-        ('@WEBFORM@',    webform),
-        ('@WEBSITE@',    website),
-    )
-
-    sfp = open(str(source[0]))
-    content = sfp.read()
-    sfp.close()
-    for (s, t) in substmap:
-        content = content.replace(s, t)
-    m = re.search("@[A-Z]+@", content)
-    if m and m.group(0) not in map(lambda x: x[0], substmap):
-        print("Unknown subst token %s in %s." % (m.group(0), sfp.name),
-              file=sys.stderr)
-    tfp = open(str(target[0]), "w")
-    tfp.write(content)
-    tfp.close()
+# tuples for Substfile.  To convert .in files to generated files.
+substmap = (
+    ('@ANNOUNCE@',   annmail),
+    ('@BUGTRACKER@', bugtracker),
+    ('@CGIUPLOAD@',  cgiupload),
+    ('@CLONEREPO@',  clonerepo),
+    ('@DATE@',       time.asctime()),
+    ('@DEVMAIL@',    devmail),
+    ('@DOWNLOAD@',   download),
+    ('@FORMSERVER@', formserver),
+    ('@GENERATED@', "This code is generated by scons.  Do not hand-hack it!"),
+    ('@GITREPO@',    gitrepo),
+    ('@GPSAPIVERMAJ@', api_version_major),
+    ('@GPSAPIVERMIN@', api_version_minor),
+    ('@INCLUDEDIR@', installdir('includedir', add_destdir=False)),
+    ('@IRCCHAN@',    ircchan),
+    ('@LIBDIR@',     installdir('libdir', add_destdir=False)),
+    ('@LIBGPSVERSION@', libgps_version),
+    ('@MAILMAN@',    mailman),
+    ('@MAINPAGE@',   mainpage),
+    ('@MASTER@',     'DO NOT HAND_HACK! THIS FILE IS GENERATED'),
+    ('@PREFIX@',     env['prefix']),
+    ('@PROJECTPAGE@', projectpage),
+    # PEP 394 and 394 python shebang
+    ('@PYSHEBANG@', '/usr/bin/env python'),
+    ('@QTVERSIONED@', env['qt_versioned']),
+    ('@SCPUPLOAD@',  scpupload),
+    ('@SITENAME@',   sitename),
+    ('@SITESEARCH@', sitesearch),
+    ('@TIPLINK@',    tiplink),
+    ('@TIPWIDGET@',  tipwidget),
+    ('@UDEVCOMMAND@', udevcommand),
+    ('@USERMAIL@',   usermail),
+    ('@VERSION@',    gpsd_version),
+    ('@WEBFORM@',    webform),
+    ('@WEBSITE@',    website),
+)
 
 
 templated = glob.glob("*.in") + glob.glob("*/*.in") + glob.glob("*/*/*.in")
@@ -1960,67 +1993,26 @@ templated = [x for x in templated if (not x.startswith('debian/') and
                                       not x.startswith('contrib/gps/'))]
 
 for fn in templated:
-    builder = env.Command(source=fn, target=fn[:-3], action=substituter)
+    # use scons built-in Substfile()
+    builder = env.Substfile(fn, SUBST_DICT=substmap)
+    # default to building all built targets
     env.Default(builder)
+    # set read-only to alert people trying to edit the files.
     env.AddPostAction(builder, 'chmod -w $TARGET')
-    if (fn.endswith(".py.in") or
-        fn[:-3] in python_progs or
-        fn[:-3] in ['contrib/ntpshmviz', 'contrib/webgps']):
+    if ((fn.endswith(".py.in") or
+         fn[:-3] in python_progs or
+         fn[:-3] in ['contrib/ntpshmviz', 'contrib/webgps'])):
+        # set python files to executable
         env.AddPostAction(builder, 'chmod +x $TARGET')
 
 # Documentation
-
-base_manpages = {
-    "man/cgps.1": "man/gps.xml",
-    "man/gps.1": "man/gps.xml",
-    "man/gps2udp.1": "man/gps2udp.xml",
-    "man/gpsctl.1": "man/gpsctl.xml",
-    "man/gpsd.8": "man/gpsd.xml",
-    "man/gpsdctl.8": "man/gpsdctl.xml",
-    "man/gpsdecode.1": "man/gpsdecode.xml",
-    "man/gpsd_json.5": "man/gpsd_json.xml",
-    "man/gpsinit.8": "man/gpsinit.xml",
-    "man/gpsmon.1": "man/gpsmon.xml",
-    "man/gpspipe.1": "man/gpspipe.xml",
-    "man/gpsrinex.1": "man/gpsrinex.xml",
-    "man/gpxlogger.1": "man/gpxlogger.xml",
-    "man/lcdgps.1": "man/gps.xml",
-    "man/libgps.3": "man/libgps.xml",
-    "man/libgpsmm.3": "man/libgpsmm.xml",
-    "man/libQgpsmm.3": "man/libgpsmm.xml",
-    "man/srec.5": "man/srec.xml",
-}
-
-if env["timeservice"] or env["gpsdclients"]:
-    base_manpages.update({
-        "man/ntpshmmon.1": "man/ntpshmmon.xml",
-    })
-
-if tiocmiwait:
-    base_manpages.update({
-        "man/ppscheck.8": "man/ppscheck.xml",
-    })
-
-all_manpages = list(base_manpages.keys())
-other_manpages = [
-                  "man/gegps.1",
-                  "man/xgps.1",
-                  "man/xgpsspeed.1",
-                  ]
-
-if python_manpages:
-    all_manpages += list(python_manpages.keys())
 
 man_env = env.Clone()
 if man_env.GetOption('silent'):
     man_env['SPAWN'] = filtered_spawn  # Suppress stderr chatter
 manpage_targets = []
 if manbuilder:
-    items = list(base_manpages.items())
-    if python_manpages:
-        items += list(python_manpages.items())
-
-    for (man, xml) in items:
+    for (man, xml) in all_manpages.items():
         manpage_targets.append(man_env.Man(source=xml, target=man))
 
 # Where it all comes together
@@ -2029,6 +2021,10 @@ build = env.Alias('build',
                   [libraries, sbin_binaries, bin_binaries, python_targets,
                    "gpsd.php", manpage_targets,
                    "libgps.pc", "gpsd.rules"])
+
+if [] == COMMAND_LINE_TARGETS:
+    # 'build' is default target
+    Default('build')
 
 if qt_env:
     # duplicate above?
@@ -2040,7 +2036,7 @@ if qt_env:
     qt_env.Default(*build_qt)
     testprogs.append(test_qgpsmm)
 
-if env['python']:
+if env['python'] and not cleaning and not helping:
     build_python = python_env.Alias('build', python_targets)
     python_env.Default(*build_python)
 
@@ -2069,8 +2065,7 @@ if ((not env['debug'] and not env['profiling'] and not env['nostrip'] and
      not sys.platform.startswith('darwin'))):
     env.AddPostAction(binaryinstall, '$STRIP $TARGET')
 
-if env['python']:
-    python_module_dir = str(python_libdir) + os.sep + 'gps'
+if env['python'] and not cleaning and not helping:
     python_extensions_install = python_env.Install(DESTDIR + python_module_dir,
                                                    python_built_extensions)
     if ((not env['debug'] and not env['profiling'] and
@@ -2099,8 +2094,9 @@ if env['python']:
     for p in python_all:
         # split in two lines for readability
         check_compile.append('cp %s tmp.py; %s -tt -m py_compile tmp.py;' %
-                             (p, sys.executable))
-        check_compile.append('rm tmp.py*')
+                             (p, target_python_path))
+        # tmp.py may have inherited non-writable permissions
+        check_compile.append('rm -f tmp.py*')
 
     python_compilation_regress = Utility('python-compilation-regress',
                                          python_all, check_compile)
@@ -2142,6 +2138,10 @@ if env['python']:
     verenv['DISPLAY'] = ''  # Avoid launching X11 in X11 progs
     pp = []
     for p in python_progs:
+        if not env['xgps_deps']:
+            if p in ['xgps', 'xgpsspeed']:
+                # do not have xgps* dependencies, don't test
+                continue
         pp.append("$PYTHON $SRCDIR/%s -V" % p)
     python_versions = Utility('python-versions', python_progs, pp, ENV=verenv)
 
@@ -2157,7 +2157,7 @@ if qt_env:
 
 
 maninstall = []
-for manpage in all_manpages:
+for manpage in all_manpages.keys():
     if not manbuilder and not os.path.exists(manpage):
         continue
     section = manpage.split(".")[1]
@@ -2412,7 +2412,7 @@ time_regress = Utility('time-regress', [test_mktime], [
     '$SRCDIR/tests/test_mktime'
 ])
 
-if not env['python']:
+if not env['python'] or cleaning or helping:
     unpack_regress = None
     misc_regress = None
 else:
@@ -2424,8 +2424,8 @@ else:
             ' $SRCDIR/test/clientlib/*.log', ])
     # Unit-test the bitfield extractor
     misc_regress = Utility('misc-regress', [], [
-        '{} $SRCDIR/test_clienthelpers.py'.format(target_python_path.decode()),
-        '{} $SRCDIR/test_misc.py'.format(target_python_path.decode())
+        '{} $SRCDIR/test_clienthelpers.py'.format(target_python_path),
+        '{} $SRCDIR/test_misc.py'.format(target_python_path)
     ])
 
 
@@ -2464,13 +2464,13 @@ method_regress = UtilityWithHerald(
         '$SRCDIR/tests/test_packet -c >/dev/null', ])
 
 # Test the xgps/xgpsspeed dependencies
-if not env['python'] or not env['xgps']:
-    test_xgps_deps = None
-else:
+if env['xgps_deps']:
     test_xgps_deps = UtilityWithHerald(
         'Testing xgps/xgpsspeed dependencies (since xgps=yes)...',
         'test-xgps-deps', [], [
             '$PYTHON $SRCDIR/test_xgps_deps.py'])
+else:
+    test_xgps_deps = None
 
 # Run a valgrind audit on the daemon  - not in normal tests
 valgrind_audit = Utility('valgrind-audit', [
@@ -2549,31 +2549,28 @@ Utility('shmclean', [], ["ipcrm  -M 0x4e545030;"
 # release tarballs.
 
 # asciidoc documents
-if env.WhereIs('asciidoc'):
-    adocfiles = ['AIVDM',
-                 'client-howto',
-                 'gpsd-time-service-howto',
-                 'NMEA',
-                 'ppp-howto',
-                 'protocol-evolution',
-                 'protocol-transition',
-                 'time-service-intro',
-                 ]
-    asciidocs = ["www/" + stem + ".html" for stem in adocfiles] \
-        + ["www/installation.html"] + ["www/README.html"]
-    for stem in adocfiles:
-        env.Command('www/%s.html' % stem, 'www/%s.adoc' % stem,
-                    ['asciidoc -b html5 -a toc -o www/%s.html www/%s.adoc'
-                     % (stem, stem)])
-    env.Command("www/installation.html",
-                "INSTALL.adoc",
-                ["asciidoc -o www/installation.html INSTALL.adoc"])
-    env.Command("www/README.html",
-                "README.adoc",
-                ["asciidoc -o www/README.html README.adoc"])
+asciidocs = []
+if env.WhereIs('asciidoctor'):
+    adocfiles = (('INSTALL', 'installation'),
+                 ('README', 'README'),
+                 ('www/AIVDM', 'AIVDM'),
+                 ('www/client-howto', 'client-howto'),
+                 ('www/gpsd-time-service-howto', 'gpsd-time-service-howto'),
+                 ('www/NMEA', 'NMEA'),
+                 ('www/ppp-howto', 'ppp-howto'),
+                 ('www/protocol-evolution', 'protocol-evolution'),
+                 ('www/protocol-transition', 'protocol-transition'),
+                 ('www/time-service-intro', 'time-service-intro'),
+                 )
+    for stem, leaf in adocfiles:
+        asciidocs.append('www/%s.html' % leaf)
+        env.Command('www/%s.html' % leaf, '%s.adoc' % stem,
+                    ['asciidoctor -a compat -b html5 -a toc -o www/%s.html '
+                     '%s.adoc' % (leaf, stem)])
 else:
-    announce("Part of the website build requires asciidoc, not installed.")
-    asciidocs = []
+    announce("WARNING: asciidoctor not found.\n"
+             "WARNING: Some documentation and html will not be built.",
+             end=True)
 
 # Non-asciidoc webpages only
 htmlpages = Split('''
@@ -2720,14 +2717,13 @@ udev_install = Utility('udev-install', 'install', [
 
 if env['systemd']:
     env.Requires(udev_install, systemd_install)
-
-if env['systemd'] and not env["sysroot"]:
-    systemctl_daemon_reload = Utility('systemctl-daemon-reload', '',
-                                      ['systemctl daemon-reload || true'])
-    env.AlwaysBuild(systemctl_daemon_reload)
-    env.Precious(systemctl_daemon_reload)
-    env.Requires(systemctl_daemon_reload, systemd_install)
-    env.Requires(udev_install, systemctl_daemon_reload)
+    if not env["sysroot"]:
+        systemctl_daemon_reload = Utility('systemctl-daemon-reload', '',
+                                          ['systemctl daemon-reload || true'])
+        env.AlwaysBuild(systemctl_daemon_reload)
+        env.Precious(systemctl_daemon_reload)
+        env.Requires(systemctl_daemon_reload, systemd_install)
+        env.Requires(udev_install, systemctl_daemon_reload)
 
 
 Utility('udev-uninstall', '', [
@@ -2742,23 +2738,25 @@ Utility('udev-test', '', ['$SRCDIR/gpsd -N -n -F /var/run/gpsd.sock -D 5', ])
 # Dummy target for cleaning misc files
 clean_misc = env.Alias('clean-misc')
 
-# clean generated python, need a new list here because python_progs
-# may be empty because env["python"] is empty
-env.Clean(clean_misc, ["gegps", "gpscat", "gpsfake", "gpsprof", "ubxtool",
-                       "xgps", "xgpsspeed", "zerk"])
+# clean generated sources, which includes:
+#  all generated python
+#  Qt stuff libQgpsmm.prl, Qgpsmm.pc
+#  packaging/rpm/gpsd.spec
+env.Clean(clean_misc, generated_sources)
 
 # Since manpage targets are disabled in clean mode, we cover them here
-env.Clean(clean_misc, all_manpages + other_manpages)
+env.Clean(clean_misc, all_manpages.keys())
+
 # Clean compiled Python
 env.Clean(clean_misc,
           glob.glob('*.pyc') + glob.glob('gps/*.pyc') +
-          glob.glob('gps/*.so') + ['gps/__pycache__'])
+          glob.glob('gps/*.so') + glob.glob('*/__pycache__') +
+          ['__pycache__'])
+
 # Clean coverage and profiling files
 env.Clean(clean_misc, glob.glob('*.gcno') + glob.glob('*.gcda'))
 # Clean Python coverage files
 env.Clean(clean_misc, glob.glob('.coverage*') + ['htmlcov/'])
-# Clean Qt stuff
-env.Clean(clean_misc, ['libQgpsmm.prl', 'Qgpsmm.pc'])
 # Clean shared library files
 env.Clean(clean_misc, glob.glob('*.so') + glob.glob('*.so.*'))
 # Clean old location man page files
@@ -2770,6 +2768,9 @@ env.Clean(clean_misc, ['config.log', 'contrib/ppscheck', 'contrib/clock_test',
 env.Clean(clean_misc, glob.glob('gps-*.egg-info') + ['revision.h'])
 # Clean scons state files
 env.Clean(clean_misc, ['.sconf_temp', '.scons-option-cache', 'config.log'])
+
+# old, and current, versions
+env.Clean(clean_misc, glob.glob('gpsd-*.zip') + glob.glob('gpsd-*tar.?z'))
 
 # Default targets
 
@@ -2807,7 +2808,7 @@ if os.path.exists("gpsd.c") and os.path.exists(".gitignore"):
     if ".gitignore" in distfiles:
         distfiles.remove(".gitignore")
     distfiles += generated_sources
-    distfiles += all_manpages
+    distfiles += all_manpages.keys()
     if "packaging/rpm/gpsd.spec" not in distfiles:
         distfiles.append("packaging/rpm/gpsd.spec")
 
@@ -2819,7 +2820,6 @@ if os.path.exists("gpsd.c") and os.path.exists(".gitignore"):
         '@zip -ry gpsd-${VERSION}.zip $SOURCES -x contrib/ais-samples/\\*',
         '@ls -l gpsd-${VERSION}.zip',
     ])
-    env.Clean(dozip, ["gpsd-${VERSION}.zip", "packaging/rpm/gpsd.spec"])
 
     # How to build a tarball.
     # The command assume the non-portable GNU tar extension
@@ -2835,7 +2835,6 @@ if os.path.exists("gpsd.c") and os.path.exists(".gitignore"):
         ' -cJf gpsd-${VERSION}.tar.xz --exclude contrib/ais-samples $SOURCES',
         '@ls -l gpsd-${VERSION}.tar.gz',
     ])
-    env.Clean(dist, ["gpsd-${VERSION}.tar.gz", "packaging/rpm/gpsd.spec"])
 
     # Make RPM from the specfile in packaging
     Utility('dist-rpm', dist, 'rpmbuild -ta gpsd-${VERSION}.tar.gz')

@@ -58,7 +58,7 @@ and "ERROR") which are not direct responses to commands.</para>
 significant, and you may specify attributes in commands in any
 order. Responses never contain the special JSON value null; instead,
 attributes with empty or undefined values are omitted. The length
-limit for responses and reports is 1536 characters, including trailing
+limit for responses and reports is 1536 characters, including a trailing
 newline; longer responses will be truncated, so client code must be
 prepared for the possibility of invalid JSON fragments.</para>
 
@@ -120,7 +120,7 @@ try to compute the value from the skyview.</para>
 	<entry>device</entry>
 	<entry>No</entry>
 	<entry>string</entry>
-        <entry>Name of originating device.</entry>
+        <entry>Name of the originating device.</entry>
 </row>
 <row>
 	<entry>status</entry>
@@ -132,14 +132,15 @@ try to compute the value from the skyview.</para>
 	<entry>mode</entry>
 	<entry>Yes</entry>
 	<entry>numeric</entry>
-        <entry>NMEA mode: %d, 0=no mode value yet seen, 1=no fix, 2=2D, 3=3D.</entry>
+        <entry>NMEA mode: %d, 0=no mode value yet seen, 1=no fix, 2=2D,
+ 3=3D.</entry>
 </row>
 <row>
 	<entry>time</entry>
 	<entry>No</entry>
 	<entry>string</entry>
         <entry>Time/date stamp in ISO8601 format, UTC. May have a
-	fractional part of up to .001sec precision. May be absent if mode
+	fractional part of up to .001sec precision. May be absent if the mode
         is not 2 or 3.</entry>
 </row>
 <row>
@@ -147,7 +148,7 @@ try to compute the value from the skyview.</para>
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Altitude, height above allipsoid, in meters.  Probably
-WGS84. Present if mode is 3.
+WGS84. Present if the mode is 3.
 </entry>
 </row>
 <row>
@@ -155,7 +156,7 @@ WGS84. Present if mode is 3.
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>MSL Altitude in meters.  The geoid used is rarely specified
-and is often inacurate.  See the comments below on geoidSep.  Present if
+and is often inaccurate.  See the comments below on geoidSep.  Present if
  mode is 3.  altMSL is altHAE - geoidSep.</entry>
 </row>
 <row>
@@ -181,7 +182,7 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>depth</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Depth in meters.  Probably depth below the keel..</entry>
+        <entry>Depth in meters.  Probably depth below the keel...</entry>
 </row>
 <row>
 	<entry>dgpsAge</entry>
@@ -215,7 +216,7 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>numeric</entry>
         <entry>Estimated horizontal Position (2D) Error in meters.
         Also known as Estimated Position Error (epe). Present
-        if mode is 2D or 3D and DOPs can be calculated from the satellite
+        if the mode is 2D or 3D and DOPs can be calculated from the satellite
         view.</entry>
 </row>
 <row>
@@ -237,7 +238,7 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Longitude error estimate in meters. Present
-        if mode is 2D or 3D and DOPs can be calculated from the satellite
+        if the mode is 2D or 3D and DOPs can be calculated from the satellite
         view.</entry>
 </row>
 <row>
@@ -245,7 +246,7 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Latitude error estimate in meters. Present
-        if mode is 2 or 3 and DOPs can be calculated from the satellite
+        if the mode is 2 or 3 and DOPs can be calculated from the satellite
         view.</entry>
 </row>
 <row>
@@ -253,7 +254,7 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Estimated vertical error in meters. Present
-        if mode is 3 and DOPs can be calculated from the satellite
+        if the mode is 3 and DOPs can be calculated from the satellite
         view.</entry>
 </row>
 <row>
@@ -261,10 +262,11 @@ and is often inacurate.  See the comments below on geoidSep.  Present if
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Latitude in degrees: +/- signifies North/South.  Present
-        when mode is 2 or 3.</entry>
+        when the mode is 2 or 3.</entry>
 </row>
 <row>
 	<entry>leapseconds</entry>
+	<entry>No</entry>
 	<entry>integer</entry>
         <entry><para>Current leap seconds.</para></entry>
 </row>
@@ -355,8 +357,9 @@ Positive is West variation.  Negative is East variation.</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Estimated Spherical (3D) Position Error in meters.
-         Present if mode is 3D and DOPs can be calculated from the satellite
-        view. Assumed to be 95% confidence, but many GPS do not specify.
+        Present if the mode is 3D and DOPs can be calculated from the
+        satellite view. Assumed to be 95% confidence, but many GPS do not
+        specify.
         </entry>
 </row>
 <row>
@@ -400,7 +403,7 @@ Positive is West variation.  Negative is East variation.</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>Geoid separation is the difference between the WGS84
-reference elipsoid and the geoid (Mean Sea Level) in meters.  Almost no
+reference ellipsoid and the geoid (Mean Sea Level) in meters.  Almost no
 GNSS receiver specifies how they compute their geoid. gpsd interpolates the
 geoid from a 5x5 degree table of EGM2008 values when the receiver does
 not supply a geoid separation.  The gpsd computed geoidSep is usually
@@ -415,9 +418,9 @@ within one meter of the "true" value, but can be off as much as 12 meters.
 
 <para>When the C client library parses a response of this kind, it
 will assert validity bits in the top-level set member for each
-field actually received; see gps.h for bitmask names and values.</para>
+field received; see gps.h for bitmask names and values.</para>
 
-<para>Invalid or known floating point values will be set to NAN.
+<para>Invalid or unknown floating point values will be set to NAN.
 </para>
 
 <para>Here's an example:</para>
@@ -540,7 +543,7 @@ yet, only the "class" field will reliably be present.</para>
 <para>Many devices compute dilution of precision factors but do not
 include them in their reports.  Many that do report DOPs report only
 HDOP, two-dimensional circular error. <application>gpsd</application>
-always passes through whatever the device actually reports, then
+always passes through whatever the device reports, then
 attempts to fill in other DOPs by calculating the appropriate
 determinants in a covariance matrix based on the satellite view. DOPs
 may be missing if some of these determinants are singular. It can even
@@ -603,21 +606,21 @@ error modeling than the covariance calculation.</para>
 </row>
 <row>
 	<entry>svid</entry>
-	<entry>no</entry>
+	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>The satellite ID within its constellation.  As defined
         by u-blox, not NMEA).</entry>
 </row>
 <row>
 	<entry>sigid</entry>
-	<entry>no</entry>
+	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>The signal ID of this signal.  As defined by u-blox, not
         NMEA. See u-blox doc for details.</entry>
 </row>
 <row>
 	<entry>freqid</entry>
-	<entry>no</entry>
+	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>For GLONASS satellites only: the frequency ID of the signal.
 As defined by u-blox, range 0 to 13.  The freqid is the frequency slot
@@ -625,7 +628,7 @@ plus 7.</entry>
 </row>
 <row>
 	<entry>health</entry>
-	<entry>no</entry>
+	<entry>No</entry>
 	<entry>numeric</entry>
         <entry>The health of this satellite.  0 is unknown, 1 is
 OK, and 2 is unhealthy.</entry>
@@ -709,21 +712,24 @@ corrections).</entry>
 	<entry>major</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Standard deviation of semi-major axis of error ellipse, in meters.</entry>
+        <entry>Standard deviation of semi-major axis of error ellipse,
+        in meters.</entry>
 </row>
 
 <row>
 	<entry>minor</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Standard deviation of semi-minor axis of error ellipse, in meters.</entry>
+        <entry>Standard deviation of semi-minor axis of error ellipse,
+        in meters.</entry>
 </row>
 
 <row>
 	<entry>orient</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Orientation of semi-major axis of error ellipse, in degrees from true north.</entry>
+        <entry>Orientation of semi-major axis of error ellipse, in degrees
+        from true north.</entry>
 </row>
 
 <row>
@@ -930,7 +936,7 @@ field points downward (into the Earth).</entry>
 	<entry>temp</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Temperature at sensor, degrees centigrade.</entry>
+        <entry>Temperature at the sensor, degrees centigrade.</entry>
 </row>
 
 
@@ -1367,7 +1373,7 @@ into this response.</para>
 <listitem>
 
 <para>This message is emitted on each cycle and reports the offset
-between the host's clock time and the GPS time at top of second
+between the host's clock time and the GPS time at top of the second
 (actually, when the first data for the reporting cycle is received).</para>
 
 <para>This message exactly mirrors the PPS message except for two
@@ -1403,7 +1409,7 @@ from the GPS PPS pulse.</para>
 	<entry>device</entry>
 	<entry>Yes</entry>
 	<entry>string</entry>
-        <entry>Name of originating device</entry>
+        <entry>Name of the originating device</entry>
 </row>
 <row>
 	<entry>real_sec</entry>
@@ -1434,7 +1440,7 @@ from the GPS PPS pulse.</para>
 </table>
 
 <para>This message is emitted once per second to watchers of a device
-and is intended to report the time stamps of the in-band report of the
+and is intended to report the timestamps of the in-band report of the
 GPS and seconds as reported by the system clock (which may be
 NTP-corrected) when the first valid timestamp of the reporting cycle
 was seen.</para>
@@ -1477,11 +1483,11 @@ from the GPS PPS pulse.</para>
 
 <para>There are various sources of error in the reported clock times.
 The speed of the serial connection between the GPS and the system adds
-a delay to start of cycle detection.  An even bigger error is added
+a delay to the start of cycle detection.  An even bigger error is added
 by the variable computation time inside the GPS.  Taken together the
 time derived from the start of the GPS cycle can have offsets of
-10 millisecond to 700 milliseconds and combined jjitter and wander of
-100 to 300 millisecond.</para>
+10 milliseconds to 700 milliseconds and combined jitter and wander of
+100 to 300 milliseconds.</para>
 
 <para>A PPS object has the following elements:</para>
 
@@ -1506,7 +1512,7 @@ time derived from the start of the GPS cycle can have offsets of
 	<entry>device</entry>
 	<entry>Yes</entry>
 	<entry>string</entry>
-        <entry>Name of originating device</entry>
+        <entry>Name of the originating device</entry>
 </row>
 <row>
 	<entry>real_sec</entry>
@@ -1542,7 +1548,7 @@ time derived from the start of the GPS cycle can have offsets of
 	<entry>qErr</entry>
 	<entry>No</entry>
 	<entry>numeric</entry>
-        <entry>Quantization error of the PPS, in pico seconds.  Sometimes
+        <entry>Quantization error of the PPS, in picoseconds.  Sometimes
 called the "sawtooth" error.</entry>
 </row>
 </tbody>
@@ -1611,13 +1617,14 @@ short-term stability (such as a rubidium atomic clock).</para>
 	<entry>device</entry>
 	<entry>Yes</entry>
 	<entry>string</entry>
-        <entry>Name of originating device.</entry>
+        <entry>Name of the originating device.</entry>
 </row>
 <row>
 	<entry>running</entry>
 	<entry>Yes</entry>
 	<entry>boolean</entry>
-        <entry>If true, the oscillator is currently running.  Oscillators may require warm-up time at start of day.</entry>
+        <entry>If true, the oscillator is currently running.  Oscillators may
+        require warm-up time at the start of the day.</entry>
 </row>
 <row>
 	<entry>reference</entry>
@@ -1629,13 +1636,16 @@ short-term stability (such as a rubidium atomic clock).</para>
 	<entry>disciplined</entry>
 	<entry>Yes</entry>
 	<entry>boolean</entry>
-        <entry>If true, the GPS PPS signal is sufficiently stable and is being used to discipline the local oscillator.</entry>
+        <entry>If true, the GPS PPS signal is sufficiently stable and is being
+        used to discipline the local oscillator.</entry>
 </row>
 <row>
 	<entry>delta</entry>
 	<entry>Yes</entry>
 	<entry>numeric</entry>
-        <entry>The time difference (in nanoseconds) between the GPS-disciplined oscillator PPS output pulse and the most recent GPS PPS input pulse.</entry>
+        <entry>The time difference (in nanoseconds) between the GPS-disciplined
+        oscillator PPS output pulse and the most recent GPS PPS input
+        pulse.</entry>
 </row>
 </tbody>
 </tgroup>
@@ -1842,7 +1852,8 @@ through.  Here are the maxima to use for computation:</para>
 <row><entry>VTG       </entry><entry>46</entry></row>
 <row><entry>RMC       </entry><entry>77</entry></row>
 <row><entry>GSA       </entry><entry>67</entry></row>
-<row><entry>GSV       </entry><entry>60 (per line, thus 180 for a set of 3)</entry> </row>
+<row><entry>GSV       </entry><entry>60 (per line, thus 180 for a set
+                                     of 3)</entry> </row>
 </tbody>
 </tgroup>
 </table>
@@ -1924,9 +1935,10 @@ will assert the ERR_SET bit in the top-level set member.</para>
 
 <refsect1 id='rtcm2'><title>RTCM2</title>
 
-<para>RTCM-104 is a family of serial protocols used for broadcasting pseudorange
-corrections from differential-GPS reference stations. Many GPS receivers can
-accept these corrections to improve their reporting accuracy.</para>
+<para>RTCM-104 is a family of serial protocols used for broadcasting
+pseudorange corrections from differential-GPS reference stations. Many
+GPS receivers can accept these corrections to improve their reporting
+accuracy.</para>
 
 <para>RTCM-104 comes in two major and incompatible flavors, 2.x and
 3.x.  Each major flavor has minor (compatible) revisions.</para>
@@ -1944,7 +1956,7 @@ Services</ulink> under "Publications".</para>
 <para>Differential-GPS correction stations consist of a GPS reference
 receiver coupled to a low frequency (LF) transmitter.  The GPS
 reference receiver is a survey-grade GPS that does GPS carrier
-tracking and can work out its own position to a few millimeters.  It
+tracking and can work out its position to a few millimeters.  It
 generates range and range-rate corrections and encodes them into
 RTCM104. It ships the RTCM104 to the LF transmitter over serial rs-232
 signal at 100 baud or 200 baud depending on the requirements of the
@@ -1952,7 +1964,7 @@ transmitter.</para>
 
 <para>The LF transmitter broadcasts the approximately 300khz radio
 signal that differential-GPS radio receivers pick up.  Transmitters
-that are meant to have a higher range will need to transmit at the
+that are meant to have a higher range will need to transmit at a
 slower rate.  The higher the data rate the harder it will be for the
 remote radio receiver to receive with a good signal-to-noise ration.
 (Higher data rate signals can't be averaged over as long a time frame,
@@ -1966,7 +1978,7 @@ words. The 24 most significant bits of each word are data and the six
 least significant bits are parity. The parity algorithm used is the
 same ISGPS-2000 as that used on GPS satellite downlinks.  Each RTCM
 2.x message consists of two header words followed by zero or more data
-words, depending upon message type.</para>
+words, depending upon the message type.</para>
 
 <para>An RTCM 3.x message begins with a fixed leader byte 0xD3.  That
 is followed by six bits of version information and 10 bits of payload
@@ -2027,7 +2039,8 @@ attributes are emitted before others.</para>
 <row>
 	<entry>seqnum</entry>
 	<entry>integer</entry>
-        <entry><para>Sequence number. Only 3 bits wide, wraps after 7.</para></entry>
+        <entry><para>Sequence number. Only 3 bits wide, wraps after 7.</para>
+        </entry>
 </row>
 <row>
 	<entry>length</entry>
@@ -2083,7 +2096,8 @@ satellites the beacon can see.</para></listitem>
 
 <varlistentry>
 <term>7</term>
-<listitem><para>radio beacon almanac &mdash; information about this or other beacons.</para></listitem>
+<listitem><para>radio beacon almanac &mdash; information about this or other
+beacons.</para></listitem>
 </varlistentry>
 
 <varlistentry>
@@ -2240,7 +2254,7 @@ Parameters) message:</para>
 decimal places, in Earth Centred Earth Fixed coordinates.
 These are usually referred to the WGS84 reference frame, but may
 be referred to NAD83 in the US (essentially identical to WGS84 for
-all except geodesists), or to some other reference frame in other
+all except geodesists), or some other reference frame in other
 parts of the world.</para>
 
 <para>An invalid reference message is represented by a type 3 header
@@ -2430,7 +2444,7 @@ should be ignored.</para>
 
 <para>Here is the format:</para>
 
-<table frame="all" pgwide="0"><title>Contellation health</title>
+<table frame="all" pgwide="0"><title>Constellation health</title>
 <tgroup cols="3" align="left" colsep="1" rowsep="1">
 <thead>
 <row>
@@ -2523,7 +2537,7 @@ but this cannot be true unless the field is 3 bits wide.
 <para>Here are the payload members of a type 13 (Groumf Tramitter Parameters)
 message:</para>
 
-<table frame="all" pgwide="0"><title>Grund Transmitter Parameters</title>
+<table frame="all" pgwide="0"><title>Ground Transmitter Parameters</title>
 <tgroup cols="3" align="left" colsep="1" rowsep="1">
 <thead>
 <row>
@@ -2780,8 +2794,10 @@ the members of the corresponding JSON object type.</para>
 
 <refsect1 id='see_also'><title>SEE ALSO</title>
 <para>
-<citerefentry><refentrytitle>gpsd</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
-<citerefentry><refentrytitle>libgps</refentrytitle><manvolnum>3</manvolnum></citerefentry>,
+<citerefentry><refentrytitle>gpsd</refentrytitle><manvolnum>8</manvolnum>
+</citerefentry>,
+<citerefentry><refentrytitle>libgps</refentrytitle><manvolnum>3</manvolnum>
+</citerefentry>,
 </para>
 </refsect1>
 

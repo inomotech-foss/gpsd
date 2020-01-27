@@ -116,7 +116,8 @@ SPDX-License-Identifier: BSD-2-clause
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
 #endif
 
-#if !defined(__BYTE_ORDER) || !defined(__BIG_ENDIAN) || !defined(__LITTLE_ENDIAN)
+#if !defined(__BYTE_ORDER) || !defined(__BIG_ENDIAN) || \
+    !defined(__LITTLE_ENDIAN)
 #error endianness macros are not defined
 #endif
 
@@ -160,7 +161,14 @@ SPDX-License-Identifier: BSD-2-clause
 #define MAXRRSMALL     (0x7F   * RRSMALL)  /*  8-bits signed */
 
 #define XYZ_SCALE       0.01    /* meters */
+// extended ECEF scale
+#define EXYZ_SCALE      0.0001          // meters
+// ECEF delta scale
 #define DXYZ_SCALE      0.1     /* meters */
+// extended ECEF delta scale: 1/256 cm
+#define EDXYZ_SCALE     (1.0/256.0)     // centimeter
+// L2 extended ECEF delta scale: 1/16 cm
+#define EDXYZ2_SCALE     (1.0/16.0)     // centimeter
 #define LA_SCALE        (90.0/32767.0)  /* degrees */
 #define LO_SCALE        (180.0/32767.0) /* degrees */
 #define FREQ_SCALE      0.1     /* kHz */
@@ -177,7 +185,7 @@ SPDX-License-Identifier: BSD-2-clause
  * Reminder: Emacs reverse-region is useful...
  */
 
-#ifndef WORDS_BIGENDIAN /* little-endian, like x86 */
+#ifndef WORDS_BIGENDIAN /* little-endian, like x86, amd64 */
 
 struct rtcm2_msg_t {
     struct rtcm2_msghw1 {                       /* header word 1 */
@@ -209,7 +217,6 @@ struct rtcm2_msg_t {
                     unsigned int    scale1:1;
                     unsigned int    _pad:2;
                 } w3;
-
                 struct {                        /* msg 1 word 4 */
                     unsigned int    parity:6;
                     unsigned int    satident2:5;        /* satellite ID */
@@ -219,14 +226,12 @@ struct rtcm2_msg_t {
                     int             rrc1:8;
                     unsigned int    _pad:2;
                 } w4;
-
                 struct {                        /* msg 1 word 5 */
                     unsigned int    parity:6;
                     int             rrc2:8;
                     int             prc2:16;
                     unsigned int    _pad:2;
                 } w5;
-
                 struct {                        /* msg 1 word 6 */
                     unsigned int    parity:6;
                     int             prc3_h:8;
@@ -236,7 +241,6 @@ struct rtcm2_msg_t {
                     unsigned int    iod2:8;
                     unsigned int    _pad:2;
                 } w6;
-
                 struct {                        /* msg 1 word 7 */
                     unsigned int    parity:6;
                     unsigned int    iod3:8;
@@ -270,7 +274,6 @@ struct rtcm2_msg_t {
                 unsigned int        y_l:16;
                 unsigned int        _pad:2;
             } w5;
-
             struct {
                 unsigned int        parity:6;
                 unsigned int        z_l:24;
@@ -422,18 +425,159 @@ struct rtcm2_msg_t {
         // msg 17 - GPS ephmerides.  RTCM 2.1
 
         // msg 18 - RTK uncorrected carrier phases.  RTCM 2.1
+        struct rtcm2_msg18 {
+            unsigned int        parity:6;
+            unsigned int        tom:20;
+            unsigned int        r:2;
+            unsigned int        f:2;
+            unsigned int        _pad:2;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        cp_h:8;
+                unsigned int        clc:5;
+                unsigned int        dq:3;
+                unsigned int        ident:5;
+                unsigned int        g:1;
+                unsigned int        pc:1;
+                unsigned int        m:1;
+                unsigned int        _pad:2;
+                unsigned int        parity1:6;
+                unsigned int        cp_l:24;
+                unsigned int        _pad1:2;
+            } sat[15];
+        } type18;
 
         // msg 19 - RTK uncorrected psuedoranges.  RTCM 2.1
+        struct rtcm2_msg19 {
+            unsigned int        parity:6;
+            unsigned int        tom:20;
+            unsigned int        sm:2;
+            unsigned int        f:2;
+            unsigned int        _pad:2;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        pr_h:8;
+                unsigned int        me:4;
+                unsigned int        dq:4;
+                unsigned int        ident:5;
+                unsigned int        g:1;
+                unsigned int        pc:1;
+                unsigned int        m:1;
+                unsigned int        _pad:2;
+                unsigned int        parity1:6;
+
+                unsigned int        pr_l:24;
+                unsigned int        _pad1:2;
+            } sat[15];
+        } type19;
 
         // msg 20 - RTK carrier phase corrections.  RTCM 2.1
+        struct rtcm2_msg20 {
+            unsigned int        parity:6;
+            unsigned int        tom:20;
+            unsigned int        r:2;
+            unsigned int        f:2;
+            unsigned int        _pad:2;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        iod:8;
+                unsigned int        clc:5;
+                unsigned int        dq:3;
+                unsigned int        ident:5;
+                unsigned int        g:1;
+                unsigned int        pc:1;
+                unsigned int        m:1;
+                unsigned int        _pad:2;
+                unsigned int        parity1:6;
+                unsigned int        cpc:24;
+                unsigned int        _pad1:2;
+            } sat[RTCM2_WORDS_MAX / 2];
+        } type20;
 
         // msg 21 - RTK/high accuracy psuedorange corrections.  RTCM 2.1
+        struct rtcm2_msg21 {
+            unsigned int        parity:6;
+            unsigned int        tom:20;
+            unsigned int        sm:2;
+            unsigned int        f:2;
+            unsigned int        _pad:2;
+        } type21;
 
         // msg 22 - Extended reference station parameters
+        struct rtcm2_msg22 {
+            unsigned int        parity:6;
+            int                 ecef_dz:8;
+            int                 ecef_dy:8;
+            int                 ecef_dx:8;
+            unsigned int        _pad:2;
+            // word 4
+            unsigned int        parity1:6;
+            unsigned int        ah:18;
+            unsigned int        nh:1;
+            unsigned int        ap:1;
+            unsigned int        at:1;
+            unsigned int        gs:1;
+            unsigned int        res:2;
+            unsigned int        _pad1:2;
+            // word 5
+            unsigned int        parity2:6;
+            int                 ecef_dz2:8;
+            int                 ecef_dy2:8;
+            int                 ecef_dx2:8;
+            unsigned int        _pad2:2;
+        } type22;
 
         // msg 23 - Type of Antenna.  RTCM 2.3
+        struct rtcm2_msg23 {
+            struct {
+                unsigned int        parity:6;
+                unsigned char       byte2:8;
+                unsigned char       byte1:8;
+                unsigned char       byte0:8;
+                unsigned int        _pad:2;
+            } words[RTCM2_WORDS_MAX - 2];
+        } type23;
 
         // msg 24 - Reference station ARP..  RTCM 2.3
+        struct rtcm2_msg24 {
+            struct {
+                unsigned int        parity:6;
+                unsigned int        x_h:24;
+                unsigned int        _pad:2;
+            } w3;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        y_h:8;
+                unsigned int        r:2;
+                unsigned int        x_l:14;
+                unsigned int        _pad:2;
+            } w4;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        y_m:24;
+                unsigned int        _pad:2;
+            } w5;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        z_h:16;
+                unsigned int        r:2;
+                unsigned int        y_l:6;
+                unsigned int        _pad:2;
+            } w6;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        ah:1;
+                unsigned int        gs:1;
+                unsigned int        z_l:22;
+                unsigned int        _pad:2;
+            } w7;
+            struct {
+                unsigned int        parity:6;
+                unsigned int        res:6;
+                unsigned int        ah:18;
+                unsigned int        _pad:2;
+            } w8;
+        } type24;
 
         // msg 27 -  Extended almanac of DGPS.
 
@@ -505,10 +649,10 @@ struct rtcm2_msg_t {
         /* msg 59 -  Proprietary messages, for transmission of any
          * required data */
 
-        // msg 60-63 - Multipurpsoe usage
+        // msg 60-63 - Multipurpose usage
 
         /* unknown message */
-        isgps30bits_t   rtcm2_msgunk[RTCM2_WORDS_MAX-2];
+        isgps30bits_t   rtcm2_msgunk[RTCM2_WORDS_MAX - 2];
     } msg_type;
 } __attribute__((__packed__));
 
@@ -606,7 +750,6 @@ struct rtcm2_msg_t {
                 unsigned int        z_h:8;
                 unsigned int        parity:6;
             } w5;
-
             struct {
                 unsigned int        _pad:2;
                 unsigned int        z_l:24;
@@ -752,18 +895,159 @@ struct rtcm2_msg_t {
         // msg 17 - GPS ephmerides.  RTCM 2.1
 
         // msg 18 - RTK uncorrected carrier phases.  RTCM 2.1
+        struct rtcm2_msg18 {
+            unsigned int        _pad:2;
+            unsigned int        f:2;
+            unsigned int        r:2;
+            unsigned int        tom:20;
+            unsigned int        parity:6;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        m:1;
+                unsigned int        pc:1;
+                unsigned int        g:1;
+                unsigned int        dq:3;
+                unsigned int        ident:5;
+                unsigned int        clc:5;
+                unsigned int        cp_h:8;
+                unsigned int        parity:6;
+                unsigned int        _pad:2;
+                unsigned int        cp_l:24;
+                unsigned int        parity:6;
+            } sat[15];
+        } type18;
 
         // msg 19 - RTK uncorrected psuedoranges.  RTCM 2.1
+        struct rtcm2_msg19 {
+            unsigned int        _pad:2;
+            unsigned int        f:2;
+            unsigned int        sm:2;
+            unsigned int        tom:20;
+            unsigned int        parity:6;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        m:1;
+                unsigned int        pc:1;
+                unsigned int        g:1;
+                unsigned int        ident:5;
+                unsigned int        dq:4;
+                unsigned int        me:4;
+                unsigned int        pr_h:8;
+                unsigned int        parity:6;
+
+                unsigned int        _pad1:2;
+                unsigned int        pr_l:24;
+                unsigned int        parity1:6;
+            } sat[15];
+        } type19;
 
         // msg 20 - RTK carrier phase corrections.  RTCM 2.1
+        struct rtcm2_msg20 {
+            unsigned int        _pad:2;
+            unsigned int        f:2;
+            unsigned int        r:2;
+            unsigned int        tom:20;
+            unsigned int        parity:6;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        m:1;
+                unsigned int        pc:1;
+                unsigned int        g:1;
+                unsigned int        dq:3;
+                unsigned int        ident:5;
+                unsigned int        clc:5;
+                unsigned int        iod:8;
+                unsigned int        parity:6;
+                unsigned int        _pad:2;
+                unsigned int        cpc:24;
+                unsigned int        parity:6;
+            } sat[RTCM2_WORDS_MAX / 2];
+        } type20;
 
         // msg 21 - RTK/high accuracy psuedorange corrections.  RTCM 2.1
+        struct rtcm2_msg21 {
+            unsigned int        _pad:2;
+            unsigned int        f:2;
+            unsigned int        sm:2;
+            unsigned int        tom:20;
+            unsigned int        parity:6;
+        } type21;
 
         // msg 22 - Extended reference station parameters
+        struct rtcm2_msg22 {
+            unsigned int        _pad:2;
+            int                 ecef_dx:8;
+            int                 ecef_dy:8;
+            int                 ecef_dz:8;
+            unsigned int        parity:6;
+            // word 4
+            unsigned int        _pad1:2;
+            unsigned int        res:2;
+            unsigned int        gs:1;
+            unsigned int        at:1;
+            unsigned int        ap:1;
+            unsigned int        nh:1;
+            unsigned int        ah:18;
+            unsigned int        parity1:6;
+            // word 5
+            unsigned int        _pad2:2;
+            int                 ecef_dx2:8;
+            int                 ecef_dy2:8;
+            int                 ecef_dz2:8;
+            unsigned int        parity2:6;
+        } type22;
 
         // msg 23 - Type of Antenna.  RTCM 2.3
+        struct rtcm2_msg23 {
+            struct {
+                unsigned int        _pad:2;
+                unsigned char       byte0:8;
+                unsigned char       byte1:8;
+                unsigned char       byte2:8;
+                unsigned int        parity:6;
+            } words[RTCM2_WORDS_MAX - 2];
+        } type23;
 
         // msg 24 - Reference station ARP..  RTCM 2.3
+        struct rtcm2_msg24 {
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        x_h:24;
+                unsigned int        parity:6;
+            } w3;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        x_l:14;
+                unsigned int        r:2;
+                unsigned int        y_h:8;
+                unsigned int        parity:6;
+            } w4;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        y_m:24;
+                unsigned int        parity:6;
+            } w5;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        y_l:6;
+                unsigned int        r:2;
+                unsigned int        z_h:16;
+                unsigned int        parity:6;
+            } w6;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        z_l:22;
+                unsigned int        gs:1;
+                unsigned int        ah:1;
+                unsigned int        parity:6;
+            } w7;
+            struct {
+                unsigned int        _pad:2;
+                unsigned int        y_m:18;
+                unsigned int        res:6;
+                unsigned int        parity:6;
+            } w8;
+        } type24;
 
         // msg 27 -  Extended almanac of DGPS.
 
@@ -851,27 +1135,51 @@ static unsigned int tx_speed[] = { 25, 50, 100, 110, 150, 200, 250, 300 };
 
 #define DIMENSION(a) (unsigned)(sizeof(a)/sizeof(a[0]))
 
-void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
 /* break out the raw bits into the content fields */
+void rtcm2_unpack(struct gps_device_t *session, struct rtcm2_t *tp, char *buf)
 {
     int len;
     unsigned int n, w;
     struct rtcm2_msg_t *msg = (struct rtcm2_msg_t *)buf;
+    bool unknown = true;              // we don't know how to decode
+    const char *msg_name = NULL;  // no decode, but maybe we know the name
 
-    tp->type = msg->w1.msgtype;
-    tp->length = msg->w2.frmlen;
-    tp->zcount = msg->w2.zcnt * ZCOUNT_SCALE;
-    tp->refstaid = msg->w1.refstaid;
-    tp->seqnum = msg->w2.sqnum;
+    tp->type = msg->w1.msgtype;         // 1 to 64.  Zero means 64
+    tp->refstaid = msg->w1.refstaid;    // 0 to 1023
+    tp->length = msg->w2.frmlen;        // 0 to 31
+    tp->zcount = msg->w2.zcnt * ZCOUNT_SCALE;  // 0 to 3599.4 sec
+    tp->seqnum = msg->w2.sqnum;         // 0 to 7
     tp->stathlth = msg->w2.stathlth;
 
+    // clear rtk struct
+    memset(&tp->rtk, 0, sizeof(tp->rtk));
+
+    // clear ref_sta struct
+    memset(&tp->ref_sta, 0, sizeof(tp->ref_sta));
+    tp->ref_sta.x = NAN;
+    tp->ref_sta.y = NAN;
+    tp->ref_sta.z = NAN;
+    tp->ref_sta.dx = NAN;
+    tp->ref_sta.dy = NAN;
+    tp->ref_sta.dz = NAN;
+    tp->ref_sta.ah = NAN;
+    tp->ref_sta.dx2 = NAN;
+    tp->ref_sta.dy2 = NAN;
+    tp->ref_sta.dz2 = NAN;
+
+    /* FIXME: test tp->length + 2, against session->lexer.isgps.buflen, */
+
+    // len does not include 2 byte header
     len = (int)tp->length;
     n = 0;
     switch (tp->type) {
     case 1:
+        // FALLTHROUGH
     case 9:
     {
         struct gps_correction_t *m = &msg->msg_type.type1.corrections[0];
+        msg_name = "Differential GPS Corrections";
+        unknown = false;
 
         while (len >= 0) {
             if (len >= 2) {
@@ -911,18 +1219,28 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
         tp->gps_ranges.nentries = n;
     }
         break;
-    case 3:
-    {
-        struct rtcm2_msg3 *m = &msg->msg_type.type3;
 
-        if ((tp->ecef.valid = len >= 4)) {
-            tp->ecef.x = ((m->w3.x_h << 8) | (m->w4.x_l)) * XYZ_SCALE;
-            tp->ecef.y = ((m->w4.y_h << 16) | (m->w5.y_l)) * XYZ_SCALE;
-            tp->ecef.z = ((m->w5.z_h << 24) | (m->w6.z_l)) * XYZ_SCALE;
-        }
-    }
+    case 2:
+        msg_name = "Delta Differential GPS Corrections";
         break;
+
+    case 3:
+        {
+            struct rtcm2_msg3 *m = &msg->msg_type.type3;
+            msg_name = "Reference Station Parameters (GPS)";
+            unknown = false;
+
+            if ((tp->ref_sta.valid = len >= 4)) {
+                tp->ref_sta.x = ((m->w3.x_h << 8) | (m->w4.x_l)) * XYZ_SCALE;
+                tp->ref_sta.y = ((m->w4.y_h << 16) | (m->w5.y_l)) * XYZ_SCALE;
+                tp->ref_sta.z = ((m->w5.z_h << 24) | (m->w6.z_l)) * XYZ_SCALE;
+            }
+        }
+        break;
+
     case 4:
+        msg_name = "Reference Station Datum";
+        unknown = false;
         if ((tp->reference.valid = len >= 2)) {
             struct rtcm2_msg4 *m = &msg->msg_type.type4;
 
@@ -957,7 +1275,10 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
                 tp->reference.sense = SENSE_INVALID;
         }
         break;
+
     case 5:
+        msg_name = "Constellation health (GPS)";
+        unknown = false;
         for (n = 0; n < (unsigned)len; n++) {
             struct consat_t *csp = &tp->conhealth.sat[n];
             struct b_health_t *m = &msg->msg_type.type5.health[n];
@@ -973,7 +1294,15 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
         }
         tp->conhealth.nentries = n;
         break;
+
+    case 6:
+        msg_name = "Null frame (GPS)";
+        unknown = false;
+        break;
+
     case 7:
+        msg_name = "Beacon Almanac (GPS)";
+        unknown = false;
         for (w = 0; w < (unsigned)len; w++) {
             struct station_t *np = &tp->almanac.station[n];
             struct b_station_t *mp = &msg->msg_type.type7.almanac[w];
@@ -991,7 +1320,28 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
         }
         tp->almanac.nentries = (unsigned)(len / 3);
         break;
+
+    case 8:
+        msg_name = "Pseudolite Almanac";
+        break;
+
+    // case 9 is handled above with case 1
+
+    case 10:
+        msg_name = "P-Code Differential Corrections";
+        break;
+
+    case 11:
+        msg_name = "C/A Code L2 Corrections";
+        break;
+
+    case 12:
+        msg_name = "Pseudolite Station Parameters";
+        break;
+
     case 13:
+        msg_name = "Ground Transmitter Parameters";
+        unknown = false;
         tp->xmitter.status = (bool)msg->msg_type.type13.w1.status;
         tp->xmitter.rangeflag = (bool)msg->msg_type.type13.w1.rangeflag;
         tp->xmitter.lat = msg->msg_type.type13.w1.lat * LATLON_SCALE;
@@ -1000,12 +1350,22 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
         if (tp->xmitter.range == 0)
             tp->xmitter.range = 1024;
         break;
+
     case 14:
+        msg_name = "GPS Time Of Week";
+        unknown = false;
         tp->gpstime.week = msg->msg_type.type14.w1.week;
         tp->gpstime.hour = msg->msg_type.type14.w1.hour;
         tp->gpstime.leapsecs = msg->msg_type.type14.w1.leapsecs;
         break;
+
+    case 15:
+        msg_name = "Ionospheric Delay Message";
+        break;
+
     case 16:
+        msg_name = "Special Message (GPS)";
+        unknown = false;
         for (w = 0; w < (unsigned)len; w++) {
             if (!msg->msg_type.type16.txt[w].byte1) {
                 break;
@@ -1023,9 +1383,228 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
         tp->message[n] = '\0';
         break;
 
+    case 17:
+        msg_name = "GPS Ephemeris";
+        break;
+
+    case 18:
+        msg_name = "RTK Uncorrected Carrier-phase";
+        unknown = false;
+        // WIP: partial decode
+        if (1 > len) {
+            // too short
+            break;
+        }
+        {
+            struct rtcm2_msg18 *m = &msg->msg_type.type18;
+            tp->rtk.nentries = (len - 1) / 2;
+            unsigned i;
+
+            tp->rtk.tom = m->tom;
+            tp->rtk.f = m->f;
+            for (i = 0; i < tp->rtk.nentries; i++) {
+                tp->rtk.sat[i].m = m->sat[i].m;
+                tp->rtk.sat[i].pc = m->sat[i].pc;
+                tp->rtk.sat[i].g = m->sat[i].g;
+                tp->rtk.sat[i].ident = m->sat[i].ident;
+                tp->rtk.sat[i].dq = m->sat[i].dq;
+                tp->rtk.sat[i].carrier_phase = m->sat[i].cp_l;
+                tp->rtk.sat[i].carrier_phase |= m->sat[i].cp_h << 24;
+                tp->rtk.sat[i].clc = m->sat[i].clc;
+            }
+        }
+        break;
+
+    case 19:
+        msg_name = "RTK Corrected Pseudorange";
+        // WIP: partial decode
+        if (1 > len) {
+            // too short
+            break;
+        }
+        {
+            struct rtcm2_msg19 *m = &msg->msg_type.type19;
+            unsigned i;
+            tp->rtk.tom = m->tom;
+            tp->rtk.f = m->f;
+            tp->rtk.sm = m->sm;
+            tp->rtk.nentries = (len - 1) / 2;
+
+            for (i = 0; i < tp->rtk.nentries; i++) {
+                tp->rtk.sat[i].m = m->sat[i].m;
+                tp->rtk.sat[i].pc = m->sat[i].pc;
+                tp->rtk.sat[i].g = m->sat[i].g;
+                tp->rtk.sat[i].ident = m->sat[i].ident;
+                tp->rtk.sat[i].dq = m->sat[i].dq;
+                tp->rtk.sat[i].pseudorange = m->sat[i].pr_l;
+                tp->rtk.sat[i].pseudorange |= m->sat[i].pr_h << 24;
+            }
+        }
+        break;
+
+    case 20:
+        msg_name = "RTK Carrier Phase Corrections";
+        // WIP: partial decode
+        if (3 > len) {
+            // too short
+            break;
+        }
+        {
+            struct rtcm2_msg20 *m = &msg->msg_type.type20;
+            tp->rtk.tom = m->tom;
+            tp->rtk.f = m->f;
+        }
+        break;
+
+    case 21:
+        msg_name = "High-Accuracy Pseudorange Corrections";
+        // WIP: partial decode
+        if (3 > len) {
+            // too short
+            break;
+        }
+        {
+            struct rtcm2_msg21 *m = &msg->msg_type.type21;
+            tp->rtk.tom = m->tom;
+            tp->rtk.f = m->f;
+            tp->rtk.sm = m->sm;
+        }
+        break;
+
+    case 22:
+        // Extends types 3 and 34
+        msg_name = "Extended Reference Station Parameters";
+        unknown = false;
+        // WIP: partial decode
+        if (3 > len) {
+            // too short
+            break;
+        }
+        // May be length 3, 4 or 5!
+        {
+            struct rtcm2_msg22 *m = &msg->msg_type.type22;
+
+            tp->ref_sta.dx = m->ecef_dx * EDXYZ_SCALE;
+            tp->ref_sta.dy = m->ecef_dy * EDXYZ_SCALE;
+            tp->ref_sta.dz = m->ecef_dz * EDXYZ_SCALE;
+            if (3 < len) {
+                // word 4 present
+                tp->ref_sta.gs = m->gs;
+                if (0 == m->nh) {
+                    tp->ref_sta.ah = m->ah * EDXYZ_SCALE;
+                }
+            }
+            if (4 < len) {
+                // word 5 present
+                tp->ref_sta.dx2 = m->ecef_dx2 * EDXYZ2_SCALE;
+                tp->ref_sta.dy2 = m->ecef_dy2 * EDXYZ2_SCALE;
+                tp->ref_sta.dz2 = m->ecef_dz2 * EDXYZ2_SCALE;
+            }
+        }
+        break;
+
+    case 23:
+        msg_name = "Antenna Type Definition";
+        // WIP
+        unknown = false;
+        if (1 > len) {
+            // too short
+            break;
+        }
+        {
+            unsigned sf;
+            unsigned nad = 0, nas = 0;
+            unsigned char tbuf[RTCM2_WORDS_MAX * 3];
+            struct rtcm2_msg23 *m = &msg->msg_type.type23;
+            int i = 0, j = 0;
+
+            tp->ref_sta.ar = (m->words[0].byte0 >> 6) & 1;
+            sf = (m->words[0].byte0 >> 5) & 1;
+            // nad is 0 to 31
+            nad = m->words[0].byte0 & 0x1f;
+
+            // crazy packing...  move to simple array first
+            for (i = 0; i < len; i++) {
+                tbuf[j++] = m->words[i].byte0;
+                tbuf[j++] = m->words[i].byte1;
+                tbuf[j++] = m->words[i].byte2;
+            }
+#if __UNUSED__
+            // debug code
+            {
+                char tmpbuf[100];
+                GPSD_LOG(LOG_SHOUT, &session->context->errout,
+                         "RTCM2: len %d nad %d tbuf %s\n",
+                         len, nad,
+                         gpsd_hexdump(tmpbuf, sizeof(tmpbuf),
+                                      (char *)tbuf, len * 3));
+            }
+#endif // __UNUSED__
+            // skip first byte (AR, SF, NAD)
+            memcpy(tp->ref_sta.ant_desc, &tbuf[1], nad);
+            tp->ref_sta.ant_desc[nad] = '\0';
+
+            tp->ref_sta.setup_id = tbuf[nad + 1];
+
+            // get serial number
+            if (1 == sf) {
+                // nas is 0 to 31. just after last ant desc byte
+                nas = tbuf[nad + 2] & 0x1f;
+                memcpy(tp->ref_sta.ant_serial, &tbuf[nad + 3], nas);
+            }
+            tp->ref_sta.ant_serial[nas] = '\0';
+        }
+        break;
+
+    case 24:
+        msg_name = "Antenna Reference Point (arp)";
+        // WIP
+        unknown = false;
+        {
+            struct rtcm2_msg24 *m = &msg->msg_type.type24;
+            // try to prevent int overflow
+            long long temp;
+
+            temp = ((long long)m->w3.x_h << 8) | (m->w4.x_l);
+            tp->ref_sta.x = temp * EXYZ_SCALE;
+            temp = ((long long)m->w4.y_h << 32) |
+                    (m->w5.y_m << 6) |
+                    (m->w6.y_l);
+            tp->ref_sta.y = temp * EXYZ_SCALE;
+            temp = ((long long)m->w6.z_h << 22) | (m->w7.z_l);
+            tp->ref_sta.z = temp * EXYZ_SCALE;
+            if (0 == m->w7.ah) {
+                tp->ref_sta.ah = m->w8.ah * EDXYZ_SCALE;
+            }
+        }
+        break;
+
+    case 25:
+        // FALLTHROUGH
+    case 26:
+        msg_name = "Undefined";
+        break;
+
+    case 27:
+        msg_name = "Radio Beacon Almanac";
+        break;
+
+    case 28:
+        // FALLTHROUGH
+    case 29:
+        // FALLTHROUGH
+    case 30:
+        msg_name = "Undefined";
+        break;
+
     case 31:
+        // FALLTHROUGH
+    case 34:
     {
+        // 32 and 34 are the same, except 31 is all sats, 34 is some sats
         struct glonass_correction_t *m = &msg->msg_type.type31.corrections[0];
+        msg_name = "Differential GLONASS corrections";
+        unknown = false;
 
         while (len >= 0) {
             if (len >= 2) {
@@ -1069,11 +1648,64 @@ void rtcm2_unpack(struct rtcm2_t *tp, char *buf)
     }
         break;
 
+    case 32:
+        msg_name = "Reference Station Parameters (GLONASS)";
+        break;
+
+    case 33:
+        msg_name = "Constellation health (GLONASS)";
+        break;
+
+    // case 34 is above with 31
+
+    case 35:
+        msg_name = "Beacon Almanac (GLONASS)";
+        break;
+
+    case 36:
+        msg_name = "Special Message (GLONASS)";
+        break;
+
+    case 37:
+        msg_name = "GNSS System Time Offset";
+        break;
+
+    case 59:
+        msg_name = "Proprietary Message";
+        break;
+
     default:
-        memcpy(tp->words, msg->msg_type.rtcm2_msgunk,
-               (RTCM2_WORDS_MAX - 2) * sizeof(isgps30bits_t));
+        msg_name = "Huh?";
         break;
     }
+
+    if (unknown) {
+        memcpy(tp->words, msg->msg_type.rtcm2_msgunk,
+               tp->length * sizeof(isgps30bits_t));
+        if (NULL == msg_name) {
+	    GPSD_LOG(LOG_PROG, &session->context->errout,
+		     "RTCM2: type %d (unknown), length %d\n",
+		     tp->type, tp->length + 2);
+        } else {
+	    GPSD_LOG(LOG_PROG, &session->context->errout,
+		     "RTCM2: type %d (%s), length %d\n",
+                     tp->type, msg_name,tp->length + 2);
+        }
+    } else {
+        GPSD_LOG(LOG_PROG, &session->context->errout,
+                 "RTCM2: type %d (%s), length %d\n",
+                 tp->type, msg_name, tp->length + 2);
+    }
+    GPSD_LOG(LOG_RAW, &session->context->errout,
+             "RTCM 2: type %d (%s) length %d words "
+             "from %zd bytes: %s\n",
+             tp->type,
+             msg_name,
+             tp->length + 2,
+             session->lexer.isgps.buflen,
+             gpsd_hexdump(session->msgbuf, sizeof(session->msgbuf),
+                             (char *)session->lexer.isgps.buf,
+                             (tp->length + 2) * sizeof(isgps30bits_t)));
 }
 
 static bool preamble_match(isgps30bits_t * w)

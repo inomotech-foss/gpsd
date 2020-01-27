@@ -20,6 +20,7 @@ PERMISSIONS
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>       // for qsort()
 #include <string.h>       /* for strcat(), strlcpy() */
 
 #include "gpsd.h"
@@ -113,7 +114,7 @@ void json_version_dump( char *reply, size_t replylen)
 		   "{\"class\":\"VERSION\",\"release\":\"%s\",\"rev\":\"%s\","
                    "\"proto_major\":%d,\"proto_minor\":%d}\r\n",
 		   VERSION, REVISION,
-		   GPSD_PROTO_MAJOR_VERSION, GPSD_PROTO_MINOR_VERSION);
+		   GPSD_PROTO_VERSION_MAJOR, GPSD_PROTO_VERSION_MINOR);
 }
 
 void json_tpv_dump(const struct gps_device_t *session,
@@ -888,6 +889,7 @@ void json_raw_dump(const struct gps_data_t *gpsdata,
 		    (void)strlcat(reply, ",", replylen);
 		str_appendf(reply, replylen, "\"l2c\":%f",
 			    gpsdata->raw.meas[i].l2c);
+                // this annoys clang, keep it for future use
 		comma = true;
 	    }
         }
@@ -901,6 +903,15 @@ void json_raw_dump(const struct gps_data_t *gpsdata,
 }
 
 #if defined(RTCM104V2_ENABLE)
+
+/* compare two struct rtk_sat_t */
+static int rtk_sat_cmp(const void *a, const void *b)
+{
+    const struct rtk_sat_t *A = (const struct rtk_sat_t*)a;
+    const struct rtk_sat_t *B = (const struct rtk_sat_t*)b;
+    return A->ident - B->ident;
+}
+
 void json_rtcm2_dump(const struct rtcm2_t *rtcm,
 		     const char *device,
 		     char buf[], size_t buflen)
@@ -908,6 +919,11 @@ void json_rtcm2_dump(const struct rtcm2_t *rtcm,
 {
     char buf1[JSON_VAL_MAX * 2 + 1];
     unsigned int n;
+
+    if (NULL == rtcm) {
+        // shut up clang about possible NULL pointer
+        return;
+    }
 
     (void)snprintf(buf, buflen, "{\"class\":\"RTCM2\",");
     if (device != NULL && device[0] != '\0')
@@ -936,10 +952,10 @@ void json_rtcm2_dump(const struct rtcm2_t *rtcm,
 	break;
 
     case 3:
-	if (rtcm->ecef.valid)
+	if (rtcm->ref_sta.valid)
 	    str_appendf(buf, buflen,
 			   "\"x\":%.2f,\"y\":%.2f,\"z\":%.2f,",
-			   rtcm->ecef.x, rtcm->ecef.y, rtcm->ecef.z);
+			   rtcm->ref_sta.x, rtcm->ref_sta.y, rtcm->ref_sta.z);
 	break;
 
     case 4:
@@ -948,7 +964,7 @@ void json_rtcm2_dump(const struct rtcm2_t *rtcm,
 	     * Beware! Needs to stay synchronized with a JSON
 	     * enumeration map in the parser. This interpretation of
 	     * NAVSYSTEM_GALILEO is assumed from RTCM3, it's not
-	     * actually documented in RTCM 2.1.
+	     * actually documented in RTCM 2.1 or 2.2.
 	     */
 	    static char *navsysnames[] = { "GPS", "GLONASS", "GALILEO" };
 	    str_appendf(buf, buflen,
@@ -1032,6 +1048,120 @@ void json_rtcm2_dump(const struct rtcm2_t *rtcm,
 							    rtcm->message));
 	break;
 
+    case 18:
+        str_appendf(buf, buflen, "\"tom\":%u,\"f\":%u,",
+                    rtcm->rtk.tom, rtcm->rtk.f);
+	(void)strlcat(buf, "\"satellites\":[", buflen);
+        // sorted lists are nicer
+        qsort((void *)rtcm->rtk.sat, rtcm->rtk.nentries,
+              sizeof(rtcm->rtk.sat[0]), rtk_sat_cmp);
+	for (n = 0; n < rtcm->rtk.nentries; n++) {
+	    str_appendf(buf, buflen,
+			"{\"ident\":%u,\"m\":%u,\"pc\":%u,\"g\":%u,\"dq\":%u,"
+                        "\"clc\":%u,\"carrierphase\":%u},",
+	                   rtcm->rtk.sat[n].ident,
+	                   rtcm->rtk.sat[n].m,
+	                   rtcm->rtk.sat[n].pc,
+	                   rtcm->rtk.sat[n].g,
+	                   rtcm->rtk.sat[n].dq,
+	                   rtcm->rtk.sat[n].clc,
+	                   rtcm->rtk.sat[n].carrier_phase);
+	}
+	str_rstrip_char(buf, ',');
+	(void)strlcat(buf, "]", buflen);
+        break;
+
+    case 19:
+        str_appendf(buf, buflen, "\"tom\":%u,\"f\":%u,\"sm\":%u,",
+                    rtcm->rtk.tom, rtcm->rtk.f, rtcm->rtk.sm);
+	(void)strlcat(buf, "\"satellites\":[", buflen);
+        // sorted lists are nicer
+        qsort((void *)rtcm->rtk.sat, rtcm->rtk.nentries,
+              sizeof(rtcm->rtk.sat[0]), rtk_sat_cmp);
+	for (n = 0; n < rtcm->rtk.nentries; n++) {
+	    str_appendf(buf, buflen,
+			"{\"ident\":%u,\"m\":%u,\"pc\":%u,\"g\":%u,\"dq\":%u,"
+                        "\"me\":%u,\"pseudorange\":%u},",
+	                   rtcm->rtk.sat[n].ident,
+	                   rtcm->rtk.sat[n].m,
+	                   rtcm->rtk.sat[n].pc,
+	                   rtcm->rtk.sat[n].g,
+	                   rtcm->rtk.sat[n].dq,
+	                   rtcm->rtk.sat[n].me,
+	                   rtcm->rtk.sat[n].pseudorange);
+	}
+	str_rstrip_char(buf, ',');
+	(void)strlcat(buf, "]", buflen);
+        break;
+
+    case 20:
+        str_appendf(buf, buflen, "\"tom\":%u,\"f\":%u,",
+                    rtcm->rtk.tom, rtcm->rtk.f);
+        break;
+
+    case 21:
+        str_appendf(buf, buflen, "\"tom\":%u,\"f\":%u,\"sm\":%u,",
+                    rtcm->rtk.tom, rtcm->rtk.f, rtcm->rtk.sm);
+        break;
+
+    case 22:
+        str_appendf(buf, buflen, "\"gs\":%u,", rtcm->ref_sta.gs);
+
+        if (0 != isfinite(rtcm->ref_sta.dx) &&
+            0 != isfinite(rtcm->ref_sta.dy) &&
+            0 != isfinite(rtcm->ref_sta.dz)) {
+            // L1 ECEF deltas
+	    str_appendf(buf, buflen,
+                        "\"dx\":%.6f,\"dy\":%.6f,\"dz\":%.6f,",
+                        rtcm->ref_sta.dx, rtcm->ref_sta.dy,
+                        rtcm->ref_sta.dz);
+        }
+        if (0 != isfinite(rtcm->ref_sta.ah)) {
+            // Antenna Height above reference point, cm
+            str_appendf(buf, buflen, "\"ah\":%.6f,", rtcm->ref_sta.ah);
+        }
+        if (0 != isfinite(rtcm->ref_sta.dx2) &&
+            0 != isfinite(rtcm->ref_sta.dy2) &&
+            0 != isfinite(rtcm->ref_sta.dz2)) {
+            // L2 ECEF deltas
+	    str_appendf(buf, buflen,
+			   "\"dx2\":%.6f,\"dy2\":%.6f,\"dz2\":%.6f,",
+			   rtcm->ref_sta.dx, rtcm->ref_sta.dy2,
+                           rtcm->ref_sta.dz);
+        }
+	break;
+
+    case 23:
+        str_appendf(buf, buflen, "\"ar\":\"%d\",\"sid\":\"%u\",",
+                    rtcm->ref_sta.ar,
+                    rtcm->ref_sta.setup_id);
+        if ('\0' != rtcm->ref_sta.ant_desc[0]) {
+            str_appendf(buf, buflen, "\"ad\":\"%.32s\",",
+                        rtcm->ref_sta.ant_desc);
+        }
+        if ('\0' != rtcm->ref_sta.ant_serial[0]) {
+            str_appendf(buf, buflen, "\"as\":\"%.32s\",",
+                        rtcm->ref_sta.ant_serial);
+        }
+        break;
+
+    case 24:
+        str_appendf(buf, buflen, "\"gs\":%u,", rtcm->ref_sta.gs);
+
+        if (0 != isfinite(rtcm->ref_sta.x) &&
+            0 != isfinite(rtcm->ref_sta.y) &&
+            0 != isfinite(rtcm->ref_sta.z)) {
+            // L1 ECEF
+	    str_appendf(buf, buflen,
+                        "\"x\":%.4f,\"y\":%.4f,\"z\":%.4f,",
+                        rtcm->ref_sta.x, rtcm->ref_sta.y, rtcm->ref_sta.z);
+        }
+        if (0 != isfinite(rtcm->ref_sta.ah)) {
+            // Antenna Height above reference point, cm
+            str_appendf(buf, buflen, "\"ah\":%.4f,", rtcm->ref_sta.ah);
+        }
+        break;
+
     case 31:
 	(void)strlcat(buf, "\"satellites\":[", buflen);
 	for (n = 0; n < rtcm->glonass_ranges.nentries; n++) {
@@ -1095,8 +1225,8 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 	for (i = 0; i < rtcm->rtcmtypes.rtcm3_1001.header.satcount; i++) {
 #define R1001 rtcm->rtcmtypes.rtcm3_1001.rtk_data[i]
 	    str_appendf(buf, buflen,
-			   "{\"ident\":%u,\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u},",
+			   "{\"ident\":%u,\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u},",
 			   R1001.ident,
 			   CODE(R1001.L1.indicator),
 			   R1001.L1.pseudorange,
@@ -1121,8 +1251,8 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 	for (i = 0; i < rtcm->rtcmtypes.rtcm3_1002.header.satcount; i++) {
 #define R1002 rtcm->rtcmtypes.rtcm3_1002.rtk_data[i]
 	    str_appendf(buf, buflen,
-			   "{\"ident\":%u,\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u,\"amb\":%u,"
+			   "{\"ident\":%u,\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u,\"amb\":%u,"
 			   "\"CNR\":%.2f},",
 			   R1002.ident,
 			   CODE(R1002.L1.indicator),
@@ -1151,10 +1281,10 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 #define R1003 rtcm->rtcmtypes.rtcm3_1003.rtk_data[i]
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,"
-			   "\"L1\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u},"
-			   "\"L2\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u},"
+			   "\"L1\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u},"
+			   "\"L2\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u},"
 			   "},",
 			   R1003.ident,
 			   CODE(R1003.L1.indicator),
@@ -1185,11 +1315,11 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 #define R1004 rtcm->rtcmtypes.rtcm3_1004.rtk_data[i]
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,"
-			   "\"L1\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u,"
+			   "\"L1\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u,"
 			   "\"amb\":%u,\"CNR\":%.2f},"
-			   "\"L2\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u,"
+			   "\"L2\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u,"
 			   "\"CNR\":%.2f}"
 			   "},",
 			   R1004.ident,
@@ -1289,7 +1419,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 #define R1009 rtcm->rtcmtypes.rtcm3_1009.rtk_data[i]
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,\"ind\":%u,\"channel\":%u,"
-			   "\"prange\":%8.2f,\"delta\":%6.4f,\"lockt\":%u},",
+			   "\"prange\":%.2f,\"delta\":%.4f,\"lockt\":%u},",
 			   R1009.ident,
 			   CODE(R1009.L1.indicator),
 			   R1009.L1.channel,
@@ -1316,7 +1446,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 #define R1010 rtcm->rtcmtypes.rtcm3_1010.rtk_data[i]
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,\"ind\":%u,\"channel\":%u,"
-			   "\"prange\":%8.2f,\"delta\":%6.4f,\"lockt\":%u,"
+			   "\"prange\":%.2f,\"delta\":%.4f,\"lockt\":%u,"
 			   "\"amb\":%u,\"CNR\":%.2f},",
 			   R1010.ident,
 			   CODE(R1010.L1.indicator),
@@ -1347,9 +1477,9 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,\"channel\":%u,"
 			   "\"L1\":{\"ind\":%u,"
-			   "\"prange\":%8.2f,\"delta\":%6.4f,\"lockt\":%u},"
-			   "\"L2:{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u}"
+			   "\"prange\":%.2f,\"delta\":%.4f,\"lockt\":%u},"
+			   "\"L2:{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u}"
 			   "}",
 			   R1011.ident,R1011.L1.channel,
 			   CODE(R1011.L1.indicator),
@@ -1380,12 +1510,12 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 #define R1012 rtcm->rtcmtypes.rtcm3_1012.rtk_data[i]
 	    str_appendf(buf, buflen,
 			   "{\"ident\":%u,\"channel\":%u,"
-			   "\"L1\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u,\"amb\":%u,"
+			   "\"L1\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u,\"amb\":%u,"
 			   "\"CNR\":%.2f},"
-			   "\"L2\":{\"ind\":%u,\"prange\":%8.2f,"
-			   "\"delta\":%6.4f,\"lockt\":%u,"
-			   "\"CNR\":%.2f},"
+			   "\"L2\":{\"ind\":%u,\"prange\":%.2f,"
+			   "\"delta\":%.4f,\"lockt\":%u,"
+			   "\"CNR\":%.2f}"
 			   "},",
 			   R1012.ident,
 			   R1012.L1.channel,
