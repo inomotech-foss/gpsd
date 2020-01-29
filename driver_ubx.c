@@ -1183,13 +1183,13 @@ ubx_msg_log_batch(struct gps_device_t *session, unsigned char *buf,
             session->newdata.climb,
             session->newdata.mode,
             session->gpsdata.status,
-            session->gpsdata.satellites_used);        
+            session->gpsdata.satellites_used);
     }
 
     if(content_valid & UBX_LOG_BATCH_CONTENTVALID_EXTRA_ODO){
         GPSD_LOG(LOG_WARN, &session->context->errout,
             "LOG-BATCH ExtraODO: Odometry data present in frame but parsing "
-            "not yet supported by GPSD ubx driver\n");  
+            "not yet supported by GPSD ubx driver\n");
     }
 
      return mask;
@@ -2181,7 +2181,7 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         /* UBX-LOG-BATCH used in super e-Mode UBX8 protocol to allow stand-alone operation */
         GPSD_LOG(LOG_PROG, &session->context->errout, "UBX-LOG-BATCH\n");
         mask = ubx_msg_log_batch(session, &buf[UBX_PREFIX_LEN], data_len);
-        break;    
+        break;
 
     default:
         GPSD_LOG(LOG_WARN, &session->context->errout,
