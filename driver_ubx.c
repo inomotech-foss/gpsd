@@ -90,6 +90,9 @@ static void ubx_msg_sbas(struct gps_device_t *session, unsigned char *buf,
                          size_t data_len);
 static gps_mask_t ubx_msg_tim_tp(struct gps_device_t *session,
                                  unsigned char *buf, size_t data_len);
+static gps_mask_t ubx_msg_log_batch(struct gps_device_t *session,
+                                      unsigned char *buf, size_t data_len);
+
 #ifdef RECONFIGURE_ENABLE
 static void ubx_mode(struct gps_device_t *session, int mode);
 #endif /* RECONFIGURE_ENABLE */
@@ -1043,6 +1046,156 @@ ubx_msg_nav_timegps(struct gps_device_t *session, unsigned char *buf,
 }
 
 /**
+ * UBX-LOG-BATCH entry only part of UBX8 protocol
+ * Used for GPS standalone operation (internal batch retrieval)
+ */
+static gps_mask_t
+ubx_msg_log_batch(struct gps_device_t *session, unsigned char *buf,
+                    size_t data_len)
+{
+     uint8_t valid;
+     uint8_t content_valid;
+     uint8_t flags;
+     uint8_t fixType;
+     struct tm unpacked_date;
+     int *status = &session->gpsdata.status;
+     int *mode = &session->newdata.mode;
+     gps_mask_t mask = 0;
+     char ts_buf[TIMESPEC_LEN];
+
+    /* u-blox 8 100 bytes payload */
+    if (100 > data_len) {
+        GPSD_LOG(LOG_WARN, &session->context->errout,
+                 "Runt LOG-BATCH message, payload len %zd", data_len);
+        return 0;
+    }
+
+     session->driver.ubx.iTOW = getleu32(buf, 4);
+     valid = (unsigned int)getub(buf, 15);
+     content_valid = (unsigned int)getub(buf, 1);
+     fixType = (unsigned char)getub(buf, 24);
+     flags = (unsigned int)getub(buf, 25);
+
+    switch (fixType) {
+
+    case UBX_MODE_3D:
+        // 3
+        if (*mode != MODE_3D) {
+            *mode = MODE_3D;
+            mask |= MODE_SET;
+        }
+        if ((flags & UBX_NAV_PVT_FLAG_DGPS) == UBX_NAV_PVT_FLAG_DGPS) {
+            if (*status != STATUS_DGPS_FIX) {
+                *status = STATUS_DGPS_FIX;
+                mask |= STATUS_SET;
+            }
+        } else {
+            if (*status != STATUS_FIX) {
+                *status = STATUS_FIX;
+                mask |= STATUS_SET;
+            }
+        }
+        mask |=   LATLON_SET;
+        break;
+
+    case UBX_MODE_2D:
+        //2
+        if (*mode != MODE_2D) {
+            *mode = MODE_2D;
+            mask |= MODE_SET;
+        };
+        if (*status != STATUS_FIX) {
+            *status = STATUS_FIX;
+            mask |= STATUS_SET;
+        }
+        mask |= LATLON_SET | SPEED_SET;
+        break;
+
+    case UBX_MODE_NOFIX:
+        // 0
+        // FALLTHROUGH
+    default:
+        // huh?
+        if (*mode != MODE_NO_FIX) {
+            *mode = MODE_NO_FIX;
+            mask |= MODE_SET;
+        };
+        if (*status != STATUS_NO_FIX) {
+            *status = STATUS_NO_FIX;
+            mask |= STATUS_SET;
+        }
+        break;
+    }
+
+    if(content_valid & UBX_LOG_BATCH_CONTENTVALID_EXTRA_PVT){
+
+        if ((valid & UBX_LOG_BATCH_VALID_DATE_TIME) == UBX_LOG_BATCH_VALID_DATE_TIME) {
+            unpacked_date.tm_year = (uint16_t)getleu16(buf, 8) - 1900;
+            unpacked_date.tm_mon = (uint8_t)getub(buf, 10) - 1;
+            unpacked_date.tm_mday = (uint8_t)getub(buf, 11);
+            unpacked_date.tm_hour = (uint8_t)getub(buf, 12);
+            unpacked_date.tm_min = (uint8_t)getub(buf, 13);
+            unpacked_date.tm_sec = (uint8_t)getub(buf, 14);
+            unpacked_date.tm_isdst = 0;
+            unpacked_date.tm_wday = 0;
+            unpacked_date.tm_yday = 0;
+            session->newdata.time.tv_sec = mkgmtime(&unpacked_date);
+            /* field 20, fracSec, can be negative! So normalize */
+            session->newdata.time.tv_nsec = getles32(buf, 20);
+            TS_NORM(&session->newdata.time);
+            mask |= TIME_SET | NTPTIME_IS | GOODTIME_IS;
+        }
+
+        session->newdata.longitude = 1e-7 * getles32(buf, 28);
+        session->newdata.latitude = 1e-7 * getles32(buf, 32);
+        /* altitude WGS84 */
+        session->newdata.altHAE = 1e-3 * getles32(buf, 36);
+        /* altitude MSL */
+        session->newdata.altMSL = 1e-3 * getles32(buf, 40);
+        /* Let gpsd_error_model() deal with geoid_sep */
+        session->newdata.speed = 1e-3 * (int32_t)getles32(buf, 64);
+        /* u-blox calls this Heading of motion (2-D) */
+        session->newdata.track = 1e-5 * (int32_t)getles32(buf, 68);
+        mask |= LATLON_SET | ALTITUDE_SET | SPEED_SET | TRACK_SET;
+
+        /* u-blox does not document the basis for the following "accuracy"
+        * estimates.  Maybe CEP(50), one sigma, two sigma, CEP(99), etc. */
+
+        /* Horizontal Accuracy estimate, in mm */
+        session->newdata.eph = (double)(getles32(buf, 44) / 1000.0);
+        /* Vertical Accuracy estimate, in mm */
+        session->newdata.epv = (double)(getles32(buf, 48) / 1000.0);
+        /* Speed Accuracy estimate, in mm/s */
+        session->newdata.eps = (double)(getles32(buf, 72) / 1000.0);
+        /* let gpsd_error_model() do the rest */
+        mask |= HERR_SET | SPEEDERR_SET | VERR_SET;
+
+        GPSD_LOG(LOG_DATA, &session->context->errout,
+            "LOG-BATCH ExtraPVT: flags=%02x time=%s lat=%.2f lon=%.2f altHAE=%.2f "
+            "track=%.2f speed=%.2f climb=%.2f mode=%d status=%d used=%d\n",
+            flags,
+            timespec_str(&session->newdata.time, ts_buf, sizeof(ts_buf)),
+            session->newdata.latitude,
+            session->newdata.longitude,
+            session->newdata.altHAE,
+            session->newdata.track,
+            session->newdata.speed,
+            session->newdata.climb,
+            session->newdata.mode,
+            session->gpsdata.status,
+            session->gpsdata.satellites_used);        
+    }
+
+    if(content_valid & UBX_LOG_BATCH_CONTENTVALID_EXTRA_ODO){
+        GPSD_LOG(LOG_WARN, &session->context->errout,
+            "LOG-BATCH ExtraODO: Odometry data present in frame but parsing "
+            "not yet supported by GPSD ubx driver\n");  
+    }
+
+     return mask;
+}
+
+/**
  * GPS Satellite Info -- new style UBX-NAV-SAT
  * Not in u-blox 5, protocol version 15+
  */
@@ -1768,6 +1921,10 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         ubx_msg_inf(session, buf, data_len);
         break;
 
+    case UBX_MON_BATCH:
+        GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-MON-BATCH\n");
+        mask |= CLEAR_IS;
+        break;
     case UBX_MON_EXCEPT:
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-MON-EXCEPT\n");
         break;
@@ -2019,6 +2176,12 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
     case UBX_TIM_VRFY:
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-TIM-VRFY\n");
         break;
+
+    case UBX_LOG_BATCH:
+        /* UBX-LOG-BATCH used in super e-Mode UBX8 protocol to allow stand-alone operation */
+        GPSD_LOG(LOG_PROG, &session->context->errout, "UBX-LOG-BATCH\n");
+        mask = ubx_msg_log_batch(session, &buf[UBX_PREFIX_LEN], data_len);
+        break;    
 
     default:
         GPSD_LOG(LOG_WARN, &session->context->errout,
