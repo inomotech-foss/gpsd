@@ -924,6 +924,11 @@ else:
         confdefs.append('#if !defined(_NETBSD_SOURCE)')
         confdefs.append("#define _NETBSD_SOURCE 1\n")
         confdefs.append('#endif\n')
+    elif sys.platform.startswith('sunos5'):
+        # required to get isascii(), and more, from ctype.h
+        confdefs.append('#if !defined(__XPG4_CHAR_CLASS__)')
+        confdefs.append("#define __XPG4_CHAR_CLASS__ 1\n")
+        confdefs.append('#endif\n')
 
     cxx = config.CheckCXX()
     if not cxx:
@@ -966,9 +971,9 @@ else:
             ncurseslibs = ['!ncursesw5-config --libs --cflags']
         elif sys.platform.startswith('freebsd'):
             ncurseslibs = ['-lncurses']
-        elif sys.platform.startswith('openbsd'):
-            ncurseslibs = ['-lcurses']
-        elif sys.platform.startswith('darwin'):
+        elif (sys.platform.startswith('darwin') or
+              sys.platform.startswith('openbsd') or
+              sys.platform.startswith('sunos5')):
             ncurseslibs = ['-lcurses']
         else:
             announce('Turning off ncurses support, library not found.')
@@ -1786,9 +1791,9 @@ else:
         "gpssim.py",
         "jsongen.py",
         "maskaudit.py",
-        "test_clienthelpers.py",
-        "test_misc.py",
-        "test_xgps_deps.py",
+        "tests/test_clienthelpers.py",
+        "tests/test_misc.py",
+        "tests/test_xgps_deps.py",
         "valgrind-audit.py"
     ]
 
@@ -1988,9 +1993,10 @@ templated = glob.glob("*.in") + glob.glob("*/*.in") + glob.glob("*/*/*.in")
 # tools will handle them.
 # ignore files in subfolder called './contrib/gps' - just links
 # ignore files in subfolder called './devtools/gps' - just links
-templated = [x for x in templated if (not x.startswith('debian/') and
+templated = [x for x in templated if (not x.startswith('contrib/gps/') and
+                                      not x.startswith('debian/') and
                                       not x.startswith('devtools/gps/') and
-                                      not x.startswith('contrib/gps/'))]
+                                      not x.startswith('tests/gps/'))]
 
 for fn in templated:
     # use scons built-in Substfile()
@@ -2424,8 +2430,8 @@ else:
             ' $SRCDIR/test/clientlib/*.log', ])
     # Unit-test the bitfield extractor
     misc_regress = Utility('misc-regress', [], [
-        '{} $SRCDIR/test_clienthelpers.py'.format(target_python_path),
-        '{} $SRCDIR/test_misc.py'.format(target_python_path)
+        '{} $SRCDIR/tests/test_clienthelpers.py'.format(target_python_path),
+        '{} $SRCDIR/tests/test_misc.py'.format(target_python_path)
     ])
 
 
@@ -2468,7 +2474,7 @@ if env['xgps_deps']:
     test_xgps_deps = UtilityWithHerald(
         'Testing xgps/xgpsspeed dependencies (since xgps=yes)...',
         'test-xgps-deps', [], [
-            '$PYTHON $SRCDIR/test_xgps_deps.py'])
+            '$PYTHON $SRCDIR/tests/test_xgps_deps.py'])
 else:
     test_xgps_deps = None
 
@@ -2553,6 +2559,7 @@ asciidocs = []
 if env.WhereIs('asciidoctor'):
     adocfiles = (('INSTALL', 'installation'),
                  ('README', 'README'),
+                 ('SUPPORT', 'SUPPORT'),
                  ('www/AIVDM', 'AIVDM'),
                  ('www/client-howto', 'client-howto'),
                  ('www/gpsd-time-service-howto', 'gpsd-time-service-howto'),
