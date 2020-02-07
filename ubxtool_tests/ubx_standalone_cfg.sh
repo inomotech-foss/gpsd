@@ -25,7 +25,7 @@ ubxtool -c 0x06,0x01,0x01,0x26,0,0,0,0,0,0
 #disable all INF messages
 ubxtool -c 0x06,0x02,0,0,0,0,0,0,0,0,0,0
 
-#enable autonomous AssitNow, set initial fix as 3D
+#enable AssitNow autonomous, set initial fix as 3D
 ubxtool -c 0x06,0x23,0x02,0,0x40,0x40,0,0,0,0,0,0,0,0,0,0,0x01,0,0,0,0,0,0,0,0,0,0,0,0,0x01,0,0,0,0x64,0,0,0,0,0,0,0,0
 
 #setup super E-mode 1Hz aggressive
