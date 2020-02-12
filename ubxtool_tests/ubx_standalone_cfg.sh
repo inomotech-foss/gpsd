@@ -13,10 +13,6 @@ ubxtool -d GLONASS
 ubxtool -e SBAS
 #disable basic BINARY messages
 ubxtool -d BINARY
-#disable sending of ECEF binary messages.
-ubxtool -d ECEF
-#enable PPS
-#ubxtool -e PPS
 
 #disable UBX_NAV_SOL
 ubxtool -c 0x06,0x01,0x01,0x06,0,0,0,0,0,0
