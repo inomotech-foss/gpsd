@@ -235,6 +235,7 @@ class SatTracks(gps):
  the satellite view correctly.</p>
 \t</canvas>
 \t<script>draw_satview();</script>
+\t<button onclick="document.body.classList.toggle('dark')">light switch</button>
 </body>
 </html>
 """)
