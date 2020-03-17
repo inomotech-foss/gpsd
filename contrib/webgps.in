@@ -16,7 +16,7 @@ Usage:
 
     duration may be
     - a number of seconds
-    - a number followed by a time unit ('s' for secinds, 'm' for minutes,
+    - a number followed by a time unit ('s' for seconds, 'm' for minutes,
       'h' for hours or 'd' for days, e.g. '4h' for a duration of four hours)
     - the letter 'c' for continuous operation
 
@@ -115,7 +115,7 @@ class SatTracks(gps):
         fh.write("""<!DOCTYPE html>
 
 <html>
-<head>
+<head lang="en">
 \t<meta http-equiv=Refresh content=300>
 \t<meta charset='utf-8'>
 \t<title>GPSD Satellite Positions and Readings</title>
