@@ -120,32 +120,63 @@ class SatTracks(gps):
 \t<meta charset='utf-8'>
 \t<title>GPSD Satellite Positions and Readings</title>
 \t<style type='text/css'>
-\t\t.num td { text-align: right; }
+\t\t#sky td { text-align: right; }
 \t\tth { text-align: left; }
+\t\ttable { border:none; }
+\t\tbody { color: #7edcda; background: #fdf6fe; }
+\t\t.dark  { color: #839496; background: #002b36; }
+\t\t@media only screen and (min-width: 900px) {
+\t\t\tbody {
+\t\t\t\tgrid-template-areas:
+\t\t\t\t'tpv satview sky';
+\t\t\t}
+\t\t}
+\t\t@media only screen and (min-width: 680px) and (max-width: 899px) {
+\t\t\tbody {
+\t\t\t\tgrid-template-areas:
+\t\t\t\t'sky satview'
+\t\t\t\t'tpv satview';
+\t\t\t}
+\t\t}
+\t\t@media only screen and (min-width: 460px) and (max-width: 679px) {
+\t\t\tbody {
+\t\t\t\tgrid-template-areas:
+\t\t\t\t'skyview'
+\t\t\t\t'sky'
+\t\t\t\t'tpv';
+\t\t\t}
+\t\t}
+\t\t@media only screen and (max-width: 459px) {
+\t\t\t#satview {
+\t\t\t\tdisplay: none
+\t\t\t}
+\t\t\tbody {
+\t\t\t\tgrid-template-areas:
+\t\t\t\t'sky'
+\t\t\t\t'tpv';
+\t\t\t}
+\t\t}
 \t</style>
 \t<script src='%s'></script>
 </head>
 <body>
-\t<table border=1>
-\t\t<tr>
-\t\t\t<td>
-\t\t\t\t<table border=0 class=num>
-\t\t\t\t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
+\t<table id="sky">
+\t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
 """ % jsfile)
 
         sats = self.satellites[:]
         sats.sort(key=lambda x: x.PRN)
         for s in sats:
-            fh.write("\t\t\t\t\t<tr><td>%d</td><td>%d</td><td>%d</td>"
+            fh.write("\t\t<tr><td>%d</td><td>%d</td><td>%d</td>"
                      "<td>%d</td><td>%s</td></tr>\n" %
                      (s.PRN, s.elevation, s.azimuth, s.ss,
                       s.used and 'Y' or 'N'))
 
-        fh.write("\t\t\t\t</table>\n\t\t\t\t<table border=0>\n")
+        fh.write("\t</table>\n\t<table id="tav">\n")
 
         def row(l, v):
-            fh.write("\t\t\t\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
+            fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
 
         def deg_to_str(a, hemi):
             return '%.6f %c' % (abs(a), hemi[a < 0])
@@ -191,17 +222,12 @@ class SatTracks(gps):
             self.state = newstate
         row('State', "%s (%d secs)" % (state, time.time() - self.statetimer))
 
-        fh.write("""\t\t\t\t</table>
-\t\t\t</td>
-\t\t\t<td>
-\t\t\t\t<canvas id=satview width=425 height=425>
-\t\t\t\t\t<p>Your browser needs HTML5 &lt;canvas> support to display
+        fh.write("""\t</table>
+\t<canvas id=satview width=425 height=425>
+\t\t<p>Your browser needs HTML5 &lt;canvas> support to display
  the satellite view correctly.</p>
-\t\t\t\t</canvas>
-\t\t\t\t<script>draw_satview();</script>
-\t\t\t</td>
-\t\t</tr>
-\t</table>
+\t</canvas>
+\t<script>draw_satview();</script>
 </body>
 </html>
 """)
