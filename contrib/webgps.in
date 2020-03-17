@@ -116,7 +116,7 @@ class SatTracks(gps):
 
 <html>
 <head lang="en">
-\t<meta http-equiv=Refresh content=300>
+\t<meta http-equiv="Refresh" content="300">
 \t<meta charset='utf-8'>
 \t<title>GPSD Satellite Positions and Readings</title>
 \t<style type='text/css'>
@@ -160,7 +160,7 @@ class SatTracks(gps):
 \t<script src='%s'></script>
 </head>
 <body>
-\t<table id="sky">
+\t<table style="grid-item:sky;">
 \t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
 """ % jsfile)
@@ -173,7 +173,7 @@ class SatTracks(gps):
                      (s.PRN, s.elevation, s.azimuth, s.ss,
                       s.used and 'Y' or 'N'))
 
-        fh.write("\t</table>\n\t<table id="tav">\n")
+        fh.write('\t</table>\n\t<table style="grid-item:tpv;">\n')
 
         def row(l, v):
             fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
@@ -223,8 +223,8 @@ class SatTracks(gps):
         row('State', "%s (%d secs)" % (state, time.time() - self.statetimer))
 
         fh.write("""\t</table>
-\t<canvas id=satview width=425 height=425>
-\t\t<p>Your browser needs HTML5 &lt;canvas> support to display
+\t<canvas style="grid-item: satview;" width="425" height="425">
+\t\t<p>Your browser needs HTML5 &lt;canvas&gt; support to display
  the satellite view correctly.</p>
 \t</canvas>
 \t<script>draw_satview();</script>
