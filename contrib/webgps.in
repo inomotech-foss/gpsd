@@ -123,7 +123,7 @@ class SatTracks(gps):
 \t\t#sky td { text-align: right; }
 \t\tth { text-align: left; }
 \t\ttable { border:none; }
-\t\tbody { color: #000; background: #fdf6e3; display: grid; }
+\t\tbody { color: #839496; background: #fdf6e3; display: grid; }
 \t\t.dark  { color: #839496; background: #002b36; }
 \t\t@media only screen and (min-width: 900px) {
 \t\t\tbody {
@@ -155,6 +155,11 @@ class SatTracks(gps):
 \t\t\t\t'sky'
 \t\t\t\t'tpv';
 \t\t\t}
+\t\t}
+\t\ttr:nth-child(6n),
+\t\ttr:nth-child(6n+4),
+\t\ttr:nth-child(6n+5) {
+\t\t\tbackground: rgba(0,0,0,0.25);
 \t\t}
 \t</style>
 \t<script src='%s'></script>
@@ -250,7 +255,7 @@ function draw_satview() {
     ctx.translate(210, 210);
 
     // grid and labels
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = '#839496';
     ctx.beginPath();
     ctx.arc(0, 0, 200, 0, circle, 0);
     ctx.stroke();
@@ -261,14 +266,12 @@ function draw_satview() {
     ctx.strokeText('E', 202, 4);
     ctx.strokeText('S', -4, 210);
 
-    ctx.strokeStyle = 'grey';
     ctx.beginPath();
     ctx.arc(0, 0, 100, 0, circle, 0);
     M(2, 0);
     ctx.arc(0, 0,   2, 0, circle, 0);
     ctx.stroke();
 
-    ctx.strokeStyle = 'lightgrey';
     ctx.save();
     ctx.beginPath();
     M(0, -200); L(0, 200); ctx.rotate(circle / 8);
