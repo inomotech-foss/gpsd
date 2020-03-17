@@ -191,8 +191,10 @@ class SatTracks(gps):
         if self.fix.mode >= MODE_2D:
             row('Latitude', deg_to_str(self.fix.latitude, 'SN'))
             row('Longitude', deg_to_str(self.fix.longitude, 'WE'))
-            row('Altitude', self.fix.mode == MODE_3D and "%f m" %
-                self.fix.altitude or 'N/A')
+            row('AltHAE', self.fix.mode == MODE_3D and "%f m" %
+                self.fix.altHAE or 'N/A')
+            row('AltMSL', self.fix.mode == MODE_3D and "%f m" %
+                self.fix.altMSL or 'N/A')
             row('Speed', isfinite(self.fix.speed) and "%f m/s" %
                 self.fix.speed or 'N/A')
             row('Course', isfinite(self.fix.track) and "%f&deg;" %
@@ -299,7 +301,7 @@ function draw_satview() {
         fh.write("""
     // satellites
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = '#839496';
 """)
 
         # Draw the satellites
