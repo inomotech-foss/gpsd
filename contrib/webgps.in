@@ -123,7 +123,7 @@ class SatTracks(gps):
 \t\t#sky td { text-align: right; }
 \t\tth { text-align: left; }
 \t\ttable { border:none; }
-\t\tbody { color: #7edcda; background: #fdf6fe; }
+\t\tbody { color: #000; background: #fdf6e3; display: grid; }
 \t\t.dark  { color: #839496; background: #002b36; }
 \t\t@media only screen and (min-width: 900px) {
 \t\t\tbody {
@@ -160,7 +160,7 @@ class SatTracks(gps):
 \t<script src='%s'></script>
 </head>
 <body>
-\t<table style="grid-item:sky;">
+\t<table style="grid-area: sky;">
 \t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
 """ % jsfile)
@@ -173,7 +173,7 @@ class SatTracks(gps):
                      (s.PRN, s.elevation, s.azimuth, s.ss,
                       s.used and 'Y' or 'N'))
 
-        fh.write('\t</table>\n\t<table style="grid-item:tpv;">\n')
+        fh.write('\t</table>\n\t<table style="grid-area: tpv;">\n')
 
         def row(l, v):
             fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
@@ -223,7 +223,7 @@ class SatTracks(gps):
         row('State', "%s (%d secs)" % (state, time.time() - self.statetimer))
 
         fh.write("""\t</table>
-\t<canvas style="grid-item: satview;" width="425" height="425">
+\t<canvas id="satview" style="grid-area: satview;" width="425" height="425">
 \t\t<p>Your browser needs HTML5 &lt;canvas&gt; support to display
  the satellite view correctly.</p>
 \t</canvas>
