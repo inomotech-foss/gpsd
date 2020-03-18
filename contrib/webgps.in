@@ -129,7 +129,8 @@ class SatTracks(gps):
 \t\t@media only screen and (min-width: 900px) {
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
-\t\t\t\t'tpv satview sky';
+\t\t\t\t\t'tpv satview sky'
+\t\t\t\t\t'dop light ep';
 \t\t\t}
 \t\t}
 \t\t@media only screen and (min-width: 680px) and (max-width: 899px) {
@@ -137,6 +138,7 @@ class SatTracks(gps):
 \t\t\t\tgrid-template-areas:
 \t\t\t\t'sky satview'
 \t\t\t\t'tpv satview';
+\t\t\t\t'dop ep';
 \t\t\t}
 \t\t}
 \t\t@media only screen and (min-width: 460px) and (max-width: 679px) {
@@ -180,7 +182,46 @@ class SatTracks(gps):
                      (0 <= s.azimuth < 360) and s.azimuth or 'N/A',
                      s.ss, s.used and 'Y' or 'N'))
 
-        fh.write('\t</table>\n\t<table style="grid-area: tpv;">\n')
+        def fgetnan(parent, child):
+            k = parent.get(child, float('nan'))
+            return isfinite(k) and k or 'N/A'
+
+
+        s = dict.get(self.backing, 'SKY', None)
+        nan = float("nan")
+        if s:
+            dops = 'x y h v p t g'.split(" ")
+            fh.write('\t</table>\n\t<table style="grid-area: dop;">\n')
+            fh.write('\t<tr><th colspan="7">Dilution Of Precision</th></tr>\n')
+            fh.write('\t<tr><th>' + '</th><th>'.join(dops) + '</th></tr>\n')
+            
+            fh.write('\t<tr class="num"><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
+                     '<td>%s</td><td>%s</td><td>%s</td></tr>\n' % (
+                     fgetnan(s, 'xdop'),
+                     fgetnan(s, 'ydop'),
+                     fgetnan(s, 'hdop'),
+                     fgetnan(s, 'vdop'),
+                     fgetnan(s, 'pdop'),
+                     fgetnan(s, 'tdop'),
+                     fgetnan(s, 'gdop')))
+
+        s = dict.get(self.backing, 'TPV', None)
+        if s:
+            eps = 'x y v c s e t'.split(" ")
+            fh.write('\t</table>\n\t<table style="grid-area: ep;">\n')
+            fh.write('\t<tr><th colspan="7">Estimated Precision</th></tr>\n')
+            fh.write('\t<tr><th>' + '</th><th>'.join(eps) + '</th></tr>\n')
+            fh.write('\t<tr class="num""><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
+                     '<td>%s</td><td>%s</td><td>%s</td></tr>\n' % (
+                     fgetnan(s, 'epx'),
+                     fgetnan(s, 'epy'),
+                     fgetnan(s, 'epv'),
+                     fgetnan(s, 'epc'),
+                     fgetnan(s, 'eps'),
+                     fgetnan(s, 'epe'),
+                     fgetnan(s, 'ept')))
+
+        fh.write('\t</table>\n\t<table class="tall" "style="grid-area: tpv;">\n')
 
         def row(l, v):
             fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
