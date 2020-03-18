@@ -121,7 +121,7 @@ class SatTracks(gps):
 \t<meta charset='utf-8'>
 \t<title>GPSD Satellite Positions and Readings</title>
 \t<style>
-\t\t#sky td { text-align: right; }
+\t\t.num td { text-align: right; }
 \t\tth { text-align: left; }
 \t\ttable { border: none; border-collapse: collapse; }
 \t\tbody { color: #839496; background: #fdf6e3; display: grid; }
@@ -157,16 +157,16 @@ class SatTracks(gps):
 \t\t\t\t'tpv';
 \t\t\t}
 \t\t}
-\t\ttr:nth-child(6n),
-\t\ttr:nth-child(6n+4),
-\t\ttr:nth-child(6n+5) {
+\t\t.tall tr:nth-child(6n),
+\t\t.tall tr:nth-child(6n+4),
+\t\t.tall tr:nth-child(6n+5) {
 \t\t\tbackground: rgba(131,148,150,0.25);
 \t\t}
 \t</style>
 \t<script src='%s'></script>
 </head>
 <body>
-\t<table class="num" style="grid-area: sky;">
+\t<table class="num tall" style="grid-area: sky;">
 \t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
 """ % jsfile)
@@ -177,7 +177,7 @@ class SatTracks(gps):
             fh.write("\t\t<tr><td>%d</td><td>%s</td><td>%s</td>"
                      "<td>%d</td><td>%s</td></tr>\n" % (s.PRN,
                      (-10 <= s.elevation <= 90) and s.elevation or 'N/A',
-                     (-10 <= s.azimuth <= 90) and s.azimuth or 'N/A',
+                     (0 <= s.azimuth < 360) and s.azimuth or 'N/A',
                      s.ss, s.used and 'Y' or 'N'))
 
         fh.write('\t</table>\n\t<table style="grid-area: tpv;">\n')
@@ -237,7 +237,7 @@ class SatTracks(gps):
  the satellite view correctly.</p>
 \t</canvas>
 \t<script>draw_satview();</script>
-\t<button onclick="document.body.classList.toggle('dark')">light switch</button>
+\t<button style="grid-area: light" onclick="document.body.classList.toggle('dark')">light switch</button>
 </body>
 </html>
 """)
