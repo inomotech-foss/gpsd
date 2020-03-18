@@ -106,6 +106,7 @@ class SatTracks(gps):
 
     def __init__(self):
         super(SatTracks, self).__init__()
+        self.backing = {}
         self.sattrack = {}      # maps PRNs to Tracks
         self.state = None
         self.statetimer = time.time()
@@ -381,6 +382,7 @@ function draw_satview() {
         self.needsupdate = 1
         self.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
         for report in self:
+            self.backing[report['class']] = report
             if report['class'] not in ('TPV', 'SKY'):
                 continue
             self.update_tracks()
