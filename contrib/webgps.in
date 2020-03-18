@@ -165,7 +165,7 @@ class SatTracks(gps):
 \t<script src='%s'></script>
 </head>
 <body>
-\t<table style="grid-area: sky;">
+\t<table class="num" style="grid-area: sky;">
 \t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
 """ % jsfile)
@@ -173,10 +173,11 @@ class SatTracks(gps):
         sats = self.satellites[:]
         sats.sort(key=lambda x: x.PRN)
         for s in sats:
-            fh.write("\t\t<tr><td>%d</td><td>%d</td><td>%d</td>"
-                     "<td>%d</td><td>%s</td></tr>\n" %
-                     (s.PRN, s.elevation, s.azimuth, s.ss,
-                      s.used and 'Y' or 'N'))
+            fh.write("\t\t<tr><td>%d</td><td>%s</td><td>%s</td>"
+                     "<td>%d</td><td>%s</td></tr>\n" % (s.PRN,
+                     (-10 <= s.elevation <= 90) and s.elevation or 'N/A',
+                     (-10 <= s.azimuth <= 90) and s.azimuth or 'N/A',
+                     s.ss, s.used and 'Y' or 'N'))
 
         fh.write('\t</table>\n\t<table style="grid-area: tpv;">\n')
 
