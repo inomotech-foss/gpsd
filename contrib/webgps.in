@@ -221,7 +221,28 @@ class SatTracks(gps):
                      fgetnan(s, 'epe'),
                      fgetnan(s, 'ept')))
 
-        fh.write('\t</table>\n\t<table class="tall" "style="grid-area: tpv;">\n')
+        fh.write('\t</table>\n\t<table "style="grid-area: misc;"><tr><td>\n')
+
+        if 'TOFF' in self.backing:
+            s = self.backing['TOFF']
+            ns = int((s.real_sec - s.clock_sec) * 1e9
+                     + s.real_sec - s.clock_sec)
+            fh.write('Time OFFset: %d ns<br/>\n' % ns)
+        if 'PPS' in self.backing:
+            s = self.backing['PPS']
+            ns = int((s.real_sec - s.clock_sec) * 1e9
+                     + s.real_sec - s.clock_sec)
+            fh.write('PPS offset: %d ns<br/>\n' % ns)
+            fh.write('PPS precision: %f\n' % s.precision)
+            fh.write(isFinite(s.get('qErr', nan) and "PPS sawtooth %fps<br/>\n"
+                     % s['qErr'] or ""))
+
+        if 'DEVICES' in self.backing:
+            for (index, value) in enumerate(self.backing['DEVICES']['devices']):
+                for key in value:
+                    fh.write('[%d]%s: %s<br/>\n' % (index, key, value[key]))
+
+        fh.write('\t</td></tr></table>\n\t<table class="tall" "style="grid-area: tpv;">\n')
 
         def row(l, v):
             fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
@@ -421,7 +442,7 @@ function draw_satview() {
         if period is not None:
             end = time.time() + period
         self.needsupdate = 1
-        self.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
+        self.stream(WATCH_ENABLE | WATCH_NEWSTYLE |WATCH_PPS)
         for report in self:
             self.backing[report['class']] = report
             if report['class'] not in ('TPV', 'SKY'):
