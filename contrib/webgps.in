@@ -137,7 +137,7 @@ class SatTracks(gps):
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
 \t\t\t\t'sky satview'
-\t\t\t\t'tpv satview';
+\t\t\t\t'tpv satview'
 \t\t\t\t'dop ep';
 \t\t\t}
 \t\t}
@@ -159,6 +159,7 @@ class SatTracks(gps):
 \t\t\t\t'tpv';
 \t\t\t}
 \t\t}
+\t\t.wide td:nth-child(odd),
 \t\t.tall tr:nth-child(6n),
 \t\t.tall tr:nth-child(6n+4),
 \t\t.tall tr:nth-child(6n+5) {
@@ -191,7 +192,7 @@ class SatTracks(gps):
         nan = float("nan")
         if s:
             dops = 'x y h v p t g'.split(" ")
-            fh.write('\t</table>\n\t<table style="grid-area: dop;">\n')
+            fh.write('\t</table>\n\t<table class="wide" style="grid-area: dop;">\n')
             fh.write('\t<tr><th colspan="7">Dilution Of Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(dops) + '</th></tr>\n')
             
@@ -208,10 +209,10 @@ class SatTracks(gps):
         s = dict.get(self.backing, 'TPV', None)
         if s:
             eps = 'x y v c s e t'.split(" ")
-            fh.write('\t</table>\n\t<table style="grid-area: ep;">\n')
+            fh.write('\t</table>\n\t<table class="wide" style="grid-area: ep;">\n')
             fh.write('\t<tr><th colspan="7">Estimated Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(eps) + '</th></tr>\n')
-            fh.write('\t<tr class="num""><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
+            fh.write('\t<tr class="num"><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
                      '<td>%s</td><td>%s</td><td>%s</td></tr>\n' % (
                      fgetnan(s, 'epx'),
                      fgetnan(s, 'epy'),
@@ -221,7 +222,7 @@ class SatTracks(gps):
                      fgetnan(s, 'epe'),
                      fgetnan(s, 'ept')))
 
-        fh.write('\t</table>\n\t<table "style="grid-area: misc;"><tr><td>\n')
+        fh.write('\t</table>\n\t<table style="grid-area: misc;"><tr><td>\n')
 
         if 'TOFF' in self.backing:
             s = self.backing['TOFF']
@@ -242,7 +243,7 @@ class SatTracks(gps):
                 for key in value:
                     fh.write('[%d]%s: %s<br/>\n' % (index, key, value[key]))
 
-        fh.write('\t</td></tr></table>\n\t<table class="tall" "style="grid-area: tpv;">\n')
+        fh.write('\t</td></tr></table>\n\t<table class="tall" style="grid-area: tpv;">\n')
 
         def row(l, v):
             fh.write("\t\t<tr><th>%s:</th><td>%s</td></tr>\n" % (l, v))
