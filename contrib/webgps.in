@@ -208,7 +208,7 @@ class SatTracks(gps):
 
         s = dict.get(self.backing, 'TPV', None)
         if s:
-            eps = 'x y v c s e t'.split(" ")
+            eps = 'x y v c s d t'.split(" ")
             fh.write('\t</table>\n\t<table class="wide" style="grid-area: ep;">\n')
             fh.write('\t<tr><th colspan="7">Estimated Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(eps) + '</th></tr>\n')
@@ -219,7 +219,7 @@ class SatTracks(gps):
                      fgetnan(s, 'epv'),
                      fgetnan(s, 'epc'),
                      fgetnan(s, 'eps'),
-                     fgetnan(s, 'epe'),
+                     fgetnan(s, 'epd'),
                      fgetnan(s, 'ept')))
 
         fh.write('\t</table>\n\t<table style="grid-area: misc;"><tr><td>\n')
