@@ -124,13 +124,14 @@ class SatTracks(gps):
 \t\t.num td { text-align: right; }
 \t\tth { text-align: left; }
 \t\ttable { border: none; border-collapse: collapse; }
-\t\tbody { color: #839496; background: #fdf6e3; display: grid; }
+\t\tbody { color: #839496; background: #fdf6e3; display: grid; grid-gap: 10px;}
 \t\t.dark  { color: #839496; background: #002b36; }
 \t\t@media only screen and (min-width: 900px) {
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
 \t\t\t\t\t'tpv satview sky'
-\t\t\t\t\t'dop light ep';
+\t\t\t\t\t'misc satview sky'
+\t\t\t\t\t'light ep dop';
 \t\t\t}
 \t\t}
 \t\t@media only screen and (min-width: 680px) and (max-width: 899px) {
@@ -138,15 +139,20 @@ class SatTracks(gps):
 \t\t\t\tgrid-template-areas:
 \t\t\t\t'sky satview'
 \t\t\t\t'tpv satview'
-\t\t\t\t'dop ep';
+\t\t\t\t'dop ep'
+\t\t\t\t'light misc';
 \t\t\t}
 \t\t}
 \t\t@media only screen and (min-width: 460px) and (max-width: 679px) {
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
-\t\t\t\t'skyview'
+\t\t\t\t'satview'
+\t\t\t\t'tpv'
 \t\t\t\t'sky'
-\t\t\t\t'tpv';
+\t\t\t\t'misc'
+\t\t\t\t'ep'
+\t\t\t\t'dop'
+\t\t\t\t'light';
 \t\t\t}
 \t\t}
 \t\t@media only screen and (max-width: 459px) {
@@ -155,8 +161,12 @@ class SatTracks(gps):
 \t\t\t}
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
+\t\t\t\t'tpv'
 \t\t\t\t'sky'
-\t\t\t\t'tpv';
+\t\t\t\t'misc'
+\t\t\t\t'ep'
+\t\t\t\t'dop'
+\t\t\t\t'light';
 \t\t\t}
 \t\t}
 \t\t.wide td:nth-child(odd),
