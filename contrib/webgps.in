@@ -212,8 +212,8 @@ class SatTracks(gps):
             fh.write('\t</table>\n\t<table class="wide" style="grid-area: ep;">\n')
             fh.write('\t<tr><th colspan="7">Estimated Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(eps) + '</th></tr>\n')
-            fh.write('\t<tr class="num"><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
-                     '<td>%s</td><td>%s</td><td>%s</td></tr>\n' % (
+            fh.write('\t<tr class="num"><td>%s m</td><td>%s m</td><td>%s m/s</td><td>%s m/s</td>'
+                     '<td>%s m</td><td>%s deg</td><td>%s !s</td></tr>\n' % (
                      fgetnan(s, 'epx'),
                      fgetnan(s, 'epy'),
                      fgetnan(s, 'epv'),
