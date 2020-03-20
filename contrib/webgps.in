@@ -238,12 +238,12 @@ class SatTracks(gps):
             s = self.backing['TOFF']
             ns = int((int(s.real_sec) - int(s.clock_sec)) * 1000000000
                      + (int(s.real_nsec) - int(s.clock_nsec)))
-            fh.write('Time OFFset: %d ns<br/>\n' % ns)
+            fh.write('Time OFFset: %f ms<br/>\n' % (float(ns)/1.0e6))
         if 'PPS' in self.backing:
             s = self.backing['PPS']
             ns = int((int(s.real_sec) - int(s.clock_sec)) * 1000000000
                      + (int(s.real_nsec) - int(s.clock_nsec)))
-            fh.write('PPS offset: %d ns<br/>\n' % ns)
+            fh.write('PPS offset: %d us<br/>\n' % (float(ns)/1.0e3))
             fh.write('PPS precision: %f\n' % s.precision)
             fh.write(isFinite(s.get('qErr', nan) and "PPS sawtooth %fps<br/>\n"
                      % s['qErr'] or ""))
