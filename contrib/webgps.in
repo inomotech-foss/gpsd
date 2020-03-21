@@ -33,9 +33,9 @@ file auto-refreshes every five minutes. The generated file names are
 "gpsd-<duration>.html" and "gpsd-<duration>.js".
 
 If webgps.py is interrupted with Ctrl-C before the duration is over, it saves
-the current tracks into the file "tracks.p". This is a Python "pickle" file.
-If this file is present on start of webgps.py, it is loaded. This allows to
-restart webgps.py without losing accumulated satellite tracks.
+the current tracks into the file "tracks.j". This is a JSON file. If this file
+is present on start of webgps.py, it is loaded. This allows to restart
+webgps.py without losing accumulated satellite tracks.
 """
 
 # This code runs compatibly under Python 2 and 3.x for x >= 2.
@@ -97,8 +97,9 @@ class Track:
 
     def track(self):
         '''Return the track as canvas drawing operations.'''
-        return('M(%d,%d); ' % self.posn[0] + ''.join(['L(%d,%d); ' %
-               p for p in self.posn[1:]]))
+        mid_thing = ');L('
+        return('M(%s);' % mid_thing.join(
+                        map(lambda x: '%d,%d' % (x[0], x[1]), self.posn)))
 
 
 class SatTracks(gps):
@@ -472,22 +473,28 @@ def main():
     sat = SatTracks()
 
     # restore the tracks
-    pfile = 'tracks.p'
-    if os.path.isfile(pfile):
-        with open(pfile, 'rb') as p:
+    jfile = 'tracks.j'
+    if os.path.isfile(jfile):
+        with open(jfile, 'r') as j:
             try:
-                sat.sattrack = pickle.load(p)
+                dictionary = json.load(j)
+                for t in dictionary.values():
+                    prn = t['prn']
+                    sat.sattrack[prn] = Track(prn)
+                    sat.sattrack[prn].stale=t['stale']
+                    sat.sattrack[prn].posn=t['posn']
             except ValueError:
-                print("Ignoring incompatible tracks file.", file=sys.stderr)
-
+                print("tracker.py WARNING: Ignoring incompatible tracks file.", file=sys.stderr)
     try:
         sat.run(prefix, period)
     except KeyboardInterrupt:
         # save the tracks
-        with open(pfile, 'wb') as p:
-            # No protocol is backward-compatible from Python 3 to Python 2,
-            # so we just use the default and punt at load time if needed.
-            pickle.dump(sat.sattrack, p)
+        with open(jfile, 'w') as j:
+            dictionary = {}
+            for t in sat.sattrack.values():
+                dictionary[t.prn] = dict(prn=t.prn, stale=t.stale, posn=t.posn)
+            json.dump(dictionary, j)
+            print("tracker.py INFORMATION: saving state", file=sys.stderr)
 
 
 if __name__ == '__main__':
