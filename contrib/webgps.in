@@ -260,31 +260,28 @@ class SatTracks(gps):
         def deg_to_str(a, hemi):
             return '%.6f %c' % (abs(a), hemi[a < 0])
 
+        def moderows(mode, table):
+            for line in table:
+                if line[0] > mode or not isfinite(line[3]):
+                    row(line[1], 'N/A')
+                    continue
+                row(line[1], line[2] % line[3])
+
         row('Time', self.utc or 'N/A')
 
         if self.fix.mode >= MODE_2D:
             row('Latitude', deg_to_str(self.fix.latitude, 'SN'))
             row('Longitude', deg_to_str(self.fix.longitude, 'WE'))
-            row('AltHAE', self.fix.mode == MODE_3D and "%f m" %
-                self.fix.altHAE or 'N/A')
-            row('AltMSL', self.fix.mode == MODE_3D and "%f m" %
-                self.fix.altMSL or 'N/A')
-            row('Speed', isfinite(self.fix.speed) and "%f m/s" %
-                self.fix.speed or 'N/A')
-            row('Course', isfinite(self.fix.track) and "%f&deg;" %
-                self.fix.track or 'N/A')
         else:
             row('Latitude', 'N/A')
             row('Longitude', 'N/A')
-            row('Altitude', 'N/A')
-            row('Speed', 'N/A')
-            row('Course', 'N/A')
-
-        row('EPX', isfinite(self.fix.epx) and "%f m" % self.fix.epx or 'N/A')
-        row('EPY', isfinite(self.fix.epy) and "%f m" % self.fix.epy or 'N/A')
-        row('EPV', isfinite(self.fix.epv) and "%f m" % self.fix.epv or 'N/A')
-        row('Climb', self.fix.mode == MODE_3D and isfinite(self.fix.climb) and
-            "%f m/s" % self.fix.climb or 'N/A')
+        moderows(self.fix.mode, [
+                                 [3, 'altHAE', '%f m',    self.fix.altHAE],
+                                 [3, 'altMSL', '%f m',    self.fix.altMSL],
+                                 [2, 'Speed',  '%f m/s',  self.fix.speed],
+                                 [2, 'Course', '%f&deg;', self.fix.track],
+                                 [3, 'Climb',  '%f m/s',  self.fix.climb],
+                                 ])
 
         state = "INIT"
         if not (self.valid & ONLINE_SET):
