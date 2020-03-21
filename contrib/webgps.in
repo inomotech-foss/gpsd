@@ -437,32 +437,24 @@ function draw_satview() {
             self.insert_sat(s.PRN, x, y)
         self.delete_stale()
 
-    def generate_html(self, htmlfile, jsfile):
-        fh = open(htmlfile, 'w')
-        self.html(fh, jsfile)
-        fh.close()
-
-    def generate_js(self, jsfile):
-        fh = open(jsfile, 'w')
-        self.js(fh)
-        fh.close()
-
     def run(self, suffix, period):
         jsfile = 'gpsd' + suffix + '.js'
         htmlfile = 'gpsd' + suffix + '.html'
         if period is not None:
             end = time.time() + period
         self.needsupdate = 1
-        self.stream(WATCH_ENABLE | WATCH_NEWSTYLE |WATCH_PPS)
+        self.stream(WATCH_ENABLE | WATCH_NEWSTYLE | WATCH_PPS)
         for report in self:
             self.backing[report['class']] = report
             if report['class'] not in ('TPV', 'SKY'):
                 continue
             self.update_tracks()
             if self.needsupdate:
-                self.generate_js(jsfile)
-                self.needsupdate = 0
-            self.generate_html(htmlfile, jsfile)
+                with open(jsfile, 'w') as jfh:
+                    self.js(jfh)
+                    self.needsupdate = 0
+            with open(htmlfile, 'w') as hfh:
+                self.html(hfh, jsfile)
             if period is not None and (
                 period <= 0 and self.fix.mode >= MODE_2D or
                 period > 0 and time.time() > end
