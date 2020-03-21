@@ -121,9 +121,20 @@ class SatTracks(gps):
 \t<style>
 \t\t.num td { text-align: right; }
 \t\tth { text-align: left; }
-\t\ttable { border: none; border-collapse: collapse; }
-\t\tbody { color: #839496; background: #fdf6e3; display: grid; grid-gap: 10px;}
-\t\t.dark  { color: #839496; background: #002b36; }
+\t\ttable {
+\t\t\tborder: none;
+\t\t\tborder-collapse: collapse;
+\t\t}
+\t\tbody {
+\t\t\tcolor: #839496;
+\t\t\tbackground: #fdf6e3;
+\t\t\tdisplay: grid;
+\t\t\tgrid-gap: 10px;
+\t\t}
+\t\t.dark  {
+\t\t\tcolor: #839496;
+\t\t\tbackground: #002b36;
+\t\t}
 \t\t@media only screen and (min-width: 900px) {
 \t\t\tbody {
 \t\t\t\tgrid-template-areas:
