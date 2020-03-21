@@ -474,22 +474,20 @@ def main():
     # restore the tracks
     pfile = 'tracks.p'
     if os.path.isfile(pfile):
-        p = open(pfile, 'rb')
-        try:
-            sat.sattrack = pickle.load(p)
-        except ValueError:
-            print("Ignoring incompatible tracks file.", file=sys.stderr)
-        p.close()
+        with open(pfile, 'rb') as p:
+            try:
+                sat.sattrack = pickle.load(p)
+            except ValueError:
+                print("Ignoring incompatible tracks file.", file=sys.stderr)
 
     try:
         sat.run(prefix, period)
     except KeyboardInterrupt:
         # save the tracks
-        p = open(pfile, 'wb')
-        # No protocol is backward-compatible from Python 3 to Python 2,
-        # so we just use the default and punt at load time if needed.
-        pickle.dump(sat.sattrack, p)
-        p.close()
+        with open(pfile, 'wb') as p:
+            # No protocol is backward-compatible from Python 3 to Python 2,
+            # so we just use the default and punt at load time if needed.
+            pickle.dump(sat.sattrack, p)
 
 
 if __name__ == '__main__':
