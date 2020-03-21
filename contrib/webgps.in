@@ -325,21 +325,18 @@ function draw_satview() {
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.strokeStyle = '#839496';
     ctx.strokeText('N', -4, -202);
     ctx.strokeText('W', -210, 4);
     ctx.strokeText('E', 202, 4);
     ctx.strokeText('S', -4, 210);
 
     ctx.beginPath();
-    ctx.strokeStyle = '#839496';
     ctx.arc(0, 0, 100, 0, circle, 0);
     M(2, 0);
     ctx.arc(0, 0,   2, 0, circle, 0);
     ctx.stroke();
 
     ctx.save();
-    ctx.strokeStyle = '#839496';
     ctx.beginPath();
     M(0, -200); L(0, 200); ctx.rotate(circle / 8);
     M(0, -200); L(0, 200); ctx.rotate(circle / 8);
