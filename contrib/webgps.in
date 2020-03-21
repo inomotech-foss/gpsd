@@ -193,10 +193,12 @@ class SatTracks(gps):
                      (0 <= s.azimuth < 360) and s.azimuth or 'N/A',
                      s.ss, s.used and 'Y' or 'N'))
 
-        def fgetnan(parent, child):
-            k = parent.get(child, float('nan'))
-            return isfinite(k) and k or 'N/A'
-
+        def fgetnans(parent, children):
+            result = []
+            for child in children:
+                k = parent.get(child, float('nan'))
+                result.append(isfinite(k) and str(k) or 'N/A')
+            return result;
 
         s = dict.get(self.backing, 'SKY', None)
         nan = float("nan")
@@ -205,16 +207,9 @@ class SatTracks(gps):
             fh.write('\t</table></div>\n\t<div style="grid-area: dop;"><table class="wide">\n')
             fh.write('\t<tr><th colspan="7">Dilution Of Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(dops) + '</th></tr>\n')
-            
-            fh.write('\t<tr class="num"><td>%s</td><td>%s</td><td>%s</td><td>%s</td>'
-                     '<td>%s</td><td>%s</td><td>%s</td></tr>\n' % (
-                     fgetnan(s, 'xdop'),
-                     fgetnan(s, 'ydop'),
-                     fgetnan(s, 'hdop'),
-                     fgetnan(s, 'vdop'),
-                     fgetnan(s, 'pdop'),
-                     fgetnan(s, 'tdop'),
-                     fgetnan(s, 'gdop')))
+
+            result = fgetnans(s, map(lambda e: e+"dop", dops))
+            fh.write('\t<tr class="num"><td>%s</td></tr>\n' % '</td><td>'.join(result))
 
         s = dict.get(self.backing, 'TPV', None)
         if s:
@@ -222,15 +217,11 @@ class SatTracks(gps):
             fh.write('\t</table></div>\n\t<div style="grid-area: ep;"><table class="wide">\n')
             fh.write('\t<tr><th colspan="7">Estimated Precision</th></tr>\n')
             fh.write('\t<tr><th>' + '</th><th>'.join(eps) + '</th></tr>\n')
+            result = fgetnans(s, map(lambda e: "ep"+e, eps))
+            #            print(result)
             fh.write('\t<tr class="num"><td>%s m</td><td>%s m</td><td>%s m/s</td><td>%s m/s</td>'
-                     '<td>%s m</td><td>%s deg</td><td>%s !s</td></tr>\n' % (
-                     fgetnan(s, 'epx'),
-                     fgetnan(s, 'epy'),
-                     fgetnan(s, 'epv'),
-                     fgetnan(s, 'epc'),
-                     fgetnan(s, 'eps'),
-                     fgetnan(s, 'epd'),
-                     fgetnan(s, 'ept')))
+                     '<td>%s m</td><td>%s deg</td><td>%s !s</td></tr>\n' % (result[0],
+                     result[1], result[2], result[3], result[4], result[5], result[6]))
 
         fh.write('\t</table></div>\n\t<div style="grid-area: misc;"><table><tr><td>\n')
 
