@@ -114,9 +114,7 @@ class SatTracks(gps):
 
     def html(self, fh, jsfile):
         fh.write("""<!DOCTYPE html>
-
-<html lang="en">
-<head>
+<html lang="en"><head>
 \t<meta http-equiv="Refresh" content="300">
 \t<meta charset='utf-8'>
 \t<title>GPSD Satellite Positions and Readings</title>
@@ -177,8 +175,7 @@ class SatTracks(gps):
 \t\t}
 \t</style>
 \t<script src='%s'></script>
-</head>
-<body>
+</head><body onload="draw_satview();">
 \t<div style="grid-area: sky;"><table class="num tall">
 \t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th>
 <th>Used:</th></tr>
@@ -300,10 +297,8 @@ class SatTracks(gps):
 \t\t<p>Your browser needs HTML5 &lt;canvas&gt; support to display
  the satellite view correctly.</p>
 \t</canvas></div>
-\t<script>draw_satview();</script>
 \t<div style="grid-area: light"><button onclick="document.body.classList.toggle('dark')">light switch</button></div>
-</body>
-</html>
+</body></html>
 """)
 
     def js(self, fh):
