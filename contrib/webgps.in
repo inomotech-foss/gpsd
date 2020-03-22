@@ -210,7 +210,6 @@ class SatTracks(gps):
             return result;
 
         s = dict.get(self.backing, 'SKY', None)
-        nan = float("nan")
         if s:
             dops = 'x y h v p t g'.split(" ")
             fh.write('\t<div style="grid-area: dop;"><table class="wide">\n')
@@ -244,9 +243,10 @@ class SatTracks(gps):
             ns = int((int(s.real_sec) - int(s.clock_sec)) * 1000000000
                      + (int(s.real_nsec) - int(s.clock_nsec)))
             fh.write('PPS offset: %d us<br/>\n' % (float(ns)/1.0e3))
-            fh.write('PPS precision: %f\n' % s.precision)
-            fh.write(isFinite(s.get('qErr', nan) and "PPS sawtooth %fps<br/>\n"
-                     % s['qErr'] or ""))
+            fh.write('PPS precision: %f<br/>\n' % s.precision)
+            qerr = s.get('qErr', float('nan'))
+            fh.write(isfinite(qerr) and ("PPS sawtooth %fps<br/>\n"
+                     % qerr) or "")
         if 'DEVICES' in self.backing:
             for (index, value) in enumerate(self.backing['DEVICES']['devices']):
                 for key in value:
