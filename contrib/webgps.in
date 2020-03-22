@@ -237,20 +237,20 @@ class SatTracks(gps):
             s = self.backing['TOFF']
             ns = int((int(s.real_sec) - int(s.clock_sec)) * 1000000000
                      + (int(s.real_nsec) - int(s.clock_nsec)))
-            fh.write('Time OFFset: %f ms<br/>\n' % (float(ns)/1.0e6))
+            fh.write('\t\tTime OFFset: %f ms<br/>\n' % (float(ns)/1.0e6))
         if 'PPS' in self.backing:
             s = self.backing['PPS']
             ns = int((int(s.real_sec) - int(s.clock_sec)) * 1000000000
                      + (int(s.real_nsec) - int(s.clock_nsec)))
-            fh.write('PPS offset: %d us<br/>\n' % (float(ns)/1.0e3))
-            fh.write('PPS precision: %f<br/>\n' % s.precision)
+            fh.write('\t\tPPS offset: %d us<br/>\n' % (float(ns)/1.0e3))
+            fh.write('\t\tPPS precision: %f<br/>\n' % s.precision)
             qerr = s.get('qErr', float('nan'))
-            fh.write(isfinite(qerr) and ("PPS sawtooth %fps<br/>\n"
+            fh.write(isfinite(qerr) and ("\t\tPPS sawtooth %fps<br/>\n"
                      % qerr) or "")
         if 'DEVICES' in self.backing:
             for (index, value) in enumerate(self.backing['DEVICES']['devices']):
                 for key in value:
-                    fh.write('[%d]%s: %s<br/>\n' % (index, key, value[key]))
+                    fh.write('\t\t[%d]%s: %s<br/>\n' % (index, key, value[key]))
         fh.write('\t</div>\n')
 
         def row(l, v):
