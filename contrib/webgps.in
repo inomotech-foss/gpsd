@@ -251,6 +251,14 @@ class SatTracks(gps):
             for (index, value) in enumerate(self.backing['DEVICES']['devices']):
                 for key in value:
                     fh.write('\t\t[%d]%s: %s<br/>\n' % (index, key, value[key]))
+        if 'OSC' in self.backing:
+            s = self.backing['OSC']
+            fh.write('\t\tOscillator')
+            fh.write(': %s running' % (s['running'] and '' or 'not'))
+            fh.write(' with%s GPS PPS' % (s['reference'] and '' or 'out'))
+            fh.write('and is %s disciplined' % (s['disciplined'] and '' or 'not'))
+            fh.write('<br/>\n')
+            fh.write('Oscillator delta: %fns<br>\n' % s['delta'])
         fh.write('\t</div>\n')
 
         def row(l, v):
