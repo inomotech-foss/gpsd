@@ -1303,7 +1303,7 @@ const struct gps_type_t driver_garmin_ser_binary =
     .parse_packet   = garmin_ser_parse,	/* parse message packets */
     .rtcm_writer    = NULL,		/* don't send DGPS corrections */
     .init_query     = NULL,		/* non-perturbing initial query */
-    .event_hook     = NULL,	        /* lifetime event handler */
+    .event_hook     = garmin_event_hook,	        /* lifetime event handler */
 #ifdef RECONFIGURE_ENABLE
     .speed_switcher = NULL,		/* no speed switcher */
     .mode_switcher  = garmin_switcher,	/* how to change modes */
