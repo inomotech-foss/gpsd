@@ -393,6 +393,7 @@ int main(int argc, char **argv)
                 struct timespec now;
                 struct tm tmp_now;
                 int written;
+
                 (void)clock_gettime(CLOCK_REALTIME, &now);
                 (void)gmtime_r((time_t *)&(now.tv_sec), &tmp_now);
                 (void)strftime(tmstr, sizeof(tmstr), format, &tmp_now);
