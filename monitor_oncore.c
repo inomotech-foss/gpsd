@@ -19,7 +19,8 @@
 #if defined(ONCORE_ENABLE) && defined(BINARY_ENABLE)
 extern const struct gps_type_t driver_oncore;
 
-static WINDOW *Ea1win, *Eawin, *Bbwin, *Enwin, *Bowin, *Aywin, *Aswin, *Atwin;
+static WINDOW *Ea1win, *Eawin, *Bbwin, *Enwin;
+static WINDOW *Bowin, *Awwin, *Aywin, *Aswin, *Atwin;
 static unsigned char EaSVlines[8];
 
 static const char *antenna[] = {
@@ -84,8 +85,9 @@ static bool oncore_initialize(void)
     Eawin = subwin(devicewin, MAXTRACKSATS + 3, 27, 6, 0);
     Bbwin = subwin(devicewin, MAXVISSATS + 3, 22, 6, 28);
     Enwin = subwin(devicewin, 10, 29, 6, 51);
-    Bowin = subwin(devicewin, 4, 11, 17, 0);
-    Aywin = subwin(devicewin, 4, 15, 17, 12);
+    Bowin = subwin(devicewin, 4, 9, 17, 0);
+    Awwin = subwin(devicewin, 4, 6, 17, 9);
+    Aywin = subwin(devicewin, 4, 13, 17, 15);
     Atwin = subwin(devicewin, 5, 9, 16, 51);
     Aswin = subwin(devicewin, 5, 19, 16, 61);
 
@@ -98,6 +100,7 @@ static bool oncore_initialize(void)
     (void)syncok(Bbwin, true);
     (void)syncok(Enwin, true);
     (void)syncok(Bowin, true);
+    (void)syncok(Awwin, true);
     (void)syncok(Aywin, true);
     (void)syncok(Aswin, true);
     (void)syncok(Atwin, true);
@@ -147,10 +150,15 @@ static bool oncore_initialize(void)
     (void)mvwprintw(Bowin, 3, 2, " @@Bo ");
     (void)wattrset(Bowin, A_NORMAL);
 
+    (void)wborder(Awwin, 0, 0, 0, 0, 0, 0, 0, 0),
+	(void)wattrset(Awwin, A_BOLD);
+    (void)mvwprintw(Awwin, 1, 1, "Mode");
+    (void)mvwprintw(Awwin, 3, 0, " @@Aw ");
+    (void)wattrset(Awwin, A_NORMAL);
+
     (void)wborder(Aywin, 0, 0, 0, 0, 0, 0, 0, 0),
 	(void)wattrset(Aywin, A_BOLD);
     (void)mvwprintw(Aywin, 1, 1, "PPS offset:");
-    (void)mvwaddstr(Aywin, 2, 11, "N/A");
     (void)mvwprintw(Aywin, 3, 4, " @@Ay ");
     (void)wattrset(Aywin, A_NORMAL);
 
@@ -371,12 +379,29 @@ static void oncore_update(void)
 	utc_offset = (unsigned char)getub(buf, 4);
 
 	if (utc_offset != (unsigned char)0)
-	    (void)mvwprintw(Bowin, 2, 2, "GPS%+4d", utc_offset);
+	    (void)mvwprintw(Bowin, 2, 1, "GPS%+4d", utc_offset);
 	else
-	    (void)mvwprintw(Bowin, 2, 2, "unknown");
+	    (void)mvwprintw(Bowin, 2, 1, "unknown");
     }
 
 	monitor_log("Bo =");
+	break;
+
+    case ONCTYPE('A', 'w'):
+    {
+	int time_mode;
+
+	time_mode = (double)getub(buf, 4);
+
+	if (time_mode == 0)
+	    (void)mvwprintw(Awwin, 2, 1, " GPS");
+	else if (time_mode == 1)
+	    (void)mvwprintw(Awwin, 2, 1, " UTC");
+	else
+	    (void)mvwprintw(Awwin, 2, 1, "   ?");
+    }
+
+	monitor_log("Aw =");
 	break;
 
     case ONCTYPE('A', 'y'):
@@ -387,7 +412,7 @@ static void oncore_update(void)
          * not a PPS offset gpsmon calculated */
 	pps_offset = (double)getbes32(buf, 4) / 1000000.0;
 
-	(void)mvwprintw(Aywin, 2, 2, " %7.3f ms", pps_offset);
+	(void)mvwprintw(Aywin, 2, 1, " %7.3f ms", pps_offset);
     }
 
 	monitor_log("Ay =");
@@ -441,6 +466,7 @@ static void oncore_wrap(void)
     (void)delwin(Bbwin);
     (void)delwin(Enwin);
     (void)delwin(Bowin);
+    (void)delwin(Awwin);
     (void)delwin(Aywin);
     (void)delwin(Atwin);
     (void)delwin(Aswin);
