@@ -1685,7 +1685,8 @@ gps_mask_t gpsd_poll(struct gps_device_t *session)
          * to derive a good fix. Such packets should set STATUS_NO_FIX.
          */
         if (0 != (session->gpsdata.set & (LATLON_SET|ECEF_SET))) {
-            if ( session->gpsdata.fix.status > STATUS_NO_FIX) {
+            if ( session->gpsdata.fix.status > STATUS_NO_FIX ||
+		 (session->gpsdata.set & GOODTIME_IS) != 0 ) {
                 session->context->fixcnt++;
                 session->fixcnt++;
             } else {
