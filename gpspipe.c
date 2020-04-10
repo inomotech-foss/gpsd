@@ -57,10 +57,13 @@ static void spinner(unsigned int, unsigned int);
 /* NMEA-0183 standard baud rate */
 #define BAUDRATE B4800
 
+enum {
+    MAXLINE = 512
+};
+
 /* Serial port variables */
 static struct termios oldtio, newtio;
 static int fd_out = 1;		/* output initially goes to standard output */
-static char serbuf[255];
 static int debug;
 
 static void open_serial(char *device)
@@ -97,6 +100,36 @@ static void open_serial(char *device)
     }
 }
 
+/* bgetc() returns a character from 'buf' at index 'n', or EOF on
+   end of buffer. */
+static inline char bgetc(char *buf, size_t size, size_t n)
+{
+    return (n < size) ? buf[n] : EOF;
+}
+
+/* bgets() reads in at most one less than 'n' characters from the buffer
+   pointed by 'bufp' and stores them into the buffer pointed to by 's'.
+   Reading stops after an EOF or a newline.
+
+   It returns s on success, and NULL when end of buffer occurs
+   while no characters have been read. */
+static char *bgets(char **bufp, size_t *sizep, char *s, size_t n)
+{
+    char c, *cs = s;
+    int pos = 0;
+
+    while (--n > 0 && (c = bgetc(*bufp, *sizep, pos)) != EOF) {
+        pos++;
+        if ((*cs++ = c) == '\n')
+            break;
+    }
+
+    *cs = '\0';
+    *sizep -= pos;
+    *bufp += pos;
+    return (c == EOF && cs == s) ? NULL : s;
+}
+
 static void usage(void)
 {
     (void)fprintf(stderr,
@@ -128,6 +161,7 @@ static void usage(void)
 int main(int argc, char **argv)
 {
     char buf[4096];
+    char line[MAXLINE+1];
     bool timestamp = false;
     bool iso8601 = false;
     char *format = "%F %T";
@@ -136,7 +170,6 @@ int main(int argc, char **argv)
     bool daemonize = false;
     bool binary = false;
     bool sleepy = false;
-    bool new_line = true;
     bool raw = false;
     bool watch = false;
     bool profile = false;
@@ -279,10 +312,7 @@ int main(int argc, char **argv)
     if (outfile == NULL) {
 	fp = stdout;
     } else {
-	if (binary)
-	    fp = fopen(outfile, "wb");
-	else
-	    fp = fopen(outfile, "w");
+        fp = fopen(outfile, binary ? "wb" : "w");
 
 	if (fp == NULL) {
 	    (void)fprintf(stderr,
@@ -313,6 +343,7 @@ int main(int argc, char **argv)
 	vflag = 0;
 
     for (;;) {
+        char *bufp;
 	int r = 0;
 	struct timespec tv;
 
@@ -336,105 +367,101 @@ int main(int argc, char **argv)
 
 	/* reading directly from the socket avoids decode overhead */
 	errno = 0;
-	r = (int)recv(gpsdata.gps_fd, buf, sizeof(buf), 0);
-	if (r > 0) {
-	    int i = 0;
-	    int j = 0;
-	    for (i = 0; i < r; i++) {
-		char c = buf[i];
-		if (j < (int)(sizeof(serbuf) - 1)) {
-		    serbuf[j++] = buf[i];
-		}
-		if (new_line && timestamp) {
-		    char tmstr_u[40];            // time with "usec" resolution
-		    struct timespec now;
-		    struct tm tmp_now;
-                    int written;
+        r = recv(gpsdata.gps_fd, buf, sizeof(buf), 0);
 
-		    (void)clock_gettime(CLOCK_REALTIME, &now);
-		    (void)gmtime_r((time_t *)&(now.tv_sec), &tmp_now);
-		    (void)strftime(tmstr, sizeof(tmstr), format, &tmp_now);
-		    new_line = 0;
+        if (r < 0) {
+            if (errno == EAGAIN)
+                /* this should never happen */
+                continue;
+            else
+                (void)fprintf(stderr, "gpspipe: read error %s(%d)\n",
+                              strerror(errno), errno);
+            exit(EXIT_FAILURE);
+        } else if (r == 0) {
+            /* gpsd has closed the connection */
+            exit(EXIT_SUCCESS);
+        }
 
-		    switch( option_u ) {
-		    case 2:
-			if(iso8601){
-			    written = strlen(tmstr);
-			    tmstr[written] = 'Z';
-			    tmstr[written+1] = '\0';
-			}
-			(void)snprintf(tmstr_u, sizeof(tmstr_u),
-				       " %lld.%06ld",
-				       (long long)now.tv_sec,
-				       (long)now.tv_nsec/1000);
-			break;
-		    case 1:
-                        written = snprintf(tmstr_u, sizeof(tmstr_u),
-                                           ".%06ld", (long)now.tv_nsec/1000);
+        /* good data is available */
 
-			if((0 < written) && (40 > written) && iso8601){
-			    tmstr_u[written-1] = 'Z';
-			    tmstr_u[written] = '\0';
-			}
-			break;
-		    default:
-			*tmstr_u = '\0';
-			break;
-		    }
+        bufp = buf;
+        while (bgets(&bufp, (size_t *)&r, line, MAXLINE) != NULL) {
+            /* write to the output stream one line at a time */
 
-		    if (fprintf(fp, "%.24s%s: ", tmstr, tmstr_u) <= 0) {
-			(void)fprintf(stderr,
-				      "gpspipe: write error, %s(%d)\n",
-				      strerror(errno), errno);
-			exit(EXIT_FAILURE);
-		    }
-		}
-		if (fputc(c, fp) == EOF) {
-		    (void)fprintf(stderr, "gpspipe: write error, %s(%d)\n",
-		                  strerror(errno), errno);
-		    exit(EXIT_FAILURE);
-		}
+            if (timestamp) {
+                char tmstr_u[40];            // time with "usec" resolution
+                struct timespec now;
+                struct tm tmp_now;
+                int written;
 
-		if (c == '\n') {
-		    if (serialport != NULL) {
-			if (write(fd_out, serbuf, (size_t) j) == -1) {
-			    (void)fprintf(stderr,
-			                  "gpspipe: serial port write error,"
-			                  " %s(%d)\n",
-			                  strerror(errno), errno);
-			    exit(EXIT_FAILURE);
-			}
-			j = 0;
-		    }
+                (void)clock_gettime(CLOCK_REALTIME, &now);
+                (void)gmtime_r((time_t *)&(now.tv_sec), &tmp_now);
+                (void)strftime(tmstr, sizeof(tmstr), format, &tmp_now);
 
-		    new_line = true;
-		    /* flush after every good line */
-		    if (fflush(fp)) {
-			(void)fprintf(stderr,
-				      "gpspipe: fflush error, %s(%d)\n",
-				      strerror(errno), errno);
-			exit(EXIT_FAILURE);
-		    }
-		    if (count > 0) {
-			if (0 >= --count) {
-			    /* completed count */
-			    exit(EXIT_SUCCESS);
-			}
-		    }
-		}
-	    }
-	} else {
-	    if (r == -1) {
-		if (errno == EAGAIN)
-		    continue;
-		else
-		    (void)fprintf(stderr, "gpspipe: read error %s(%d)\n",
-			      strerror(errno), errno);
-		exit(EXIT_FAILURE);
-	    } else {
-		exit(EXIT_SUCCESS);
-	    }
-	}
+                switch (option_u) {
+                case 2:
+                    if (iso8601) {
+                        written = strlen(tmstr);
+                        tmstr[written] = 'Z';
+                        tmstr[written+1] = '\0';
+                    }
+                    (void)snprintf(tmstr_u, sizeof(tmstr_u),
+                                   " %lld.%06ld",
+                                   (long long)now.tv_sec,
+                                   (long)now.tv_nsec/1000);
+                    break;
+                case 1:
+                    written = snprintf(tmstr_u, sizeof(tmstr_u),
+                                       ".%06ld", (long)now.tv_nsec/1000);
+
+                    if ((0 < written) && (40 > written) && iso8601) {
+                        tmstr_u[written-1] = 'Z';
+                        tmstr_u[written] = '\0';
+                    }
+                    break;
+                default:
+                    *tmstr_u = '\0';
+                }
+
+                if (fprintf(fp, "%.24s%s: ", tmstr, tmstr_u) <= 0) {
+                    (void)fprintf(stderr,
+                                  "gpspipe: write error, %s(%d)\n",
+                                  strerror(errno), errno);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            if (fputs(line, fp) == EOF) {
+                (void)fprintf(stderr, "gpspipe: write error, %s(%d)\n",
+                              strerror(errno), errno);
+                exit(EXIT_FAILURE);
+            }
+
+            /* flush after every good line */
+            if (fflush(fp)) {
+                (void)fprintf(stderr,
+                              "gpspipe: fflush error, %s(%d)\n",
+                              strerror(errno), errno);
+                exit(EXIT_FAILURE);
+            }
+
+            if (serialport != NULL) {
+                if (write(fd_out, line, strlen(line)) == -1) {
+                    (void)fprintf(stderr,
+                                  "gpspipe: serial port write error,"
+                                  " %s(%d)\n",
+                                  strerror(errno), errno);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            if (count > 0) {
+                if (0 >= --count) {
+                    /* completed count */
+                    exit(EXIT_SUCCESS);
+                }
+            }
+        }
     }
 
 #ifdef __UNUSED__
