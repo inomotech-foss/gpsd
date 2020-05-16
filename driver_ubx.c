@@ -273,7 +273,7 @@ static short ubx_to_prn(int ubx_PRN, unsigned char *gnssId,
  * Receiver/Software Version
  * UBX-MON-VER
  *
- * sadly more info than fits in session->swtype for now.
+ * sadly, potentially more info than may fit in session->subtype1.
  * so squish the data hard.
  */
 static void
@@ -292,14 +292,14 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
 
     /* save SW and HW Version as subtype */
     (void)snprintf(obuf, sizeof(obuf),
-                   "SW %.30s,HW %.10s",
+                   "SW %.30s, HW %.10s",
                    (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 0],
                    (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 30]);
 
     /* save what we can */
     (void)strlcpy(session->subtype, obuf, sizeof(session->subtype));
-    /* find PROTVER= */
-    cptr = strstr(session->subtype, "PROTVER=");
+    /* find PROTVER, followed by space character or equal sign */
+    cptr = strstr(session->subtype, "PROTVER");
     if (NULL != cptr) {
         int protver = atoi(cptr + 8);
         if (9 < protver) {
@@ -326,9 +326,9 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     }
     /* save what we can */
     (void)strlcpy(session->subtype1, obuf, sizeof(session->subtype1));
-    /* output SW and HW Version at LOG_INFO */
+    /* output SW and HW Version at LOG_INF */
     GPSD_LOG(LOG_INF, &session->context->errout,
-             "UBX-MON-VER: %s %s\n",
+             "UBX-MON-VER: %s (%s)\n",
              session->subtype, session->subtype1);
 }
 
