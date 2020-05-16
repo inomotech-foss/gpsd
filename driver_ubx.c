@@ -273,7 +273,7 @@ static short ubx_to_prn(int ubx_PRN, unsigned char *gnssId,
  * Receiver/Software Version
  * UBX-MON-VER
  *
- * sadly, potentially more info than may fit in session->subtype1.
+ * sadly more info than fits in session->swtype for now.
  * so squish the data hard.
  */
 static void
@@ -292,14 +292,14 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
 
     /* save SW and HW Version as subtype */
     (void)snprintf(obuf, sizeof(obuf),
-                   "SW %.30s, HW %.10s",
+                   "SW %.30s,HW %.10s",
                    (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 0],
                    (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 30]);
 
     /* save what we can */
     (void)strlcpy(session->subtype, obuf, sizeof(session->subtype));
-    /* find PROTVER, followed by space character or equal sign */
-    cptr = strstr(session->subtype, "PROTVER");
+    /* find PROTVER= */
+    cptr = strstr(session->subtype, "PROTVER=");
     if (NULL != cptr) {
         int protver = atoi(cptr + 8);
         if (9 < protver) {
@@ -323,12 +323,45 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
             (void)strlcat(obuf, ",", sizeof(obuf));
         }
         (void)strlcat(obuf, (char *)&buf[start_of_str], sizeof(obuf));
+
+        /* try to extract protocol version from extension info only if
+           it appears we don't have it yet */
+        if (9 < session->driver.ubx.protver) {
+            continue;
+        }
+        /* try to extract protocol version only if assumedly full length
+           (i.e. 30 octets) Extended info string is completely contained
+           within payload */
+        if ( (40 + (30 * (n + 1))) > data_len ) {
+            continue;
+        }
+        /* current sub-string should already be null-terminated, make sure */
+        buf[start_of_str + 29] = '\0';
+        /* find PROTVER, followed by space character or equal sign */
+        cptr = strstr((char *)&buf[start_of_str], "PROTVER=");
+        if (NULL == cptr) {
+            cptr = strstr((char *)&buf[start_of_str], "PROTVER ");
+        }
+        if (NULL != cptr) {
+            continue;
+        }
+        /* enough characters after PROTVER and separator to contain digits? */
+        if (strlen(cptr) > 8) {
+            /* protocol version strictly is a float, but get as integer
+               for now while we don't customize our behavior based on
+               decimal digits */
+            int protver = atoi(cptr + 8);
+            if (9 < protver) {
+                /* protver 10, u-blox 5, is the oldest we know */
+                session->driver.ubx.protver = protver;
+            }
+        }
     }
     /* save what we can */
     (void)strlcpy(session->subtype1, obuf, sizeof(session->subtype1));
-    /* output SW and HW Version at LOG_INF */
+    /* output SW and HW Version at LOG_INFO */
     GPSD_LOG(LOG_INF, &session->context->errout,
-             "UBX-MON-VER: %s (%s)\n",
+             "UBX-MON-VER: %s %s\n",
              session->subtype, session->subtype1);
 }
 
