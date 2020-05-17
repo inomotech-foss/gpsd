@@ -342,7 +342,7 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
         if (NULL == cptr) {
             cptr = strstr((char *)&buf[start_of_str], "PROTVER ");
         }
-        if (NULL != cptr) {
+        if (NULL == cptr) {
             continue;
         }
         /* enough characters after PROTVER and separator to contain digits? */
