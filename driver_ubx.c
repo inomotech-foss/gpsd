@@ -323,39 +323,6 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
             (void)strlcat(obuf, ",", sizeof(obuf));
         }
         (void)strlcat(obuf, (char *)&buf[start_of_str], sizeof(obuf));
-
-        /* try to extract protocol version from extension info only if
-           it appears we don't have it yet */
-        if (9 < session->driver.ubx.protver) {
-            continue;
-        }
-        /* try to extract protocol version only if assumedly full length
-           (i.e. 30 octets) Extended info string is completely contained
-           within payload */
-        if ( (40 + (30 * (n + 1))) > data_len ) {
-            continue;
-        }
-        /* current sub-string should already be null-terminated, make sure */
-        buf[start_of_str + 29] = '\0';
-        /* find PROTVER, followed by space character or equal sign */
-        cptr = strstr((char *)&buf[start_of_str], "PROTVER=");
-        if (NULL == cptr) {
-            cptr = strstr((char *)&buf[start_of_str], "PROTVER ");
-        }
-        if (NULL == cptr) {
-            continue;
-        }
-        /* enough characters after PROTVER and separator to contain digits? */
-        if (strlen(cptr) > 8) {
-            /* protocol version strictly is a float, but get as integer
-               for now while we don't customize our behavior based on
-               decimal digits */
-            int protver = atoi(cptr + 8);
-            if (9 < protver) {
-                /* protver 10, u-blox 5, is the oldest we know */
-                session->driver.ubx.protver = protver;
-            }
-        }
     }
     /* save what we can */
     (void)strlcpy(session->subtype1, obuf, sizeof(session->subtype1));
@@ -363,6 +330,11 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     GPSD_LOG(LOG_INF, &session->context->errout,
              "UBX-MON-VER: %s %s\n",
              session->subtype, session->subtype1);
+    /* output detected protocol version to aid in understanding
+       protocol version detection effectiveness */
+    GPSD_LOG(LOG_INF, &session->context->errout,
+             "UBX-MON-VER: detected protocol version: %d\n",
+             session->driver.ubx.protver);
 }
 
 /**
