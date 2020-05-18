@@ -330,6 +330,11 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     GPSD_LOG(LOG_INF, &session->context->errout,
              "UBX-MON-VER: %s %s\n",
              session->subtype, session->subtype1);
+    /* output detected protocol version to aid in understanding
+       protocol version detection effectiveness */
+    GPSD_LOG(LOG_INF, &session->context->errout,
+             "UBX-MON-VER: detected protocol version: %d\n",
+             session->driver.ubx.protver);
 }
 
 /**
