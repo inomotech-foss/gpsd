@@ -99,8 +99,8 @@ static gps_mask_t ubx_msg_nav_timegps(struct gps_device_t *session,
                                       unsigned char *buf, size_t data_len);
 static gps_mask_t ubx_msg_nav_velecef(struct gps_device_t *session,
                                       unsigned char *buf, size_t data_len);
-static void ubx_msg_sbas(struct gps_device_t *session, unsigned char *buf,
-                         size_t data_len);
+static void ubx_msg_nav_sbas(struct gps_device_t *session, unsigned char *buf,
+                             size_t data_len);
 static gps_mask_t ubx_msg_tim_tp(struct gps_device_t *session,
                                  unsigned char *buf, size_t data_len);
 #ifdef RECONFIGURE_ENABLE
@@ -293,8 +293,8 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     /* save SW and HW Version as subtype */
     (void)snprintf(obuf, sizeof(obuf),
                    "SW %.30s,HW %.10s",
-                   (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 0],
-                   (char *)&buf[UBX_MESSAGE_DATA_OFFSET + 30]);
+                   (char *)&buf[UBX_PREFIX_LEN + 0],
+                   (char *)&buf[UBX_PREFIX_LEN + 30]);
 
     /* save what we can */
     (void)strlcpy(session->subtype, obuf, sizeof(session->subtype));
@@ -311,7 +311,7 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     obuf[0] = '\0';
     /* get n number of Extended info strings.  what is max n? */
     for ( n = 0; ; n++ ) {
-        size_t start_of_str = UBX_MESSAGE_DATA_OFFSET + 40 + (30 * n);
+        size_t start_of_str = UBX_PREFIX_LEN + 40 + (30 * n);
 
         if ( (start_of_str + 2 ) > data_len ) {
             /* last one can be shorter than 30 */
@@ -363,6 +363,9 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     GPSD_LOG(LOG_INF, &session->context->errout,
              "UBX-MON-VER: %s %s\n",
              session->subtype, session->subtype1);
+    GPSD_LOG(LOG_INF, &session->context->errout,
+             "UBX-MON-VER: PROTVER %d\n",
+             session->driver.ubx.protver);
 }
 
 /**
@@ -1443,7 +1446,7 @@ ubx_msg_nav_dop(struct gps_device_t *session, unsigned char *buf,
 {
     if (18 > data_len) {
         GPSD_LOG(LOG_WARN, &session->context->errout,
-                 "UBX-RXM-SFRB message, runt payload len %zd", data_len);
+                 "UBX-NAV-DOP message, runt payload len %zd", data_len);
         return 0;
     }
 
@@ -1794,7 +1797,7 @@ ubx_msg_nav_velned(struct gps_device_t *session, unsigned char *buf,
  * Not in u-blox 9
  * FIXME: not well decoded...
  */
-static void ubx_msg_sbas(struct gps_device_t *session, unsigned char *buf,
+static void ubx_msg_nav_sbas(struct gps_device_t *session, unsigned char *buf,
                          size_t data_len)
 {
     unsigned int i, nsv;
@@ -1852,9 +1855,9 @@ static void ubx_msg_sbas(struct gps_device_t *session, unsigned char *buf,
  * u-blox 9, message version 0 (but no version byte!)
  * u-blox 9, message version 1
  */
-static gps_mask_t ubx_rxm_rawx(struct gps_device_t *session,
-                               const unsigned char *buf,
-                               size_t data_len)
+static gps_mask_t ubx_msg_rxm_rawx(struct gps_device_t *session,
+                                   const unsigned char *buf,
+                                   size_t data_len)
 {
     double rcvTow;
     uint16_t week;
@@ -2087,8 +2090,8 @@ static gps_mask_t ubx_rxm_rawx(struct gps_device_t *session,
  * Raw Subframes - UBX-RXM-SFRB
  * Not in u-blox 8 or 9
  */
-static gps_mask_t ubx_rxm_sfrb(struct gps_device_t *session,
-                               unsigned char *buf, size_t data_len)
+static gps_mask_t ubx_msg_rxm_sfrb(struct gps_device_t *session,
+                                   unsigned char *buf, size_t data_len)
 {
     unsigned int i, chan, svid;
     uint32_t words[10];
@@ -2248,22 +2251,22 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         if (2 <= data_len) {
             GPSD_LOG(LOG_DATA, &session->context->errout,
                      "UBX-ACK-ACK, class: %02x, id: %02x\n",
-                     buf[UBX_MESSAGE_DATA_OFFSET],
-                     buf[UBX_MESSAGE_DATA_OFFSET + 1]);
+                     buf[UBX_PREFIX_LEN],
+                     buf[UBX_PREFIX_LEN + 1]);
         }
         break;
     case UBX_ACK_NAK:
         if (2 <= data_len) {
             GPSD_LOG(LOG_WARN, &session->context->errout,
                      "UBX-ACK-NAK, class: %02x, id: %02x\n",
-                     buf[UBX_MESSAGE_DATA_OFFSET],
-                     buf[UBX_MESSAGE_DATA_OFFSET + 1]);
+                     buf[UBX_PREFIX_LEN],
+                     buf[UBX_PREFIX_LEN + 1]);
         }
         break;
 
     case UBX_CFG_PRT:
-        if (session->driver.ubx.port_id != buf[UBX_MESSAGE_DATA_OFFSET + 0] ) {
-            session->driver.ubx.port_id = buf[UBX_MESSAGE_DATA_OFFSET + 0];
+        if (session->driver.ubx.port_id != buf[UBX_PREFIX_LEN + 0] ) {
+            session->driver.ubx.port_id = buf[UBX_PREFIX_LEN + 0];
             GPSD_LOG(LOG_INF, &session->context->errout,
                      "UBX-CFG-PRT: port %d\n", session->driver.ubx.port_id);
 
@@ -2441,7 +2444,7 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         break;
     case UBX_NAV_SBAS:
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-NAV-SBAS\n");
-        ubx_msg_sbas(session, &buf[UBX_PREFIX_LEN], data_len);
+        ubx_msg_nav_sbas(session, &buf[UBX_PREFIX_LEN], data_len);
         break;
     case UBX_NAV_SOL:
         /* UBX-NAV-SOL deprecated in u-blox 6, gone in u-blox 9.
@@ -2521,7 +2524,7 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-RXM-RAW\n");
         break;
     case UBX_RXM_RAWX:
-        mask = ubx_rxm_rawx(session, &buf[UBX_PREFIX_LEN], data_len);
+        mask = ubx_msg_rxm_rawx(session, &buf[UBX_PREFIX_LEN], data_len);
         break;
     case UBX_RXM_RLM:
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-RXM-RLM\n");
@@ -2530,7 +2533,7 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
         GPSD_LOG(LOG_DATA, &session->context->errout, "UBX-RXM-RTCM\n");
         break;
     case UBX_RXM_SFRB:
-        mask = ubx_rxm_sfrb(session, &buf[UBX_PREFIX_LEN], data_len);
+        mask = ubx_msg_rxm_sfrb(session, &buf[UBX_PREFIX_LEN], data_len);
         break;
     case UBX_RXM_SFRBX:
         GPSD_LOG(LOG_PROG, &session->context->errout, "UBX-RXM-SFRBX\n");
