@@ -63,6 +63,10 @@
 #define UBX_CFG_LEN             20
 #define outProtoMask            14
 
+#define CFG_PRT_DONE            1
+#define CFG_MSG_DONE            2
+#define CFG_DONE                (CFG_PRT_DONE | CFG_MSG_DONE)
+
 static gps_mask_t ubx_parse(struct gps_device_t *session, unsigned char *buf,
                             size_t len);
 static gps_mask_t ubx_msg_log_batch(struct gps_device_t *session,
@@ -2304,11 +2308,12 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
                      "UBX-CFG-PRT: port %d\n", session->driver.ubx.port_id);
 
             /* Need to reinitialize since port changed */
-            if (session->mode == O_OPTIMIZE) {
+/*            if (session->mode == O_OPTIMIZE) {
                 ubx_mode(session, MODE_BINARY);
             } else {
                 ubx_mode(session, MODE_NMEA);
             }
+*/
         }
         break;
 
@@ -2730,14 +2735,22 @@ static ssize_t ubx_control_send(struct gps_device_t *session, char *msg,
 
 static void ubx_init_query(struct gps_device_t *session)
 {
+    /* UBX-CFG-PRT: poll for current port */
+    (void)ubx_write(session, UBX_CLASS_CFG, 0x00, NULL, 0);
     /* UBX-MON-VER: query for version information */
     (void)ubx_write(session, UBX_CLASS_MON, 0x04, NULL, 0);
 }
 
 static void ubx_event_hook(struct gps_device_t *session, event_t event)
 {
+    bool cfg_prt_done = (bool)(session->cfg_stage & CFG_PRT_DONE);
+    bool cfg_msg_done = (bool)(session->cfg_stage & CFG_MSG_DONE);
+    bool have_protver = (bool)(9 < session->driver.ubx.protver);
+    bool have_port = (bool)(session->driver.ubx.port_id != 0);
+
     if (session->context->readonly ||
-        session->context->passive) {
+        session->context->passive ||
+        CFG_DONE == session->cfg_stage) {
         return;
     }
     if (event == event_identified) {
@@ -2745,13 +2758,34 @@ static void ubx_event_hook(struct gps_device_t *session, event_t event)
 
         /* no longer set UBX-CFG-SBAS here, u-blox 9 does not have it */
 
-        /*
-         * Turn off NMEA output, turn on UBX on this port.
-         */
-        if (session->mode == O_OPTIMIZE) {
-            ubx_mode(session, MODE_BINARY);
-        } else {
-            ubx_mode(session, MODE_NMEA);
+    } else if (event == event_configure) {
+        session->cfg_step++;
+        if (have_protver == true && have_port == true) {
+
+            if (cfg_prt_done == false && cfg_msg_done == false) {
+                 /*
+                 * Turn off NMEA output, turn on UBX on this port.
+                 */
+                if (session->mode == O_OPTIMIZE) {
+                    ubx_mode(session, MODE_BINARY);
+                } else {
+                    ubx_mode(session, MODE_NMEA);
+                }
+                session->cfg_stage = CFG_DONE;
+            }
+        }
+        /* Force port and message configuration if we don't have
+           port and protVer after 15 messages */
+        if (session->cfg_step == 15 && CFG_DONE != session->cfg_stage) {
+             /*
+             * Turn off NMEA output, turn on UBX on this port.
+             */
+            if (session->mode == O_OPTIMIZE) {
+                ubx_mode(session, MODE_BINARY);
+            } else {
+                ubx_mode(session, MODE_NMEA);
+            }
+            session->cfg_stage = CFG_DONE;
         }
     } else if (event == event_deactivate) {
         /* There used to be a hotstart/reset here.
