@@ -104,6 +104,7 @@ static void ubx_msg_nav_sbas(struct gps_device_t *session, unsigned char *buf,
 static gps_mask_t ubx_msg_tim_tp(struct gps_device_t *session,
                                  unsigned char *buf, size_t data_len);
 static void ubx_mode(struct gps_device_t *session, int mode);
+static void ubx_cfg_msg(struct gps_device_t *session, const int mode);
 
 /* make up an NMEA 4.0 (extended) PRN based on gnssId:svId,
  * using Appendix A from * u-blox ZED-F9P Interface Description
@@ -2870,6 +2871,12 @@ static void ubx_cfg_prt(struct gps_device_t *session,
              "UBX ubx_cfg_prt mode %d port %d PROTVER %d\n", mode, buf[0],
              session->driver.ubx.protver);
 
+    (void)ubx_cfg_msg(session, mode);
+}
+
+static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
+/* generate and send a configuration block */
+{
     /* selectively enable output protocols */
     if (mode == MODE_NMEA) {
         /*
