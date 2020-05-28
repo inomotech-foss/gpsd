@@ -2870,13 +2870,16 @@ static void ubx_cfg_prt(struct gps_device_t *session,
     GPSD_LOG(LOG_PROG, &session->context->errout,
              "UBX ubx_cfg_prt mode %d port %d PROTVER %d\n", mode, buf[0],
              session->driver.ubx.protver);
-
-    (void)ubx_cfg_msg(session, mode);
 }
 
 static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
 /* generate and send a configuration block */
 {
+
+    GPSD_LOG(LOG_PROG, &session->context->errout,
+             "UBX ubx_cfg_msg mode %d PROTVER %d\n", mode,
+             session->driver.ubx.protver);
+
     /* selectively enable output protocols */
     if (mode == MODE_NMEA) {
         /*
@@ -3088,6 +3091,7 @@ static void ubx_mode(struct gps_device_t *session, int mode)
                 gpsd_get_parity(session),
                 gpsd_get_stopbits(session),
                 mode);
+    ubx_cfg_msg(session, mode);
 }
 
 static bool ubx_speed(struct gps_device_t *session,
@@ -3097,6 +3101,8 @@ static bool ubx_speed(struct gps_device_t *session,
                 speed,
                 parity,
                 stopbits,
+                (session->lexer.type == UBX_PACKET) ? MODE_BINARY : MODE_NMEA);
+    ubx_cfg_msg(session,
                 (session->lexer.type == UBX_PACKET) ? MODE_BINARY : MODE_NMEA);
     return true;
 }
