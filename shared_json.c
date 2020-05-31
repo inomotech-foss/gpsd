@@ -119,7 +119,7 @@ int json_watch_read(const char *buf,
     /* *INDENT-ON* */
     int status;
 
-    status = json_read_object(buf, chanconfig_attrs, endptr);
+    status = json_read_object(buf, chanconfig_attrs, endptr);  
     return status;
 }
 
