@@ -228,6 +228,7 @@ static void nmea_event_hook(struct gps_device_t *session, event_t event)
             /* probe for UBX -- query port configuration */
             GPSD_LOG(LOG_PROG, &session->context->errout,
                      "=> Probing for UBX\n");
+            (void)ubx_write(session, 0x0a, 0x04, NULL, 0);
             (void)ubx_write(session, 0x06, 0x00, NULL, 0);
             break;
 #endif /* UBLOX_ENABLE */
