@@ -63,9 +63,12 @@
 #define UBX_CFG_LEN             20
 #define outProtoMask            14
 
-#define CFG_PRT_DONE            1
-#define CFG_MSG_DONE            2
-#define CFG_DONE                (CFG_PRT_DONE | CFG_MSG_DONE)
+#define CFG_START               0
+#define CFG_PRT_WAIT            1
+#define CFG_PRT_DONE            2
+#define CFG_MSG_DONE            3
+#define CFG_DONE                CFG_MSG_DONE
+#define CFG_PRT_WAIT_STEPS      3
 
 static gps_mask_t ubx_parse(struct gps_device_t *session, unsigned char *buf,
                             size_t len);
@@ -109,6 +112,10 @@ static gps_mask_t ubx_msg_tim_tp(struct gps_device_t *session,
                                  unsigned char *buf, size_t data_len);
 static void ubx_mode(struct gps_device_t *session, int mode);
 static void ubx_cfg_msg(struct gps_device_t *session, const int mode);
+static void ubx_mode_msg(struct gps_device_t *session, int mode);
+static void ubx_mode_prt(struct gps_device_t *session, int mode);
+static void ubx_mode_msg_opt(struct gps_device_t *session);
+static void ubx_mode_prt_opt(struct gps_device_t *session);
 
 /* make up an NMEA 4.0 (extended) PRN based on gnssId:svId,
  * using Appendix A from * u-blox ZED-F9P Interface Description
@@ -216,6 +223,7 @@ static short ubx_to_prn(int ubx_PRN, unsigned char *gnssId,
     *gnssId = 0;
     *svId = 0;
 
+    // IRNSS??
     if (1 > ubx_PRN) {
         /* skip 0 PRN */
         return 0;
@@ -318,6 +326,7 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
 
         // extensions are exactly 30 bytes long
         /* if gross extension length doesn't look sane, don't proceed here */
+        // FIXME: remove from loop
         if ( (40 + (30 * n)) >= data_len ) {
             break;
         }
@@ -340,6 +349,11 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
             /* protver 10, u-blox 5, is the oldest we know */
             session->driver.ubx.protver = protver;
         }
+    }
+
+    /* Flag that we saw UBX-MON-VER even if we didn't get valid protver (> 9) */
+    if (0 == session->driver.ubx.protver) {
+        session->driver.ubx.protver = 1;
     }
 
     // save what we can in subtype1
@@ -2144,12 +2158,10 @@ static gps_mask_t ubx_msg_rxm_sfrbx(struct gps_device_t *session,
     }
 
     for (i = 0; i < 10; i++) {
-        words[i] = (uint32_t)getleu32(buf, 4 * i + 8) & 0x3fffffff;
+        words[i] = (uint32_t)getleu32(buf, 4 * i + 8) >> 6;
     }
 
-    // return gpsd_interpret_subframe(session, svId, words);
-    // do not decode yet...
-    return 0;
+    return gpsd_interpret_subframe(session, svId, words);
 }
 
 /* UBX-INF-* */
@@ -2306,14 +2318,6 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
             session->driver.ubx.port_id = buf[UBX_PREFIX_LEN + 0];
             GPSD_LOG(LOG_INF, &session->context->errout,
                      "UBX-CFG-PRT: port %d\n", session->driver.ubx.port_id);
-
-            /* Need to reinitialize since port changed */
-/*            if (session->mode == O_OPTIMIZE) {
-                ubx_mode(session, MODE_BINARY);
-            } else {
-                ubx_mode(session, MODE_NMEA);
-            }
-*/
         }
         break;
 
@@ -2735,17 +2739,18 @@ static ssize_t ubx_control_send(struct gps_device_t *session, char *msg,
 
 static void ubx_init_query(struct gps_device_t *session)
 {
-    /* UBX-CFG-PRT: poll for current port */
-    (void)ubx_write(session, UBX_CLASS_CFG, 0x00, NULL, 0);
+    /* Query version info first to avoid timing issue when reconfiguring
+       port triggered by receipt of port poll response */
     /* UBX-MON-VER: query for version information */
     (void)ubx_write(session, UBX_CLASS_MON, 0x04, NULL, 0);
+    /* UBX-CFG-PRT: poll for current port */
+    (void)ubx_write(session, UBX_CLASS_CFG, 0x00, NULL, 0);
 }
 
 static void ubx_event_hook(struct gps_device_t *session, event_t event)
 {
-    bool cfg_prt_done = (bool)(session->cfg_stage & CFG_PRT_DONE);
-    bool cfg_msg_done = (bool)(session->cfg_stage & CFG_MSG_DONE);
-    bool have_protver = (bool)(9 < session->driver.ubx.protver);
+    bool have_protver = (bool)(0 < session->driver.ubx.protver);
+    /* FIXME!  Bad test, port_id == 0 is valid too.  DDC (I2X) = port 0 */
     bool have_port = (bool)(session->driver.ubx.port_id != 0);
 
     if (session->context->readonly ||
@@ -2759,33 +2764,46 @@ static void ubx_event_hook(struct gps_device_t *session, event_t event)
         /* no longer set UBX-CFG-SBAS here, u-blox 9 does not have it */
 
     } else if (event == event_configure) {
-        session->cfg_step++;
-        if (have_protver == true && have_port == true) {
 
-            if (cfg_prt_done == false && cfg_msg_done == false) {
-                 /*
-                 * Turn off NMEA output, turn on UBX on this port.
-                 */
-                if (session->mode == O_OPTIMIZE) {
-                    ubx_mode(session, MODE_BINARY);
-                } else {
-                    ubx_mode(session, MODE_NMEA);
-                }
-                session->cfg_stage = CFG_DONE;
+        switch(session->cfg_stage) {
+        case CFG_START:
+            if (have_port == true) {
+                ubx_mode_prt_opt(session);
+                session->cfg_stage = CFG_PRT_WAIT;
+                session->cfg_step = 0;
             }
-        }
-        /* Force port and message configuration if we don't have
-           port and protVer after 15 messages */
-        if (session->cfg_step == 15 && CFG_DONE != session->cfg_stage) {
-             /*
-             * Turn off NMEA output, turn on UBX on this port.
-             */
-            if (session->mode == O_OPTIMIZE) {
-                ubx_mode(session, MODE_BINARY);
+            break;
+        case CFG_PRT_WAIT:
+            /* Receiver may garble queued output upon port reconfiguration,
+               so wait a bit before next configuration steps */
+            if (CFG_PRT_WAIT_STEPS > session->cfg_step) {
+                session->cfg_step++;
             } else {
-                ubx_mode(session, MODE_NMEA);
+                session->cfg_stage = CFG_PRT_DONE;
+                session->cfg_step = 0;
             }
-            session->cfg_stage = CFG_DONE;
+            break;
+        case CFG_PRT_DONE:
+            if (have_protver == true) {
+                ubx_mode_msg_opt(session);
+                session->cfg_stage = CFG_MSG_DONE;
+            }
+            break;
+        }
+
+        /* Force port and message configuration if we don't have
+           port and/or protVer after a few moments */
+        if (session->lexer.counter > 25 &&
+            CFG_MSG_DONE > session->cfg_stage) {
+            ubx_mode_msg_opt(session);
+            session->cfg_stage = CFG_MSG_DONE;
+            return;
+        }
+        if (session->lexer.counter > 25 &&
+            CFG_PRT_DONE > session->cfg_stage) {
+            ubx_mode_prt_opt(session);
+            session->cfg_stage = CFG_PRT_DONE;
+            return;
         }
     } else if (event == event_deactivate) {
         /* There used to be a hotstart/reset here.
@@ -2835,6 +2853,8 @@ static void ubx_cfg_prt(struct gps_device_t *session,
      */
     else if (strstr(session->gpsdata.dev.path, "/ttyACM") != NULL) {
         /* using the built in USB port */
+        // FIXME!!  USB port has no speed!
+        // FIXME!!  maybe we know the portid already?
         session->driver.ubx.port_id = buf[0] = USB_ID;
     } else {
         /* A guess.  Could be UART2, or SPI, or DDC port */
@@ -2900,9 +2920,10 @@ static void ubx_cfg_prt(struct gps_device_t *session,
     buf[12] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK | RTCM_PROTOCOL_MASK |
               RTCM3_PROTOCOL_MASK;
 
-    /* FIXME?  RTCM/RTCM3 needs to be set too? */
-    buf[outProtoMask] = (mode == MODE_NMEA
-                         ? NMEA_PROTOCOL_MASK : UBX_PROTOCOL_MASK);
+    /* enable all input protocols by default
+     * no u-blox has RTCM2 out */
+    buf[outProtoMask] = NMEA_PROTOCOL_MASK | UBX_PROTOCOL_MASK |
+                        RTCM3_PROTOCOL_MASK;
     (void)ubx_write(session, 0x06u, 0x00, buf, sizeof(buf));
 
     GPSD_LOG(LOG_PROG, &session->context->errout,
@@ -2922,8 +2943,8 @@ static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
     if (mode == MODE_NMEA) {
         /*
          * We have to club the GR601-W over the head to make it stop emitting
-         * UBX after we've told it to start. Turning off the UBX protocol
-         * mask, by itself, seems to be ineffective.
+         * UBX after we've told it to start.  But do not mung the
+         * protocol out mask, that breaks things.
          */
 
         unsigned char msg[3];
@@ -3026,6 +3047,7 @@ static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
         msg[2] = 0x01;          /* rate */
         (void)ubx_write(session, 0x06u, 0x01, msg, 3);
 
+        // FIXME: what if we do not know the protver??
         /* UBX-NAV-SOL deprecated in u-blox 6, gone in u-blox 9.
          * Use UBX-NAV-PVT after u-blox 7 */
         if (10 > session->driver.ubx.protver) {
@@ -3059,6 +3081,7 @@ static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
         msg[2] = 0x01;          /* rate */
         (void)ubx_write(session, 0x06u, 0x01, msg, 3);
 
+        // FIXME: what if we do not know the protver??
         /* UBX-NAV-SVINFO deprecated in u-blox 8, gone in u-blox 9.
          * Use UBX-NAV-SAT after u-blox 7 */
         if (10 > session->driver.ubx.protver) {
@@ -3120,14 +3143,48 @@ static void ubx_cfg_msg(struct gps_device_t *session, const int mode)
     }
 }
 
-static void ubx_mode(struct gps_device_t *session, int mode)
+static void ubx_mode_prt_opt(struct gps_device_t *session)
+{
+     /*
+     * Turn off NMEA output, turn on UBX on this port.
+     */
+    if (session->mode == O_OPTIMIZE) {
+        ubx_mode_prt(session, MODE_BINARY);
+    } else {
+        ubx_mode_prt(session, MODE_NMEA);
+    }
+}
+
+static void ubx_mode_msg_opt(struct gps_device_t *session)
+{
+     /*
+      * Enable mode-specific message set on port.
+     */
+    if (session->mode == O_OPTIMIZE) {
+        ubx_mode_msg(session, MODE_BINARY);
+    } else {
+        ubx_mode_msg(session, MODE_NMEA);
+    }
+}
+
+static void ubx_mode_prt(struct gps_device_t *session, int mode)
 {
     ubx_cfg_prt(session,
                 gpsd_get_speed(session),
                 gpsd_get_parity(session),
                 gpsd_get_stopbits(session),
                 mode);
+}
+
+static void ubx_mode_msg(struct gps_device_t *session, int mode)
+{
     ubx_cfg_msg(session, mode);
+}
+
+static void ubx_mode(struct gps_device_t *session, int mode)
+{
+    ubx_mode_prt(session, mode);
+    ubx_mode_msg(session, mode);
 }
 
 static bool ubx_speed(struct gps_device_t *session,
