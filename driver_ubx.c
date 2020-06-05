@@ -3058,13 +3058,13 @@ static void ubx_cfg_prt(struct gps_device_t *session,
         msg[2] = 0x01;          /* rate */
         (void)ubx_write(session, 0x06u, 0x01, msg, 3);
 
-        msg[0] = 0x01;          /* class */
-        msg[1] = 0x26;          /* msg id  = UBX-NAV-TIMELS */
-        msg[2] = 0xff;          /* about every 4 minutes if nav rate is 1Hz */
-        (void)ubx_write(session, 0x06, 0x01, msg, 3);
-
         if (18 <= session->driver.ubx.protver) {
             /* first in u-blox 8 */
+            msg[0] = 0x01;          /* class */
+            msg[1] = 0x26;          /* msg id  = UBX-NAV-TIMELS */
+            msg[2] = 0xff;          /* about every 4 minutes if nav rate is 1Hz */
+            (void)ubx_write(session, 0x06, 0x01, msg, 3);
+
             /* UBX-NAV-EOE makes a good cycle ender */
             msg[0] = 0x01;              /* class */
             msg[1] = 0x61;              /* msg id  = NAV-EOE */
