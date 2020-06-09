@@ -2351,7 +2351,7 @@ Field Number:
 This is one of the sentences commonly emitted by GPS units.
 
 ------------------------------------------------------------------------------
-	1         2  3  4    5  6  7
+        1         2  3  4    5  6  7
         |         |  |  |    |  |  |
  $--ZDA,hhmmss.ss,xx,xx,xxxx,xx,xx*hh<CR><LF>
 ------------------------------------------------------------------------------
@@ -2731,7 +2731,7 @@ Described in <<MALTESE>>, actually a Maltese government document.
   about the NMEA standard(s) but do not wish to be identified.
 
 - [[[NORWAY]]]
-  "Etterretninger for sjøfarende" Notoces for Mariners, see p26
+  "Etterretninger for sjøfarende" Notices to Mariners, see p26
   https://kartverket.no/efs-documents/editions/2015/efs01-2015.pdf
 
 - [[[TALKERS]]]
