@@ -123,7 +123,7 @@ const fw_protver_map_entry_t fw_protver_map[] = {
     {"6.02", 12.02},
     {"7.01", 13.01},
     {"7.03", 13.03},
-    // protVer >14 should carry explicit protVer in MON-VER extension
+    // protVer >=14 should carry explicit protVer in MON-VER extension
     {"1.00", 14.00}
 };
 
