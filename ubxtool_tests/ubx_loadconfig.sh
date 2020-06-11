@@ -1,0 +1,9 @@
+echo Start UBX load config script
+
+#set up verbosity level & protocol
+export UBXOPTS="-v 2 -P 23.01"
+
+#load NAV configuration (last byte selects for memory to load  from/to)
+ubxtool -c 0x06,0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x08,0x00,0x00,0x02
+
+echo UBX load config complete
