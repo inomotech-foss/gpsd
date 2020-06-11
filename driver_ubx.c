@@ -105,6 +105,32 @@ static gps_mask_t ubx_msg_tim_tp(struct gps_device_t *session,
                                  unsigned char *buf, size_t data_len);
 static void ubx_mode(struct gps_device_t *session, int mode);
 
+typedef struct {
+    const char *fw_string;
+    const float protver;
+} fw_protver_map_entry_t;
+
+/* based on u-blox document no. GPS.G7-SW-12001-B1 (15 June 2018) */
+/* capture decimal parts of protVer info even when session->protver currently
+ * is integer (which _might_ change in the future, so avoid having to revisit
+ * the info at that time).
+ * This list is substantially incomplete and over specific. */
+static const fw_protver_map_entry_t fw_protver_map[] = {
+    {"2.10", 8.10},           // antaris 4, version 8 is a guess
+    {"2.11", 8.11},           // antaris 4, version 8 is a guess
+    {"3.04", 9.00},           // antaris 4, version 9 is a guess
+    {"4.00", 10.00},          // antaris 4, and u-blox 5
+    {"4.01", 10.01},          // antaris 4, and u-blox 5
+    {"5.00", 11.00},          // u-blox 5 and antaris 4
+    {"6.00", 12.00},          // u-blox 5 and 6
+    {"6.02", 12.02},          // u-blox 5 and 6
+    {"7.01", 13.01},          // u-blox 7
+    {"7.03", 13.03},          // u-blox 7
+    {"1.00", 14.00},          // u-blox 6 w/ GLONASS, and 7
+    // protVer >14 should carry explicit protVer in MON-VER extension
+    {NULL, 0.0},
+};
+
 /* make up an NMEA 4.0 (extended) PRN based on gnssId:svId,
  * using Appendix A from * u-blox ZED-F9P Interface Description
  *
@@ -279,9 +305,9 @@ static void
 ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
                 size_t data_len)
 {
-    size_t n = 0;       /* extended info counter */
-    size_t num_ext = (data_len - 40) / 30;  /* number of extensions */
-    char obuf[128];     /* temp version string buffer */
+    int n = 0;                           /* extended info counter */
+    int num_ext = (data_len - 40) / 30;  /* number of extensions */
+    char obuf[128];                      /* temp version string buffer */
     char *cptr;
 
     if (40 > data_len) {
@@ -301,10 +327,10 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
 
     obuf[0] = '\0';
     /* extract Extended info strings. */
-    for ( n = 0; n < num_ext ; n++ ) {
-        size_t start_of_str = 40 + (30 * n);
+    for (n = 0; n < num_ext; n++) {
+        int start_of_str = 40 + (30 * n);
 
-        if (n > 0) {
+        if (0 < n) {
             // commas between elements
             (void)strlcat(obuf, ",", sizeof(obuf));
         }
@@ -321,6 +347,21 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
         if (9 < protver) {
             /* protver 10, u-blox 5, is the oldest we know */
             session->driver.ubx.protver = protver;
+        }
+    }
+
+    /* MON-VER did not contain PROTVER in any extension field (typical for
+     * protVer < 15), so use mapping table to try to derive protVer from
+     * firmware revision number carried in swVersion field */
+    if (0 == session->driver.ubx.protver) {
+        for (n = 0; NULL != fw_protver_map[n].fw_string; n++) {
+            /* skip "SW " prefix in session->subtype */
+            cptr = strstr(session->subtype + 3, fw_protver_map[n].fw_string);
+            /* use only when swVersion field starts with fw_string */
+            if (cptr == (session->subtype + 3)) {
+                session->driver.ubx.protver = (int)fw_protver_map[n].protver;
+                break;
+            }
         }
     }
 
