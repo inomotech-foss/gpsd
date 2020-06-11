@@ -293,8 +293,8 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
     /* save SW and HW Version as subtype */
     (void)snprintf(obuf, sizeof(obuf),
                    "SW %.30s,HW %.10s",
-                   (char *)&buf[0],
-                   (char *)&buf[30]);
+                   (char *)buf,
+                   (char *)(buf + 30));
 
     /* save what we can */
     (void)strlcpy(session->subtype, obuf, sizeof(session->subtype));
