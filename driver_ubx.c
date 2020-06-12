@@ -2371,6 +2371,32 @@ ubx_msg_tim_tp(struct gps_device_t *session, unsigned char *buf,
     return mask;
 }
 
+/* UBX-CFG-RATE */
+static void ubx_msg_cfg_rate(struct gps_device_t *session, unsigned char *buf,
+                             size_t data_len)
+{
+    unsigned short measRate, navRate, timeRef;
+
+    if (6 != data_len) {
+        GPSD_LOG(LOG_WARN, &session->context->errout,
+                 "UBX-CFG-RATE message, runt payload len %zd", data_len);
+        return;
+    }
+
+    measRate = getleu16(buf, 0);
+    navRate = getleu16(buf, 2);
+    timeRef = getleu16(buf, 4);
+
+    /* cast for 32 bit compatibility */
+    GPSD_LOG(LOG_DATA, &session->context->errout,
+             "UBX-CFG-RATE: measRate %lums, navRate %lu cycle(s), "
+             "timeRef %lu\n",
+             (unsigned long)measRate, (unsigned long)navRate,
+             (unsigned long)timeRef);
+
+    return;
+}
+
 gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
                      size_t len)
 {
@@ -2413,6 +2439,10 @@ gps_mask_t ubx_parse(struct gps_device_t * session, unsigned char *buf,
             GPSD_LOG(LOG_INF, &session->context->errout,
                      "UBX-CFG-PRT: port %d\n", session->driver.ubx.port_id);
         }
+        break;
+    case UBX_CFG_RATE:
+        GPSD_LOG(LOG_PROG, &session->context->errout, "UBX-CFG-RATE\n");
+        ubx_msg_cfg_rate(session, &buf[UBX_PREFIX_LEN], data_len);
         break;
 
     case UBX_INF_DEBUG:
