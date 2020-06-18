@@ -634,6 +634,10 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         else if (c == 0xb5)  // LEA-5H can/ will output NMEA/UBX back to back
             lexer->state = UBX_LEADER_1;
 #endif
+#ifdef RTCM104V3_ENABLE
+        else if (c == 0xD3)
+            lexer->state = RTCM3_LEADER_1;
+#endif /* RTCM104V3_ENABLE */
 #ifdef PASSTHROUGH_ENABLE
         else if (c == '{')
             return character_pushback(lexer, JSON_LEADER);
