@@ -3307,7 +3307,7 @@ const struct gps_type_t driver_ubx = {
     .mode_switcher    = ubx_mode,       /* Mode switcher */
     .rate_switcher    = ubx_rate,       /* Message delivery rate switcher */
     .min_cycle.tv_sec  = 0,
-    .min_cycle.tv_nsec = 250000000,     /* Maximum 4Hz sample rate */
+    .min_cycle.tv_nsec = 200000000,     /* Maximum 5Hz sample rate */
     .control_send     = ubx_control_send,/* how to send a control string */
     .time_offset     = NULL,            /* no method for NTP fudge factor */
 };
