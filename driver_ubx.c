@@ -2394,6 +2394,10 @@ static void ubx_msg_cfg_rate(struct gps_device_t *session, unsigned char *buf,
              (unsigned long)measRate, (unsigned long)navRate,
              (unsigned long)timeRef);
 
+    /* Update our notion of what the device's measurement rate is */
+    session->gpsdata.dev.cycle.tv_sec = measRate / 1000;
+    session->gpsdata.dev.cycle.tv_nsec = (measRate % 1000) * 1000000;
+
     return;
 }
 
@@ -3302,7 +3306,7 @@ const struct gps_type_t driver_ubx = {
     .speed_switcher   = ubx_speed,      /* Speed (baudrate) switch */
     .mode_switcher    = ubx_mode,       /* Mode switcher */
     .rate_switcher    = ubx_rate,       /* Message delivery rate switcher */
-    .min_cycle.tv_sec  = 0,             /* not relevant, no rate switch */
+    .min_cycle.tv_sec  = 0,
     .min_cycle.tv_nsec = 250000000,     /* Maximum 4Hz sample rate */
     .control_send     = ubx_control_send,/* how to send a control string */
     .time_offset     = NULL,            /* no method for NTP fudge factor */
