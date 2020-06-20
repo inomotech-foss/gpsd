@@ -205,7 +205,7 @@ use it, because the device type will already have been discovered.</para>
 <term>c</term>
 <listitem>
 <para>(Direct mode only.) Change cycle time. Follow it with a number
-interpreted as a cycle time in seconds. Most devices have a fixed
+interpreted as a cycle time in milliseconds. Most devices have a fixed
 cycle time of 1 second, so this command may fail with a
 message.</para>
 </listitem>
