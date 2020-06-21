@@ -650,8 +650,6 @@ else:
     # Should we build with optimisation?
     if env['debug'] or env['coveraging']:
         env.Append(CCFLAGS=['-O0'])
-    else:
-        env.Append(CCFLAGS=['-O2'])
 
 # Cross-development
 
