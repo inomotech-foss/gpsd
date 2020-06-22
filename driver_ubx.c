@@ -3273,8 +3273,8 @@ static bool ubx_rate(struct gps_device_t *session, double cycletime)
     /* clamp to cycle times that i know work on my receiver */
     if (cycletime > 20000.0)
         cycletime = 20000.0;
-    if (cycletime < 200.0)
-        cycletime = 200.0;
+    if (cycletime < 25.0)
+        cycletime = 25.0;
 
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "UBX rate change, report every %f millisecs\n", cycletime);
@@ -3288,7 +3288,7 @@ static bool ubx_rate(struct gps_device_t *session, double cycletime)
 /* This is everything we export */
 /* *INDENT-OFF* */
 const struct gps_type_t driver_ubx = {
-    .type_name        = "u-blox",    /* Full name of type */
+    .type_name        = "u-blox",       /* Full name of type */
     .packet_type      = UBX_PACKET,     /* associated lexer packet type */
     .flags            = DRIVER_STICKY,  /* remember this */
     .trigger          = NULL,
@@ -3298,7 +3298,7 @@ const struct gps_type_t driver_ubx = {
     /* Packet getter (using default routine) */
     .get_packet       = generic_get,
     .parse_packet     = parse_input,    /* Parse message packets */
-     /* RTCM handler (using default routine) */
+    /* RTCM handler (using default routine) */
     .rtcm_writer      = gpsd_write,
     .init_query       = ubx_init_query, /* non-perturbing initial query */
     .event_hook       = ubx_event_hook, /* Fire on various lifetime events */
@@ -3306,9 +3306,9 @@ const struct gps_type_t driver_ubx = {
     .mode_switcher    = ubx_mode,       /* Mode switcher */
     .rate_switcher    = ubx_rate,       /* Message delivery rate switcher */
     .min_cycle.tv_sec  = 0,
-    .min_cycle.tv_nsec = 200000000,     /* Maximum 5Hz sample rate */
+    .min_cycle.tv_nsec = 25000000,      /* Maximum 40Hz sample rate */
     .control_send     = ubx_control_send,/* how to send a control string */
-    .time_offset     = NULL,            /* no method for NTP fudge factor */
+    .time_offset      = NULL,           /* no method for NTP fudge factor */
 };
 /* *INDENT-ON* */
 #endif /* defined(UBLOX_ENABLE) && defined(BINARY_ENABLE) */
