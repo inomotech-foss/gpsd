@@ -2395,8 +2395,7 @@ static void ubx_msg_cfg_rate(struct gps_device_t *session, unsigned char *buf,
              (unsigned long)timeRef);
 
     /* Update our notion of what the device's measurement rate is */
-    session->gpsdata.dev.cycle.tv_sec = measRate / 1000;
-    session->gpsdata.dev.cycle.tv_nsec = (measRate % 1000) * 1000000;
+    MSTOTS(&session->gpsdata.dev.cycle, measRate);
 
     return;
 }
