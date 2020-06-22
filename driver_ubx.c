@@ -3268,21 +3268,20 @@ static bool ubx_rate(struct gps_device_t *session, double cycletime)
     unsigned char msg[6] = {
         0x00, 0x00,     /* U2: Measurement rate (ms) */
         0x01, 0x00,     /* U2: Navigation rate (cycles) */
-        0x00, 0x00,     /* U2: Alignment to reference time: 0 = UTC, !0 = GPS */
+        0x00, 0x00,     /* U2: Alignment to reference time: 0 = UTC, ... */
     };
 
     /* cycletime comes in seconds, we work with milliseconds */
-    cycletime *= (double)MS_IN_SEC;
+    s = (unsigned short)(cycletime * MS_IN_SEC);
 
     /* clamp to cycle times that i know work on my receiver */
-    if (cycletime > 20000.0)
-        cycletime = 20000.0;
-    if (cycletime < (min_cycle * (const double)(MS_IN_SEC / NS_IN_SEC)))
-        cycletime = (min_cycle * (const double)(MS_IN_SEC / NS_IN_SEC));
+    if (20000 < s)
+        s = 20000;
+    if ((unsigned short)(min_cycle * MS_IN_SEC / NS_IN_SEC) > s)
+        s = (unsigned short)(min_cycle * MS_IN_SEC / NS_IN_SEC);
 
     GPSD_LOG(LOG_DATA, &session->context->errout,
-             "UBX rate change, report every %f millisecs\n", cycletime);
-    s = (unsigned short)cycletime;
+             "UBX rate change, report every %u millisecs\n", s);
     msg[0] = (unsigned char)(s & 0xff);
     msg[1] = (unsigned char)(s >> 8);
 
