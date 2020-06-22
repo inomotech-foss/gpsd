@@ -3270,6 +3270,9 @@ static bool ubx_rate(struct gps_device_t *session, double cycletime)
         0x00, 0x00,     /* U2: Alignment to reference time: 0 = UTC, !0 = GPS */
     };
 
+    /* cycletime comes in seconds, we work with milliseconds */
+    cycletime *= 1000;
+
     /* clamp to cycle times that i know work on my receiver */
     if (cycletime > 20000.0)
         cycletime = 20000.0;
