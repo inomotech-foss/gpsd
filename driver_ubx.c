@@ -380,7 +380,7 @@ ubx_msg_mon_ver(struct gps_device_t *session, unsigned char *buf,
  * Supported but deprecated in M9N protVer 32.00 */
 static void
 ubx_msg_mon_txbuf(struct gps_device_t *session, unsigned char *buf,
-                size_t data_len)
+                  size_t data_len)
 {
     unsigned int pending, usage, peakUsage;
     unsigned int tUsage, tPeakusage;
@@ -417,8 +417,8 @@ ubx_msg_mon_txbuf(struct gps_device_t *session, unsigned char *buf,
 
     if ((errors & 0x40) == 0x40 || (errors & 0x80) == 0x80) {
         GPSD_LOG(LOG_WARN, &session->context->errout,
-             "TXBUF: alloc %u, mem %u\n",
-             errors >> 7, (errors >> 6) & 1);
+                 "TXBUF: alloc %u, mem %u\n",
+                 errors >> 7, (errors >> 6) & 1);
     }
 }
 
@@ -428,7 +428,7 @@ ubx_msg_mon_txbuf(struct gps_device_t *session, unsigned char *buf,
  * Supported but deprecated in M9N protVer 32.00 */
 static void
 ubx_msg_mon_rxbuf(struct gps_device_t *session, unsigned char *buf,
-                size_t data_len)
+                  size_t data_len)
 {
     unsigned int pending, usage, peakUsage;
     int i;
@@ -494,7 +494,7 @@ ubx_msg_log_batch(struct gps_device_t *session, unsigned char *buf UNUSED,
     TS_NORM(&session->gpsdata.log.then);
 
     session->gpsdata.log.fixType = getub(buf, 24);
-    flags = getub(   buf, 25);
+    flags = getub(buf, 25);
     gnssFixOK = flags & 1;
     diffSoln = flags & 2;
     psmState = ((flags >> 2) & 7);
@@ -522,7 +522,7 @@ ubx_msg_log_batch(struct gps_device_t *session, unsigned char *buf UNUSED,
     session->gpsdata.log.hAcc = 1.0e-3 * getleu32(buf, 44);
 
     GPSD_LOG(LOG_INF, &session->context->errout,
-            "UBX-LOG-BATCH: time=%s index_cnt=%u fixType=%u lon=%.7f lat=%.7f"
+             "UBX-LOG-BATCH: time=%s index_cnt=%u fixType=%u lon=%.7f lat=%.7f"
              " gSpeed=%.3f heading=%.5f altHae=%.3f psmState=%u hAcc=%.3f\n",
              timespec_str(&session->gpsdata.log.then, ts_buf, sizeof(ts_buf)),
              session->gpsdata.log.index_cnt, session->gpsdata.log.fixType,
@@ -546,7 +546,7 @@ ubx_msg_log_batch(struct gps_device_t *session, unsigned char *buf UNUSED,
         session->gpsdata.log.headAcc = 1.0e-5 * getleu32(buf, 76);
         session->gpsdata.log.pDOP = 1.0e-2 * getleu32(buf, 80);
         GPSD_LOG(LOG_INF, &session->context->errout,
-                "UBX-LOG-BATCH extraPVT: time=%s index_cnt=%d"
+                 "UBX-LOG-BATCH extraPVT: time=%s index_cnt=%d"
                  " tAcc=%.2f numSV=%d altMSL=%.3f hAcc=%.2f vAcc=%.3f"
                  " velN=%.3f velE=%.3f velD=%.3f sAcc=%.3f headAcc=%.5f"
                  " pDOP=%.5f\n",
@@ -2860,7 +2860,6 @@ bool ubx_write(struct gps_device_t * session,
     session->msgbuf[6 + data_len] = CK_A;
     session->msgbuf[7 + data_len] = CK_B;
     session->msgbuflen = data_len + 8;
-
 
     GPSD_LOG(LOG_PROG, &session->context->errout,
              "=> GPS: UBX class: %02x, id: %02x, len: %zd, crc: %02x%02x\n",
