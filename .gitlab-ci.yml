@@ -157,7 +157,7 @@ arch-hardened:
   stage: build
   script:
   - pacman -Sy
-  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc ccache libeatmydata
+  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc ccache
   - mkdir -p "${CCACHE_DIR}"
   - export CCACHE_DIR=$(realpath "${CCACHE_DIR}")
   - export CCACHE_BASEDIR=$(realpath "${CCACHE_BASEDIR}")
@@ -167,8 +167,8 @@ arch-hardened:
   - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
   - export LDFLAGS="-Wl,-z,relro -Wl,-z,now"
   - _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
-  - scons prefix=/usr systemd=yes gpsd_group=uucp python_libdir=$_pythonpath sbindir=/usr/bin qt_versioned=5
-  - scons build
+  - scons prefix=/usr systemd=yes gpsd_group=uucp python_libdir=$_pythonpath target_python=python3 sbindir=/usr/bin qt_versioned=5 build
+  - scons check
 
 # to avoid failed builds on MRs/forks where no builder with the
 # tag `freebsd` is available, run this job only if
