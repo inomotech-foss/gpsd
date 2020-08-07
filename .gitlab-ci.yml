@@ -157,7 +157,11 @@ arch-hardened:
   stage: build
   script:
   - pacman -Sy
-  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc
+  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc ccache libeatmydata
+  - mkdir -p "${CCACHE_DIR}"
+  - export CCACHE_DIR=$(realpath "${CCACHE_DIR}")
+  - export CCACHE_BASEDIR=$(realpath "${CCACHE_BASEDIR}")
+  - export PATH="/usr/lib/ccache/bin:${PATH}"
   - export CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
   - export CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
   - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
