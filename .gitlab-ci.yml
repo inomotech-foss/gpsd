@@ -157,7 +157,7 @@ arch-hardened:
   stage: build
   script:
   - pacman -Sy
-  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc ccache
+  - pacman -S --noconfirm asciidoctor bluez-libs ccache diffutils docbook-xsl gcc libusb python qt5-base scons 
   - mkdir -p "${CCACHE_DIR}"
   - export CCACHE_DIR=$(realpath "${CCACHE_DIR}")
   - export CCACHE_BASEDIR=$(realpath "${CCACHE_BASEDIR}")
