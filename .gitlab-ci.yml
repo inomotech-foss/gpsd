@@ -157,7 +157,7 @@ arch-hardened:
   stage: build
   script:
   - pacman -Sy
-  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs
+  - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc
   - CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
   - CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
   - CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
