@@ -156,6 +156,7 @@ arch-hardened:
   image: archlinux:latest
   stage: build
   script:
+  - pacman -Sy
   - pacman -S scons docbook-xsl qt5-base python libusb bluez-libs
   - CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
   - CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
