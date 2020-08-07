@@ -158,10 +158,10 @@ arch-hardened:
   script:
   - pacman -Sy
   - pacman -S --noconfirm scons docbook-xsl qt5-base python libusb bluez-libs gcc
-  - CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
-  - CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
-  - CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
-  - LDFLAGS="-Wl,-z,relro -Wl,-z,now"
+  - export CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
+  - export CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
+  - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
+  - export LDFLAGS="-Wl,-z,relro -Wl,-z,now"
   - _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
   - scons prefix=/usr systemd=yes gpsd_group=uucp python_libdir=$_pythonpath sbindir=/usr/bin qt_versioned=5
   - scons build
