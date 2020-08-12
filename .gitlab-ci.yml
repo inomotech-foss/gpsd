@@ -162,9 +162,9 @@ arch-hardened:
   - export CCACHE_DIR=$(realpath "${CCACHE_DIR}")
   - export CCACHE_BASEDIR=$(realpath "${CCACHE_BASEDIR}")
   - export PATH="/usr/lib/ccache/bin:${PATH}"
-  - export CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
+  - export CFLAGS="-g -O2 -fstack-protector-strong -Wpedantic -Wextra"
   - export CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
-  - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security"
+  - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wpedantic -Wextra"
   - export LDFLAGS="-Wl,-z,relro -Wl,-z,now"
   - _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
   - scons prefix=/usr systemd=yes gpsd_group=uucp python_libdir=$_pythonpath target_python=python3 sbindir=/usr/bin qt_versioned=5 build
