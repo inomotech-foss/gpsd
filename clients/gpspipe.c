@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #ifdef HAVE_GETOPT_LONG
-       #include <getopt.h>   // for getopt_long()
+    #include <getopt.h>   // for getopt_long()
 #endif
 #include <stdbool.h>
 #include <stdio.h>
@@ -43,11 +43,11 @@
 #include <unistd.h>
 
 #ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
+    #include <sys/socket.h>
 #endif /* HAVE_SYS_SOCKET_H */
 #include <termios.h>            /* for speed_t, and cfmakeraw() on some OS */
 #ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
+    #include <winsock2.h>
 #endif /* HAVE_WINSOCK2_H */
 
 #include "../include/gpsd.h"            // for os_daemon()
@@ -62,7 +62,7 @@ static void spinner(unsigned int, unsigned int);
 
 /* Serial port variables */
 static struct termios oldtio, newtio;
-static int fd_out = 1;          /* output initially goes to standard output */
+static int fd_out = STDOUT_FILENO; /* output initially goes to standard output */
 static char serbuf[255];
 static int debug;
 
@@ -309,7 +309,7 @@ int main(int argc, char **argv)
         case '?':
         case 'h':
             usage();
-            exit(0);
+            exit(EXIT_SUCCESS);
         default:
             usage();
             exit(EXIT_FAILURE);
@@ -319,8 +319,9 @@ int main(int argc, char **argv)
     /* Grok the server, port, and device. */
     if (optind < argc) {
         gpsd_source_spec(argv[optind], &source);
-    } else
+    } else {
         gpsd_source_spec(NULL, &source);
+    }
 
     if (serialport != NULL && !raw) {
         (void)fprintf(stderr, "gpspipe: use of '-s' requires '-r'.\n");
@@ -339,38 +340,38 @@ int main(int argc, char **argv)
     }
 
     /* Daemonize if the user requested it. */
-    if (daemonize)
-        if (os_daemon(0, 0) != 0)
+    if (daemonize) {
+        if (os_daemon(0, 0) != 0) {
             (void)fprintf(stderr,
                           "gpspipe: daemonization failed: %s\n",
                           strerror(errno));
+        }
+    }
 
     /* Sleep for ten seconds if the user requested it. */
-    if (sleepy)
+    if (sleepy) {
         (void)sleep(10);
+    }
 
-    /* Open the output file if the user requested it.  If the user
+    /* Open the output file if the user requested it. If the user
      * requested '-R', we use the 'b' flag in fopen() to "do the right
      * thing" in non-linux/unix OSes. */
     if (outfile == NULL) {
         fp = stdout;
     } else {
-        if (binary)
-            fp = fopen(outfile, "wb");
-        else
-            fp = fopen(outfile, "w");
-
+        fp = fopen(outfile, binary ? "wb" : "w");
         if (fp == NULL) {
             (void)fprintf(stderr,
-                          "gpspipe: unable to open output file:  %s\n",
+                          "gpspipe: unable to open output file: %s\n",
                           outfile);
             exit(EXIT_FAILURE);
         }
     }
 
     /* Open the serial port and set it up. */
-    if (serialport)
+    if (serialport) {
         open_serial(serialport);
+    }
 
     if (gps_open(source.server, source.port, &gpsdata) != 0) {
         (void)fprintf(stderr,
@@ -379,14 +380,17 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (profile)
+    if (profile) {
         flags |= WATCH_TIMING;
-    if (source.device != NULL)
+    }
+    if (source.device != NULL) {
         flags |= WATCH_DEVICE;
+    }
     (void)gps_stream(&gpsdata, flags, source.device);
 
-    if ((isatty(STDERR_FILENO) == 0) || daemonize)
+    if ((isatty(STDERR_FILENO) == 0) || daemonize) {
         vflag = 0;
+    }
 
     for (;;) {
         int r = 0;
@@ -398,17 +402,20 @@ int main(int argc, char **argv)
         FD_SET(gpsdata.gps_fd, &fds);
         errno = 0;
         r = pselect(gpsdata.gps_fd+1, &fds, NULL, NULL, &tv, NULL);
-        if (r >= 0 && exit_timer && time(NULL) >= exit_timer)
-                break;
+        if (r >= 0 && exit_timer && time(NULL) >= exit_timer) {
+            break;
+        }
         if (r == -1 && errno != EINTR) {
             (void)fprintf(stderr, "gpspipe: select error %s(%d)\n",
                           strerror(errno), errno);
             exit(EXIT_FAILURE);
-        } else if (r == 0)
-                continue;
+        } else if (r == 0) {
+            continue;
+        }
 
-        if (vflag)
+        if (vflag) {
             spinner(vflag, l++);
+        }
 
         /* reading directly from the socket avoids decode overhead */
         errno = 0;
@@ -430,11 +437,11 @@ int main(int argc, char **argv)
                     (void)clock_gettime(CLOCK_REALTIME, &now);
                     (void)gmtime_r((time_t *)&(now.tv_sec), &tmp_now);
                     (void)strftime(tmstr, sizeof(tmstr), format, &tmp_now);
-                    new_line = 0;
+                    new_line = false;
 
-                    switch( option_u ) {
+                    switch (option_u) {
                     case 2:
-                        if(iso8601){
+                        if (iso8601) {
                             written = strlen(tmstr);
                             tmstr[written] = 'Z';
                             tmstr[written+1] = '\0';
@@ -448,14 +455,13 @@ int main(int argc, char **argv)
                         written = snprintf(tmstr_u, sizeof(tmstr_u),
                                            ".%06ld", (long)now.tv_nsec/1000);
 
-                        if((0 < written) && (40 > written) && iso8601){
+                        if ((0 < written) && (40 > written) && iso8601) {
                             tmstr_u[written-1] = 'Z';
                             tmstr_u[written] = '\0';
                         }
                         break;
                     default:
                         *tmstr_u = '\0';
-                        break;
                     }
 
                     if (fprintf(fp, "%.24s%s: ", tmstr, tmstr_u) <= 0) {
@@ -501,11 +507,12 @@ int main(int argc, char **argv)
             }
         } else {
             if (r == -1) {
-                if (errno == EAGAIN)
+                if (errno == EAGAIN) {
                     continue;
-                else
+                } else {
                     (void)fprintf(stderr, "gpspipe: read error %s(%d)\n",
                               strerror(errno), errno);
+                }
                 exit(EXIT_FAILURE);
             } else {
                 exit(EXIT_SUCCESS);
@@ -527,13 +534,11 @@ int main(int argc, char **argv)
     exit(EXIT_SUCCESS);
 }
 
-
 static void spinner(unsigned int v, unsigned int num)
 {
     char *spin = "|/-\\";
 
     (void)fprintf(stderr, "\010%c", spin[(num / (1 << (v - 1))) % 4]);
     (void)fflush(stderr);
-    return;
 }
 // vim: set expandtab shiftwidth=4
