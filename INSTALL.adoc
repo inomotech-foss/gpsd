@@ -395,6 +395,21 @@ Some very old Garmin USB devices need libusb:
 # apt-get install libusb-1.0-0-dev
 --------------------------------------------------------------
 
+To use Python3
+
+--------------------------------------------------------------
+# apt-get install python3
+# apt-get install python3-serial
+# apt-get install python3-distutils
+--------------------------------------------------------------
+
+Invoke scons with
+
+--------------------------------------------------------------
+# scons config=true target_python=python3
+--------------------------------------------------------------
+
+
 If you wish to build the documentation, be warned it pulls in a
 lot of packages.  Build the documentation is a prerequisite to
 building the HTML files for the website (www/), and also to make
