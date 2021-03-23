@@ -154,6 +154,24 @@ centos-8-latest:
   - dnf -y install diffutils python3-scons bc ncurses-devel qt5-qtbase-devel pps-tools-devel libnsl2-devel bluez-libs-devel platform-python-devel dbus-devel libusbx-devel gtk3-devel python3-pyserial python3-cairo python3-gobject-base ccache
   - .ci-build/build.sh
 
+arch-hardened:
+  image: archlinux:latest
+  stage: build
+  script:
+  - pacman -Sy
+  - pacman -S --noconfirm asciidoctor bluez-libs ccache diffutils docbook-xsl gcc libusb python qt5-base scons 
+  - mkdir -p "${CCACHE_DIR}"
+  - export CCACHE_DIR=$(realpath "${CCACHE_DIR}")
+  - export CCACHE_BASEDIR=$(realpath "${CCACHE_BASEDIR}")
+  - export PATH="/usr/lib/ccache/bin:${PATH}"
+  - export CFLAGS="-g -O2 -fstack-protector-strong -Wpedantic -Wextra"
+  - export CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2"
+  - export CXXFLAGS="-g -O2 -fstack-protector-strong -Wpedantic -Wextra"
+  - export LDFLAGS="-Wl,-z,relro -Wl,-z,now"
+  - _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
+  - scons prefix=/usr systemd=yes gpsd_group=uucp python_libdir=$_pythonpath target_python=python3 sbindir=/usr/bin qt_versioned=5 build
+  - scons check
+
 # to avoid failed builds on MRs/forks where no builder with the
 # tag `freebsd` is available, run this job only if
 # $HAVE_FREEBSD == "true"
