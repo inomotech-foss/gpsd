@@ -94,7 +94,7 @@ import threading
 import time
 
 import gps
-from . import packet as sniffer
+from gps import packet as sniffer
 
 # The magic number below has to be derived from observation.  If
 # it's too high you'll slow the tests down a lot.  If it's too low

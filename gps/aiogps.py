@@ -78,9 +78,9 @@ import logging
 import socket
 from typing import Optional, Union, Awaitable
 
-from .client import gpsjson, dictwrapper
-from .gps import gps, gpsdata, WATCH_ENABLE, PACKET_SET
-from .misc import polystr, polybytes
+from gps.client import gpsjson, dictwrapper
+from gps.gps import gps, gpsdata, WATCH_ENABLE, PACKET_SET
+from gps.misc import polystr, polybytes
 
 
 class aiogps(gps):  # pylint: disable=R0902
