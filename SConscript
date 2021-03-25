@@ -2143,7 +2143,7 @@ substmap = (
     ('@ICONPATH@',   installdir('icondir', add_destdir=False)),
     ('@INCLUDEDIR@', installdir('includedir', add_destdir=False)),
     ('@IRCCHAN@',    ircchan),
-    ('@ISSUES@',     'https://gitlab.com/gpsd/gpsd/issues'),
+    ('@ISSUES@',     bugtracker),
     ('@LIBDIR@',     installdir('libdir', add_destdir=False)),
     ('@LIBGPSVERSION@', libgps_version),
     ('@MAILMAN@',    mailman),
@@ -2251,7 +2251,7 @@ if man_env.GetOption('silent'):
 manpage_targets = []
 maninstall = []
 if adoc_prog:
-    adoc_args = ('-a gpsdweb=%s -a gpsdver=%s ' % (website, gpsd_version))
+    adoc_args = ('-a gpsdweb=%s -a gpsdver=%s -a linkcss -a stylesheet=gpsdadoc.css' % (website, gpsd_version))
     for (man, src) in all_manpages.items():
         # build it
         # make nroff man page
@@ -2292,7 +2292,8 @@ env.Command('www/hardware.html',
 docinstall = env.Install(target=installdir('docdir'), source=doc_files)
 
 if adoc_prog:
-    adocfiles = (('build', 'www/building'),
+    adocfiles = (('www/inc-menu', 'www/inc-menu'),
+                 ('build', 'www/building'),
                  ('INSTALL', 'www/installation'),
                  ('README', 'www/README'),
                  ('SUPPORT', 'www/SUPPORT'),

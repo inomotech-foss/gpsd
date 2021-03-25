@@ -1,0 +1,17 @@
+@import "https://cdn.jsdelivr.net/gh/asciidoctor/asciidoctor@2.0/data/stylesheets/asciidoctor-default.css";
+
+body {
+}
+
+.sidebarblock,
+#toc.toc2 {
+  background: #f8f8f8;
+  border: 1px dashed #999;
+}
+
+.sidebarblock {
+  display: inline-block;
+  float: right;
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
