@@ -210,7 +210,7 @@ This class contains functions to decode messages in the Javad GREIS
                 }
 
     # allowable speeds
-    speeds = (460800, 230400, 153600, 115200, 57600, 38400, 19200, 9600,
+    speeds = (921600, 460800, 230400, 153600, 115200, 57600, 38400, 19200, 9600,
               4800, 2400, 1200, 600, 300)
 
     def msg_c_(self, payload):
