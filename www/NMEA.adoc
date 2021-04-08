@@ -140,7 +140,7 @@ This field may be empty.  In pre-2.3 versions it is omitted. <<NTUM>> says
 that according to the NMEA specification, it dominates the Status field --
 the Status field will be set to "A" (data valid) for Mode Indicators A
 and D, and to "V" (data invalid) for all other values of the Mode
-Indicator.  This is confirmed by <<IEC>>.
+Indicator.  This is confirmed by <<IEC61162-1>>.
 
 In NMEA 3.0, the GBS sentence reports a complete set of error estimates. Note
 however that many receivers claiming to emit "3.0" or "3.01" don't
@@ -2939,15 +2939,15 @@ Described in <<MALTESE>>, actually a Maltese government document.
   "Procurement of a Fixed-Wing Maritime Patrol Aircraft"
   https://secure2.gov.mt/eprocurement/Tenders/file.ashx?f=9832DB05E65C774258580284031EC72CC315D954A7108B5E.
 
-- [[NMEA-ADVANCE]]
+- [[[NMEA-ADVANCE]]]
   "NMEA 0183 Advancements" (describes 'P' value of FAA mode)
   http://www.nmea.org/Assets/0183_advancements_nmea_oct_1_2010%20(2).pdf
 
-- [[CDDSC]]
+- [[[CDDSC]]]
   "Data Interface in Digital Selective Calling Class-D Radios"
   http://continuouswave.com/whaler/reference/DSC_Datagrams.html
 
-- [[ANON]]
+- [[[ANON]]]
   Anonymous commentator(s) are persons who have volunteered information
   about the NMEA standard(s) but do not wish to be identified.
 
@@ -2958,3 +2958,7 @@ Described in <<MALTESE>>, actually a Maltese government document.
 - [[[TALKERS]]]
   "Talker Identifier Mnemonics"
   https://www.nmea.org/Assets/NMEA%200183%20Talker%20Identifier%20Mnemonics.pdf
+
+- [[[GLOBALSAT]]]
+  "iGlobalSat WorldCom Corporation"
+  https://www.globalsat.com.tw/
