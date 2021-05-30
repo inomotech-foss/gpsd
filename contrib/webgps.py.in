@@ -67,7 +67,10 @@ def parseargs():
     """Parse arguments sys.argv"""
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('duration', default="0")
+    # `duration` is not required, but when `required=False` is set, error appears:
+    # TypeError: 'required' is an invalid argument for positionals
+    # so `nargs='?'` is using here
+    parser.add_argument('duration', default="0", nargs='?')
     parser.add_argument('--no-html-head', default=False, action="store_true",
                         help='Do not put HTML page header')
     parser.add_argument('--no-strict-version-check', default=False, action="store_true",
