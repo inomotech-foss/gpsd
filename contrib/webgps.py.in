@@ -75,6 +75,9 @@ def parseargs():
                         help='Do not put HTML page header')
     parser.add_argument('--no-strict-version-check', default=False, action="store_true",
                         help='Do not exit if client and server versions are not equal')
+    parser.add_argument('-V', '--version', action='version',
+                        version="%(prog)s: Version " + gps_version + "\n",
+                        help='Output version to stderr, then exit')
     args = parser.parse_args()
 
     return args
