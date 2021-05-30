@@ -57,6 +57,11 @@ import argparse
 from gps import *
 
 gps_version = '@VERSION@'
+if gps.__version__ != gps_version:
+    sys.stderr.write("webgps.py: ERROR: need gps module version %s, got %s\n" %
+                     (gps_version, gps.__version__))
+    sys.exit(1)
+
 
 TRACKMAX = 1024
 STALECOUNT = 10
@@ -73,8 +78,6 @@ def parseargs():
     parser.add_argument('duration', default="0", nargs='?')
     parser.add_argument('--no-html-head', default=False, action="store_true",
                         help='Do not put HTML page header')
-    parser.add_argument('--no-strict-version-check', default=False, action="store_true",
-                        help='Do not exit if client and server versions are not equal')
     parser.add_argument('-V', '--version', action='version',
                         version="%(prog)s: Version " + gps_version + "\n",
                         help='Output version to stderr, then exit')
@@ -521,12 +524,6 @@ def main():
     else:
         period = int(arg)
     prefix = '-' + arg
-
-    if gps.__version__ != gps_version:
-        sys.stderr.write("webgps.py: ERROR: need GPS module version %s, got %s\n" %
-                         (gps_version, gps.__version__))
-        if not args.no_strict_version_check:
-            sys.exit(1)
 
     sat = SatTracks()
 
