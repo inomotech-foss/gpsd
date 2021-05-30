@@ -212,8 +212,8 @@ class SatTracks(gps):
 \t\t}
 \t</style>
 \t<script src='%s'></script>
-</head><body onload="draw_satview();">
-\t<div style="grid-area: sky;"><table class="num tall">""" % jsfile)
+</head><body onload="draw_satview();">""" % jsfile)
+        fh.write('\t<div style="grid-area: sky;"><table class="num tall">')
         fh.write('\t\t<tr><th>PRN:</th><th>Elev:</th><th>Azim:</th><th>SNR:</th><th>Used:</th></tr>')
         sats = self.satellites[:]
         sats.sort(key=lambda x: x.PRN)
