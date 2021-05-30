@@ -325,6 +325,10 @@ pages:
     - gpsd-*.tar.*
     - gpsd-*/packaging/rpm/gpsd.spec
     expire_in: 2 weeks
+  only:
+  - schedules
+  - tags
+  - web
 
 dist-f32:
   variables:
