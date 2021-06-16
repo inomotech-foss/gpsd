@@ -732,6 +732,10 @@ struct gps_device_t {
             unsigned char sbas_in_use;
             unsigned char protver;              // u-blox protocol version
             unsigned char last_protver;         // last protocol version
+            struct {
+                int64_t iTOW;
+                uint32_t uptime_milliseconds;  
+            } uptime;
         } ubx;
 #endif /* UBLOX_ENABLE */
 #ifdef NAVCOM_ENABLE

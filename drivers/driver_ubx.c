@@ -499,7 +499,18 @@ ubx_msg_esf_meas(struct gps_device_t *session, unsigned char *buf,
     gps_clear_att(datap);
     (void)strlcpy(datap->msg, "UBX-ESF-MEAS", sizeof(datap->msg));
 
-    datap->timeTag = getleu32(buf, 0);
+    uint32_t relative_time_tag = getleu32(buf, 0);
+    if (session->driver.ubx.uptime.uptime_milliseconds > 0) {
+        // the timetag is actually uptime in milliseconds for UBX-ESF-MEAS
+        timespec_t ts_tow;
+        MSTOTS(&ts_tow, session->driver.ubx.uptime.iTOW);
+        timespec_t ts_resolved = gpsd_gpstime_resolv(session, session->context->gps_week, ts_tow);
+        datap->timeTag = TSTOMS(&ts_resolved) + (int64_t)relative_time_tag - (int64_t)session->driver.ubx.uptime.uptime_milliseconds;
+
+    }
+    else {
+        datap->timeTag = relative_time_tag;
+    }
     flags = getleu16(buf, 4);
     numMeas = (flags >> 11) & 0x01f;
     id = getleu16(buf, 6);
@@ -1847,6 +1858,10 @@ ubx_msg_nav_status(struct gps_device_t *session, unsigned char *buf,
     flags2 = getub(buf, 7);
     ttff = getleu32(buf, 8);
     msss = getleu32(buf, 12);
+
+    // stash time data to use with ESF-MEAS
+    session->driver.ubx.uptime.uptime_milliseconds = msss;
+    session->driver.ubx.uptime.iTOW = session->driver.ubx.iTOW;
 
     // FIXME: how does this compare with other places ubx sets mode/status?
     if (0 == (1 & flags)) {
@@ -3914,6 +3929,22 @@ ubx_cfg_prt(struct gps_device_t *session, speed_t speed, const char parity,
         msg[0] = 0x01;          /* class */
         msg[1] = 0x26;          /* msg id  = UBX-NAV-TIMELS */
         msg[2] = 0xff;          /* about every 4 minutes if nav rate is 1Hz */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+
+        msg[0] = 0x01;          /* class */
+        msg[1] = 0x03;          /* msg id  = UBX-NAV-STATUS */
+        msg[2] = 0x01;          /* high rate for dev purposes */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+        session->driver.ubx.uptime.uptime_milliseconds = 0;
+
+        msg[0] = UBX_CLASS_ESF;
+        msg[1] = 0x10; /* msg id  = UBX-ESF-STATUS */
+        msg[2] = 1; /* high rate for dev purposes */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+
+        msg[0] = UBX_CLASS_ESF;
+        msg[1] = 0x14; /* msg id  = UBX-ESF-ALG */
+        msg[2] = 1; /* high rate for dev purposes */
         (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
 
         // turn off common NMEA
