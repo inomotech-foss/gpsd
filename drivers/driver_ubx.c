@@ -422,32 +422,33 @@ ubx_msg_esf_ins(struct gps_device_t *session, unsigned char *buf,
     yAccel = getles32(buf, 28);
     zAccel = getles32(buf, 32);
 
-    if (0x10 == (0x10 & bitfield0)) {
+    gps_clear_att(&session->gpsdata.attitude);
+    if (0x100 == (0x100 & bitfield0)) {
         // xAngRateValid
-        session->gpsdata.attitude.gyro_x = 0.001 * xAngRate;  // m/s^2
+        session->gpsdata.attitude.gyro_x = 0.001 * xAngRate;  // deg/s
         mask |= ATTITUDE_SET;
     }
-    if (0x20 == (0x20 & bitfield0)) {
+    if (0x200 == (0x200 & bitfield0)) {
         // yAngRateValid
-        session->gpsdata.attitude.gyro_x = 0.001 * yAngRate;  // m/s^2
+        session->gpsdata.attitude.gyro_y = 0.001 * yAngRate;  // deg/s
         mask |= ATTITUDE_SET;
     }
-    if (0x40 == (0x40 & bitfield0)) {
+    if (0x400 == (0x400 & bitfield0)) {
         // zAngRateValid
-        session->gpsdata.attitude.gyro_x = 0.001 * zAngRate;  // m/s^2
+        session->gpsdata.attitude.gyro_z = 0.001 * zAngRate;  // deg/s
         mask |= ATTITUDE_SET;
     }
-    if (0x80 == (0x80 & bitfield0)) {
+    if (0x800 == (0x800 & bitfield0)) {
         // xAccelValid
         session->gpsdata.attitude.acc_x = 0.01 * xAccel;  // m/s^2
         mask |= ATTITUDE_SET;
     }
-    if (0x100 == (0x100 & bitfield0)) {
+    if (0x1000 == (0x1000 & bitfield0)) {
         // yAccelValid
         session->gpsdata.attitude.acc_y = 0.01 * yAccel;  // m/s^2
         mask |= ATTITUDE_SET;
     }
-    if (0x200 == (0x200 & bitfield0)) {
+    if (0x2000 == (0x2000 & bitfield0)) {
         // zAccelValid
         session->gpsdata.attitude.acc_z = 0.01 * zAccel;  // m/s^2
         mask |= ATTITUDE_SET;
@@ -499,7 +500,18 @@ ubx_msg_esf_meas(struct gps_device_t *session, unsigned char *buf,
     gps_clear_att(datap);
     (void)strlcpy(datap->msg, "UBX-ESF-MEAS", sizeof(datap->msg));
 
-    datap->timeTag = getleu32(buf, 0);
+    uint32_t relative_time_tag = getleu32(buf, 0);
+    if (session->driver.ubx.uptime.uptime_milliseconds > 0) {
+        // the timetag is actually uptime in milliseconds for UBX-ESF-MEAS
+        timespec_t ts_tow;
+        MSTOTS(&ts_tow, session->driver.ubx.uptime.iTOW);
+        timespec_t ts_resolved = gpsd_gpstime_resolv(session, session->context->gps_week, ts_tow);
+        datap->timeTag = TSTOMS(&ts_resolved) + (int64_t)relative_time_tag - (int64_t)session->driver.ubx.uptime.uptime_milliseconds;
+
+    }
+    else {
+        datap->timeTag = relative_time_tag;
+    }
     flags = getleu16(buf, 4);
     numMeas = (flags >> 11) & 0x01f;
     id = getleu16(buf, 6);
@@ -1847,6 +1859,10 @@ ubx_msg_nav_status(struct gps_device_t *session, unsigned char *buf,
     flags2 = getub(buf, 7);
     ttff = getleu32(buf, 8);
     msss = getleu32(buf, 12);
+
+    // stash time data to use with ESF-MEAS
+    session->driver.ubx.uptime.uptime_milliseconds = msss;
+    session->driver.ubx.uptime.iTOW = session->driver.ubx.iTOW;
 
     // FIXME: how does this compare with other places ubx sets mode/status?
     if (0 == (1 & flags)) {
@@ -3914,6 +3930,22 @@ ubx_cfg_prt(struct gps_device_t *session, speed_t speed, const char parity,
         msg[0] = 0x01;          /* class */
         msg[1] = 0x26;          /* msg id  = UBX-NAV-TIMELS */
         msg[2] = 0xff;          /* about every 4 minutes if nav rate is 1Hz */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+
+        msg[0] = 0x01;          /* class */
+        msg[1] = 0x03;          /* msg id  = UBX-NAV-STATUS */
+        msg[2] = 0x01;          /* high rate for dev purposes */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+        session->driver.ubx.uptime.uptime_milliseconds = 0;
+
+        msg[0] = UBX_CLASS_ESF;
+        msg[1] = 0x10; /* msg id  = UBX-ESF-STATUS */
+        msg[2] = 1; /* high rate for dev purposes */
+        (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
+
+        msg[0] = UBX_CLASS_ESF;
+        msg[1] = 0x14; /* msg id  = UBX-ESF-ALG */
+        msg[2] = 1; /* high rate for dev purposes */
         (void)ubx_write(session, UBX_CLASS_CFG, 0x01, msg, 3);
 
         // turn off common NMEA
