@@ -241,6 +241,14 @@ NMEA2000 CAN data::
   there is more than one unit on the CAN bus that provides GPS data,
   *gpsd* chooses the unit from which a GPS message is first seen. Example:
   *nmea2000://can0*.
+PDS service data::
+  URI with the prefix "pds://", followed by "any" or host id
+  a numerical identifier of the PDS node. Only Linux socket PDS interfaces
+  are supported. The daemon will open a AF_QIPCRTR socket sending/listening for
+  UDP datagrams arriving in form of the QRTR encoded messages for setup and after
+  QMI encoded messages containing GPS NMEA data.
+  If "any" is send the PDS driver chooses the first PDS service
+  found. Example: *pds://any* or *pds://0*.
 
 (The "ais:://" source type supported in some older versions of the
 daemon has been retired in favor of the more general "tcp://".)
