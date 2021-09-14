@@ -3723,6 +3723,7 @@ gps_mask_t nmea_parse(char *sentence, struct gps_device_t * session)
         // Jackson Labs proprietary
         {"PJLTS", 11,  false, NULL},          // GPSDO status
         {"PJLTV", 4,  false, NULL},           // Time and 3D velocity
+        {"PTKM", 0, false, NULL},             // Robertson RGC12 Gyro
         {"PMGNST", 8, false, processPMGNST},  // Magellan Status
         {"PMTK", 3,  false, processMTK3301},
         /* for some reason the parser no longer triggering on leading chars */
