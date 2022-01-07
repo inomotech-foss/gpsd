@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #if defined(DBUS_EXPORT_ENABLE)
 
@@ -20,10 +20,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "../include/gps.h"
-#include "../include/libgps.h"
-#include "../include/os_compat.h"
-#include "../include/timespec.h"
+#include "gps.h"
+#include "libgps.h"
+#include "os_compat.h"
+#include "timespec.h"
 
 
 struct privdata_t

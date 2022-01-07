@@ -7,11 +7,11 @@
  *
  * See "man 8 gpsd" for description of the gpsd D-Bus message.
  */
-#include "../include/gpsd_config.h"    // must be before all includes
+#include "gpsd_config.h"    // must be before all includes
 
 #if defined(DBUS_EXPORT_ENABLE)
 #include <dbus/dbus.h>
-#include "../include/gpsd.h"
+#include "gpsd.h"
 
 static DBusConnection *connection = NULL;
 

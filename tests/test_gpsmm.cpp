@@ -7,13 +7,13 @@
  */
 /* This simple program shows the basic functionality of the C++ wrapper class */
 
-#include "../include/gpsd_config.h"  /* must be before all includes */
+#include "gpsd_config.h"  /* must be before all includes */
 
 #include <getopt.h>
 #include <iostream>
 
-#include "../include/libgpsmm.h"
-#include "../include/timespec.h"
+#include "libgpsmm.h"
+#include "timespec.h"
 #include "../libgps/timespec_str.c"
 #include "../libgps/gpsdclient.c"
 /*     YES   --->  ^^^^

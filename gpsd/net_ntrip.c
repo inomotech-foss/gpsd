@@ -9,7 +9,7 @@
  * NTRIP is not an open protocol.  So this file is based on guesswork.
  */
 
-#include "../include/gpsd_config.h"  // must be before all includes
+#include "gpsd_config.h"  // must be before all includes
 
 #include <errno.h>
 #include <fcntl.h>
@@ -25,8 +25,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../include/gpsd.h"
-#include "../include/strfuncs.h"
+#include "gpsd.h"
+#include "strfuncs.h"
 
 // NTRIP 1.0 caster responses.  Based on Icecast audio servers
 #define NTRIP_SOURCETABLE       "SOURCETABLE 200 OK\r\n"

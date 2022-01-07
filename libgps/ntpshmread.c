@@ -7,7 +7,7 @@
  *
  */
 
-#include "../include/gpsd_config.h"  // must be before all includes
+#include "gpsd_config.h"  // must be before all includes
 
 #include <assert.h>
 #include <errno.h>
@@ -20,8 +20,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../include/ntpshm.h"
-#include "../include/compiler.h"
+#include "ntpshm.h"
+#include "compiler.h"
 
 // initialize a SHM segment
 struct shmTime *shm_get(const int unit, const bool create, const bool forall)

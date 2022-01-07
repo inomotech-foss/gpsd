@@ -10,7 +10,7 @@
  *
  */
 
-#include "../include/gpsd_config.h"  // must be before all includes
+#include "gpsd_config.h"  // must be before all includes
 
 #ifdef HAVE_GETOPT_LONG
    #include <getopt.h>
@@ -19,10 +19,10 @@
 #include <stdlib.h>
 #include <string.h>                  // for strlcpy()
 
-#include "../include/compiler.h"     // for FALLTHROUGH
-#include "../include/gps.h"
-#include "../include/gpsdclient.h"   // for gpsd_source_spec()
-#include "../include/os_compat.h"    // for strlcpy() if needed
+#include "compiler.h"     // for FALLTHROUGH
+#include "gps.h"
+#include "gpsdclient.h"   // for gpsd_source_spec()
+#include "os_compat.h"    // for strlcpy() if needed
 
 #define OID_VISIBLE ".1.3.6.1.2.1.25.1.31"
 #define OID_USED ".1.3.6.1.2.1.25.1.32"

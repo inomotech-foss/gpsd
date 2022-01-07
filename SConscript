@@ -464,7 +464,7 @@ for var in import_env:
         envs[var] = os.environ[var]
 envs["GPSD_HOME"] = os.getcwd() + os.sep + 'gpsd'
 
-env = Environment(tools=["default", "tar", "textfile"], options=opts, ENV=envs)
+env = Environment(tools=["default", "tar", "textfile"], options=opts, ENV=envs, CPPPATH=['include'])
 
 # Release identification begins here.
 #

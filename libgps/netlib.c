@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #ifdef HAVE_ARPA_INET_H
 #  include <arpa/inet.h>              // for htons() and friends
@@ -38,8 +38,8 @@
 #  include <ws2tcpip.h>
 #endif // HAVE_WINSOCK2_H
 
-#include "../include/gpsd.h"
-#include "../include/sockaddr.h"
+#include "gpsd.h"
+#include "sockaddr.h"
 
 /* work around the unfinished ipv6 implementation on hurd and OSX <10.6 */
 #ifndef IPV6_TCLASS

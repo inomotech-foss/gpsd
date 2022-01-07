@@ -73,7 +73,7 @@
    COMPASS mode. */
 #define MIN_COMPASS_DATAWIN_YSIZE (DATAWIN_COMPASS_FIELDS + DATAWIN_OVERHEAD)
 
-#include "../include/gpsd_config.h"    // must be before all includes
+#include "gpsd_config.h"    // must be before all includes
 
 #include <ctype.h>
 #include <curses.h>
@@ -90,12 +90,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "../include/gps.h"
-#include "../include/gps_json.h"    // for GPS_JSON_RESPONSE_MAX
-#include "../include/compiler.h"    // for UNUSED
-#include "../include/gpsdclient.h"
-#include "../include/os_compat.h"
-#include "../include/timespec.h"
+#include "gps.h"
+#include "gps_json.h"    // for GPS_JSON_RESPONSE_MAX
+#include "compiler.h"    // for UNUSED
+#include "gpsdclient.h"
+#include "os_compat.h"
+#include "timespec.h"
 
 // FILE *dlog = NULL;     // debug
 

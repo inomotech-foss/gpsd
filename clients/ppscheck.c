@@ -22,7 +22,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #include <errno.h>
 #include <fcntl.h>                    // needed for open() and friends
@@ -44,8 +44,8 @@
 // 'close' is not defined otherwise.
 #include <unistd.h>
 
-#include "../include/compiler.h"     // for FALLTHROUGH
-#include "../include/timespec.h"
+#include "compiler.h"     // for FALLTHROUGH
+#include "timespec.h"
 
 struct assoc {
     int mask;

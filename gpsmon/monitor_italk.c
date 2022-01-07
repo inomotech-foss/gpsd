@@ -3,17 +3,17 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"  /* must be before all includes */
+#include "gpsd_config.h"  /* must be before all includes */
 
 #include <stdio.h>
 #include <string.h>     /* for strlcat() */
 
-#include "../include/gpsd.h"
-#include "../include/bits.h"
-#include "../include/gpsmon.h"
+#include "gpsd.h"
+#include "bits.h"
+#include "gpsmon.h"
 
 #ifdef ITRAX_ENABLE
-#include "../include/driver_italk.h"
+#include "driver_italk.h"
 
 extern const struct gps_type_t driver_italk;
 static WINDOW *satwin, *navfixwin;

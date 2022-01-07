@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: BSD-2-clause
 */
 
-#include "../include/gpsd_config.h"    // first so the #ifdefs work
+#include "gpsd_config.h"    // first so the #ifdefs work
 
 #include <math.h>                      // for nan()
 #include <stdio.h>
@@ -15,9 +15,9 @@
 #include <string.h>
 #include <unistd.h>                    // for getopt()
 
-#include "../include/compiler.h"       // for FALLTHROUGH
-#include "../include/gpsdclient.h"
-#include "../include/os_compat.h"
+#include "compiler.h"       // for FALLTHROUGH
+#include "gpsdclient.h"
+#include "os_compat.h"
 
 struct test {
     double deg;

@@ -8,7 +8,7 @@
  */
 
 /* first so the #defs work */
-#include "../include/gpsd_config.h"
+#include "gpsd_config.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <unistd.h>            /* for getopt() */
 
-#include "../include/compiler.h"       // for FALLTHROUGH
-#include "../include/gpsd.h"
+#include "compiler.h"       // for FALLTHROUGH
+#include "gpsd.h"
 
 struct test3 {
     double lat;

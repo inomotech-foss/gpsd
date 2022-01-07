@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #include <ctype.h>
 #include <errno.h>
@@ -16,10 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/gpsd.h"
-#include "../include/libgps.h"
-#include "../include/gps_json.h"
-#include "../include/strfuncs.h"
+#include "gpsd.h"
+#include "libgps.h"
+#include "gps_json.h"
+#include "strfuncs.h"
 
 int libgps_debuglevel = 0;
 
