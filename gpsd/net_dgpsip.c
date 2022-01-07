@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #include <errno.h>                    // for errno
 #include <fcntl.h>
@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../include/gpsd.h"
+#include "gpsd.h"
 
 /* open a connection to a DGPSIP server
  * Return: socket on success

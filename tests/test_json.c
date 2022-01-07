@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"
+#include "gpsd_config.h"
 
 #include <getopt.h>
 #include <stddef.h>
@@ -13,8 +13,8 @@
 #include <string.h>
 #include <time.h>              // for struct timespec
 
-#include "../include/gpsd.h"
-#include "../include/gps_json.h"
+#include "gpsd.h"
+#include "gps_json.h"
 
 // Note: JSON_MINIMAL no longer exists
 

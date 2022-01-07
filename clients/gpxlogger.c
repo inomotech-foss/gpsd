@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #include <assert.h>
 #include <errno.h>
@@ -21,10 +21,10 @@
 #include <time.h>
 #include <unistd.h>          // for _exit()
 
-#include "../include/gps.h"
-#include "../include/gpsdclient.h"
-#include "../include/os_compat.h"
-#include "../include/timespec.h"
+#include "gps.h"
+#include "gpsdclient.h"
+#include "os_compat.h"
+#include "timespec.h"
 
 static char *progname;
 static struct fixsource_t source;

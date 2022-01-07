@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-clause
  */
 
-#include "../include/gpsd_config.h"  // must be before all includes
+#include "gpsd_config.h"  // must be before all includes
 
 #include <ctype.h>
 #include <errno.h>
@@ -31,13 +31,13 @@
     #include <QTcpSocket>
 #endif  // USE_QT
 
-#include "../include/gps.h"
-#include "../include/gpsd.h"          // FIXME: clients chould not use gpsd.h!
-#include "../include/libgps.h"
-#include "../include/strfuncs.h"
-#include "../include/timespec.h"      // for NS_IN_SEC
+#include "gps.h"
+#include "gpsd.h"          // FIXME: clients chould not use gpsd.h!
+#include "libgps.h"
+#include "strfuncs.h"
+#include "timespec.h"      // for NS_IN_SEC
 #ifdef SOCKET_EXPORT_ENABLE
-#include "../include/gps_json.h"
+#include "gps_json.h"
 
 struct privdata_t
 {

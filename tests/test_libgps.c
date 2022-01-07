@@ -3,7 +3,7 @@
  * Not really useful for anything but debugging.
  * SPDX-License-Identifier: BSD-2-clause
  */
-#include "../include/gpsd_config.h"  /* must be before all includes */
+#include "gpsd_config.h"  /* must be before all includes */
 
 #include <ctype.h>
 #include <errno.h>
@@ -16,9 +16,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../include/gps.h"
-#include "../include/libgps.h"
-#include "../include/gpsdclient.h"
+#include "gps.h"
+#include "libgps.h"
+#include "gpsdclient.h"
 
 static void onsig(int sig)
 {

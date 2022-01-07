@@ -191,13 +191,13 @@ SPDX-License-Identifier: BSD-2-clause
 
 *****************************************************************************/
 
-#include "../include/gpsd_config.h"   // must be before all includes
+#include "gpsd_config.h"   // must be before all includes
 
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/gpsd.h"
+#include "gpsd.h"
 
 // initialize the GPS context's time fields
 void gpsd_time_init(struct gps_context_t *context, time_t starttime)

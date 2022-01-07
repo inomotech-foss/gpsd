@@ -41,7 +41,7 @@
  * IF IBM IS APPRISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
 
-#include "../include/gpsd_config.h"  /* must be before all includes */
+#include "gpsd_config.h"  /* must be before all includes */
 
 #include <assert.h>
 #include <ctype.h>
@@ -50,7 +50,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include "../include/gpsd.h"       /* we only need the prototype */
+#include "gpsd.h"       /* we only need the prototype */
 
 static const char Base64[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
