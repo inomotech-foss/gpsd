@@ -2019,9 +2019,9 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     "\"add_as\":%.3f,\"add_bs\":%.3f,"
                     "\"add_at\":%.3f,\"add_bt\":%.3f,",
                     json_stringify(buf1, sizeof(buf1),
-                                   (char *)rtcm->rtcmtypes.rtcm3_1021.src_name),
+                                   rtcm->rtcmtypes.rtcm3_1021.src_name),
                     json_stringify(buf2, sizeof(buf2),
-                                   (char *)rtcm->rtcmtypes.rtcm3_1021.tar_name),
+                                   rtcm->rtcmtypes.rtcm3_1021.tar_name),
                     rtcm->rtcmtypes.rtcm3_1021.sys_id_num,
                     rtcm->rtcmtypes.rtcm3_1021.plate_number,
                     rtcm->rtcmtypes.rtcm3_1021.lat_origin,
@@ -2047,7 +2047,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     "\"shift_h\":%u,\"shift_v\":%u,"
                     "\"lat_origin\":%f,\"lon_origin\":%f,"
                     "\"lat_extension\":%f,\"lon_extension\":%f,"
-                    "\"lat_mean\":%.3f,\"lon_mean\":%.3f,\"ele_mean\":%.2f,"
+                    "\"lat_mean\":%.3f,\"lon_mean\":%.3f,\"hgt_mean\":%.2f,"
                     "\"mjd\":%u,",
                     rtcm->rtcmtypes.rtcm3_1023.sys_id_num,
                     rtcm->rtcmtypes.rtcm3_1023.shift_id_hori,
@@ -2058,24 +2058,63 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     rtcm->rtcmtypes.rtcm3_1023.lon_extension,
                     rtcm->rtcmtypes.rtcm3_1023.lat_mean,
                     rtcm->rtcmtypes.rtcm3_1023.lon_mean,
-                    rtcm->rtcmtypes.rtcm3_1023.ele_mean,
+                    rtcm->rtcmtypes.rtcm3_1023.hgt_mean,
                     rtcm->rtcmtypes.rtcm3_1023.mjd
         );
         (void)strlcat(buf, "\"residuals\":{", buflen);
-        for (i = 0; i < 16; i++) {
+        for (i = 0; i < RTCM3_GRID_SIZE; i++) {
 #define R1023 rtcm->rtcmtypes.rtcm3_1023.residuals[i]
             str_appendf(buf, buflen,
                         "\"lat_%02u\":%.5f,"
                         "\"lon_%02u\":%.5f,"
-                        "\"ele_%02u\":%.3f,",
+                        "\"hgt_%02u\":%.3f,",
                         i + 1, R1023.lat_res,
                         i + 1, R1023.lon_res,
-                        i + 1, R1023.ele_res);
+                        i + 1, R1023.hgt_res);
 #undef R1023
         }
         str_rstrip_char(buf, ',');
         (void)strlcat(buf, "}", buflen);
+            break;
+    case 1025:
+        str_appendf(buf, buflen,
+                    "\"sys_id\":%u,"
+                    "\"lat_origin\":%.9f,\"lon_origin\":%.9f,"
+                    "\"add_sno\":%.5f,"
+                    "\"false_easting\":%.3f,\"false_northing\":%.3f,",
+                    rtcm->rtcmtypes.rtcm3_1025.sys_id_num,
+                    rtcm->rtcmtypes.rtcm3_1025.lat_origin,
+                    rtcm->rtcmtypes.rtcm3_1025.lon_origin,
+                    rtcm->rtcmtypes.rtcm3_1025.add_sno,
+                    rtcm->rtcmtypes.rtcm3_1025.false_east,
+                    rtcm->rtcmtypes.rtcm3_1025.false_north);
+        (void)strlcat(buf, "\"projection_type\":", buflen);
+        switch (rtcm->rtcmtypes.rtcm3_1025.projection_type)
+        {
+        case PR_TM:
+            (void)strlcat(buf, "\"TM\",", buflen);
+            break;
+        case PR_TMS:
+            (void)strlcat(buf, "\"TMS\",", buflen);
+            break;
+        case PR_LCC1SP:
+            (void)strlcat(buf, "\"LCC1SP\",", buflen);
+            break;
+        case PR_LCC2SP:
+            (void)strlcat(buf, "\"LCC2SP\",", buflen);
+            break;
+        case PR_LCCW:
+            (void)strlcat(buf, "\"LCCW\",", buflen);
+            break;
+        case PR_CS:
+            (void)strlcat(buf, "\"CS\",", buflen);
+            break;
+        default:
+            (void)strlcat(buf, "\"UNKNOWN\",", buflen);
+            break;
+        }
         break;
+
     case 1029:
         str_appendf(buf, buflen,
                     "\"station_id\":%u,\"mjd\":%u,\"sec\":%u,"
@@ -2086,7 +2125,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     rtcm->rtcmtypes.rtcm3_1029.len,
                     rtcm->rtcmtypes.rtcm3_1029.unicode_units,
                     json_stringify(buf1, sizeof(buf1),
-                                   (char *)rtcm->rtcmtypes.rtcm3_1029.text));
+                                    (char *)rtcm->rtcmtypes.rtcm3_1029.text));
         break;
 
     case 1033:
@@ -2237,8 +2276,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
 
     default:
         (void)strlcat(buf, "\"data\":[", buflen);
-        for (n = 0; n < rtcm->length; n++)
-        {
+        for (n = 0; n < rtcm->length; n++) {
             str_appendf(buf, buflen,
                         "\"0x%02x\",", (unsigned int)rtcm->rtcmtypes.data[n]);
         }
