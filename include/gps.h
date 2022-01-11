@@ -602,7 +602,27 @@ struct rtcm3_msm_hdr {
     unsigned char msm;          // 1 to 7, MSMx
 };
 
-struct rtcm3_network_rtk_header {
+// satellite data from MSM1 and MSM7
+struct rtcm3_msm_sat {
+    unsigned short rr_ms;       // Milliseconds in GNSS Satellite rough ranges
+    unsigned short ext_info;    // Extended Satellite info
+    unsigned short rr_m1;       // Rough ranges Modulo 1 Milliseconds
+    unsigned short rr_prr;      // Rough PhaseRange rates
+};
+
+// signal data from MSM1 and MSM7
+struct rtcm3_msm_sig {
+    short pseudo_r;             // Signal fine Pseudoranges
+    int phase_r;                // Signal fine Phaseranges
+    unsigned short lti;         // Lock Time Indicator
+    bool half_amb;              // Half-cycle ambiguity indicator
+    unsigned short cnr;         // Signal CNRs
+    short phase_rr;             // Phase Range Rates
+    // FIXME extend
+};
+
+struct rtcm3_network_rtk_header
+{
     unsigned int network_id;    // Network ID
     unsigned int subnetwork_id; // Subnetwork ID
     unsigned long tow;          // GPS Epoch Time (TOW).  scale 0.1 s
