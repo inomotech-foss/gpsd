@@ -132,6 +132,38 @@ static bool rtcm3_101567(const struct gps_context_t *context,
     return false;
 }
 
+/* count satellites from satellite mask
+ * Number of Satellites "NSat" is hidden in DF394 (GNSS Satellite Mask)
+ * Counting the bits gives the number of satellites in Message
+ *
+ * Return: number of satellites, max 64
+ */
+unsigned int rtcm3_msm_count_sats(uint64_t n)
+{
+    unsigned int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+
+/* count signals from signal mask
+ * Number of Signals "NSig" is hidden in DF395 (GNSS Signal Mask)
+ * Counting the bits gives the number of signals in Message
+ *
+ * Return: number of signals, max 32
+ */
+unsigned int rtcm3_msm_count_sigs(uint32_t n)
+{
+    unsigned int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+
 /* decode MSM header
  * MSM1 to MSM7 share a common header
  * TODO: rtklib has C code for these.
@@ -325,6 +357,66 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
             rtcm->rtcmtypes.rtcm3_msm.sig[i].cnr = sgrab(15);
         }
     }
+
+    unsigned int n_sat, n_sig, n_cell;
+    n_sat = rtcm3_msm_count_sats(rtcm->rtcmtypes.rtcm3_msm.sat_mask);
+    n_sig = rtcm3_msm_count_sigs(rtcm->rtcmtypes.rtcm3_msm.sig_mask);
+    n_cell = n_sat * n_sig;
+    ugrab(n_cell);
+
+    struct rtcm3_msm_sat sat_data[n_sat];
+    struct rtcm3_msm_sig sig_data[n_cell];
+
+    // Decode Satellite Data
+    // Decode DF397 (MSM 4-7)
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
+    case 4:
+        FALLTHROUGH
+    case 5:
+        FALLTHROUGH
+    case 6:
+        FALLTHROUGH
+    case 7:
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].rr_ms = (unsigned short)ugrab(8);
+        };
+        break;
+    default:
+        break;
+    }
+    // Decode Extended Info (MSM 5+7)
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
+    case 5:
+        FALLTHROUGH
+    case 7:
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].ext_info = (unsigned short)ugrab(4);
+        };
+        break;
+    default:
+        break;
+    }
+    // Decode DF398 (MSM 1-7)
+    for (int i = 0; i < n_sat; i++) {
+        sat_data[i].rr_m1 = (unsigned short)ugrab(10);
+    };
+    // Decode DF399 (MSM 5+7)
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
+    case 5:
+        FALLTHROUGH
+    case 7:
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].rr_prr = (unsigned short)ugrab(14);
+        };
+        break;
+    default:
+        break;
+    }
+    // TODO Decode Signal Data
+    // ..
 
     // (long long)tow for 32 bit machines.
     GPSD_LOG(LOG_PROG, &context->errout, "RTCM3: rtcm3_decode_msm(%u) "
