@@ -610,17 +610,18 @@ struct rtcm3_msm_sat {
     unsigned short rr_ms;       // Milliseconds in GNSS Satellite rough ranges
     unsigned short ext_info;    // Extended Satellite info
     unsigned short rr_m1;       // Rough ranges Modulo 1 Milliseconds
-    short rates_rphr;  // Rough PhaseRange rates
+    unsigned short rr_prr;      // Rough PhaseRange rates
 };
 
 // signal data from MSM1 and MSM7
 struct rtcm3_msm_sig {
-    int pseudo_r;               // Signal fine Pseudoranges
+    short pseudo_r;             // Signal fine Pseudoranges
     int phase_r;                // Signal fine Phaseranges
     unsigned short lti;         // Lock Time Indicator
     bool half_amb;              // Half-cycle ambiguity indicator
     unsigned short cnr;         // Signal CNRs
-    short rates_phr;            // Phase Range Rates
+    short phase_rr;             // Phase Range Rates
+    // FIXME extend
 };
 
 struct rtcm3_network_rtk_header
