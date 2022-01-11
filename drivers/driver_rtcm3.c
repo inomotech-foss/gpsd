@@ -133,6 +133,38 @@ static bool rtcm3_101567(const struct gps_context_t *context,
     return false;
 }
 
+/* count satellites from satellite mask
+ * Number of Satellites "NSat" is hidden in DF394 (GNSS Satellite Mask)
+ * Counting the bits gives the number of satellites in Message
+ *
+ * Return: number of satellites, max 64
+ */
+unsigned int rtcm3_msm_count_sats(uint64_t n)
+{
+    unsigned int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+
+/* count signals from signal mask
+ * Number of Signals "NSig" is hidden in DF395 (GNSS Signal Mask)
+ * Counting the bits gives the number of signals in Message
+ *
+ * Return: number of signals, max 32
+ */
+unsigned int rtcm3_msm_count_sigs(uint32_t n)
+{
+    unsigned int count = 0;
+    while (n) {
+        count += n & 1;
+        n >>= 1;
+    }
+    return count;
+}
+
 /* decode MSM header
  * MSM1 to MSM7 share a common header
  * TODO: rtklib has C code for these.
@@ -172,34 +204,19 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
     // FIXME: cell_mask is variable length!
     // rtcm->rtcmtypes.rtcm3_msm.cell_mask = (uint64_t)ugrab(64);
 
-    unsigned short n_sig = 0, n_sat = 0;
-    unsigned long mask_sat = rtcm->rtcmtypes.rtcm3_msm.sat_mask;
-    unsigned int mask_sig = rtcm->rtcmtypes.rtcm3_msm.sig_mask;
+    unsigned int n_sat, n_sig, n_cell;
+    n_sat = rtcm3_msm_count_sats(rtcm->rtcmtypes.rtcm3_msm.sat_mask);
+    n_sig = rtcm3_msm_count_sigs(rtcm->rtcmtypes.rtcm3_msm.sig_mask);
+    n_cell = n_sat * n_sig;
+    ugrab(n_cell);
 
-    // printf("SatMask: %lu, SigMask: %u", mask_sat, mask_sig);
+    struct rtcm3_msm_sat sat_data[n_sat];
+    struct rtcm3_msm_sig sig_data[n_cell];
 
-    // count satellites
-    while (mask_sat)
-    {
-        n_sat += mask_sat & 1;
-        mask_sat >>= 1;
-    }
-    rtcm->rtcmtypes.rtcm3_msm.n_sat = n_sat;
-    // count signals
-    while (mask_sig)
-    {
-        n_sig += mask_sig & 1;
-        mask_sig >>= 1;
-    }
-    rtcm->rtcmtypes.rtcm3_msm.n_sig = n_sig;
-    // determine cells
-    rtcm->rtcmtypes.rtcm3_msm.n_cell = n_sat * n_sig;
-    bitcount += rtcm->rtcmtypes.rtcm3_msm.n_cell;
-
-    /* Decode Satellite Data */
-
+    // Decode Satellite Data
     // Decode DF397 (MSM 4-7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
     case 4:
         FALLTHROUGH
     case 5:
@@ -207,174 +224,45 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
     case 6:
         FALLTHROUGH
     case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_ms = (unsigned short)ugrab(8);
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].rr_ms = (unsigned short)ugrab(8);
         };
         break;
     default:
         break;
     }
     // Decode Extended Info (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
     case 5:
         FALLTHROUGH
     case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm_sat[i].ext_info = (unsigned short)ugrab(4);
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].ext_info = (unsigned short)ugrab(4);
         };
         break;
     default:
         break;
     }
     // Decode DF398 (MSM 1-7)
-    for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-        rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_m1 = (unsigned short)ugrab(10);
+    for (int i = 0; i < n_sat; i++) {
+        sat_data[i].rr_m1 = (unsigned short)ugrab(10);
     };
     // Decode DF399 (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
+    switch (rtcm->rtcmtypes.rtcm3_msm.msm)
+    {
     case 5:
         FALLTHROUGH
     case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm_sat[i].rates_rphr = (signed short)ugrab(14);
+        for (int i = 0; i < n_sat; i++) {
+            sat_data[i].rr_prr = (unsigned short)ugrab(14);
         };
         break;
     default:
         break;
     }
-
-    /* Decode Signal Data */
-
-    // Decode DF400 (MSM 1,3,4,5) resp. DF405 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 1:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(15);
-        };
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(20);
-        };
-        break;
-    default:
-        break;
-    }
-    // Decode DF401 (MSM 2,3,4,5) resp. DF406 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(22);
-        }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(24);
-        }
-        break;
-    default:
-        break;
-    }
-    // Decode DF402 (MSM 2,3,4,5) resp. DF407 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(4);
-        }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(10);
-        }
-        break;
-    default:
-        break;
-    }
-    // Decode DF420 (MSM 2-7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
-        FALLTHROUGH
-    case 6:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].half_amb = (bool)ugrab(1);
-        }
-        break;
-    default:
-        break;
-    }
-    // Decode DF403 (MSM 4+5) resp. DF408 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 4:
-        FALLTHROUGH
-    case 5:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(6);
-        }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(10);
-        }
-        break;
-    default:
-        break;
-    }
-    // Decode DF404 (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 5:
-        FALLTHROUGH
-    case 7:
-        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
-        {
-            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (signed short)sgrab(15);
-        }
-        break;
-    default:
-        break;
-    }
+    // TODO Decode Signal Data
+    // ..
 
     // (long long)tow for 32 bit machines.
     GPSD_LOG(LOG_PROG, &context->errout, "RTCM3: rtcm3_decode_msm(%u) "
