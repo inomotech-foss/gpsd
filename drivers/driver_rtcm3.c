@@ -80,8 +80,7 @@ SPDX-License-Identifier: BSD-2-clause
  * https://software.rtcm-ntrip.org/export/HEAD/ntrip/trunk/BNC/src/bnchelp.html
  * Also look in the BNC source
  * and look at the tklib source: http://www.rtklib.com/
- */// Bismasks for MSM
-#define BITMASK_32
+ */
 
 #define ugrab(width)    (bitcount += width, ubits((unsigned char *)buf, \
                          bitcount - width, width, false))
@@ -139,7 +138,7 @@ static bool rtcm3_101567(const struct gps_context_t *context,
  *
  * Return: number of satellites, max 64
  */
-unsigned int rtcm3_msm_count_sats(uint64_t n)
+static unsigned short rtcm3_msm_count_sats(uint64_t n)
 {
     unsigned int count = 0;
     while (n) {
@@ -155,7 +154,7 @@ unsigned int rtcm3_msm_count_sats(uint64_t n)
  *
  * Return: number of signals, max 32
  */
-unsigned int rtcm3_msm_count_sigs(uint32_t n)
+static unsigned short rtcm3_msm_count_sigs(uint32_t n)
 {
     unsigned int count = 0;
     while (n) {
