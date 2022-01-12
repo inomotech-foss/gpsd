@@ -2232,8 +2232,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     "\"tow\":%lld,\"sync\":\"%u\",\"IODS\":%u,"
                     "\"steering\":%u,\"extclk\":%u,"
                     "\"smoothing\":%u,\"interval\":%u,"
-                    "\"MaskSat\":%llu,\"MaskSig\":%u,"
-                    "\"NSat\":%u,\"NSig\":%u,\"NCell\":%u,",
+                    "\"NSat\":%u,\"NCell\":%u,",
                     rtcm->rtcmtypes.rtcm3_msm.station_id,
                     // FIXME: make gnssid a string?
                     rtcm->rtcmtypes.rtcm3_msm.gnssid,
@@ -2245,10 +2244,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     rtcm->rtcmtypes.rtcm3_msm.ext_clk,
                     rtcm->rtcmtypes.rtcm3_msm.smoothing,
                     rtcm->rtcmtypes.rtcm3_msm.interval,
-                    rtcm->rtcmtypes.rtcm3_msm.sat_mask,
-                    rtcm->rtcmtypes.rtcm3_msm.sig_mask,
                     rtcm->rtcmtypes.rtcm3_msm.n_sat,
-                    rtcm->rtcmtypes.rtcm3_msm.n_sig,
                     rtcm->rtcmtypes.rtcm3_msm.n_cell);
         break;
 
