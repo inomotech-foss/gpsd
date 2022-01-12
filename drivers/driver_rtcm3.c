@@ -139,7 +139,7 @@ static bool rtcm3_101567(const struct gps_context_t *context,
  *
  * Return: number of satellites, max 64
  */
-unsigned int rtcm3_msm_count_sats(uint64_t n)
+static unsigned short rtcm3_msm_count_sats(uint64_t n)
 {
     unsigned int count = 0;
     while (n) {
@@ -155,7 +155,7 @@ unsigned int rtcm3_msm_count_sats(uint64_t n)
  *
  * Return: number of signals, max 32
  */
-unsigned int rtcm3_msm_count_sigs(uint32_t n)
+static unsigned short rtcm3_msm_count_sigs(uint32_t n)
 {
     unsigned int count = 0;
     while (n) {
