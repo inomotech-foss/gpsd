@@ -601,6 +601,7 @@ struct rtcm3_msm_hdr {
     unsigned char gnssid;       // gnssid
     unsigned char msm;          // 1 to 7, MSMx
     unsigned short n_sat;       // Number of satellites derived from sat_mask
+    unsigned short n_sig;       // Number of signals derived from sig_mask
     unsigned short n_cell;      // no. of sats * no. of sigs (<=64!)
     unsigned short n_sig;
 };
