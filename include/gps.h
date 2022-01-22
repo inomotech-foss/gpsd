@@ -610,14 +610,15 @@ struct rtcm3_msm_hdr {
     unsigned char steering;     // Clock Steering Indicator
     unsigned char ext_clk;      // External Clock Indicator
     bool smoothing;             // Divergence-free Smoothing Indicator
-    unsigned interval;          // Smoothing Interval
-    uint64_t sat_mask;          // Satellite Mask
-    uint32_t sig_mask;          // Signal Mask
+    unsigned int interval;      // Smoothing Interval
+    unsigned long sat_mask;          // Satellite Mask
+    unsigned int sig_mask;          // Signal Mask
     uint64_t cell_mask;         // Cell Mask
     // not part of the network message:
     unsigned char gnssid;       // gnssid
     unsigned char msm;          // 1 to 7, MSMx
     unsigned short n_sat;       // Number of satellites derived from sat_mask
+    unsigned short n_sig;       // Number of signals derived from sig_mask
     unsigned short n_cell;      // no. of sats * no. of sigs (<=64!)
 };
 
