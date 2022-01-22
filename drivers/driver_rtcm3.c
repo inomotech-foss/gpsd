@@ -133,38 +133,6 @@ static bool rtcm3_101567(const struct gps_context_t *context,
     return false;
 }
 
-/* count satellites from satellite mask
- * Number of Satellites "NSat" is hidden in DF394 (GNSS Satellite Mask)
- * Counting the bits gives the number of satellites in Message
- *
- * Return: number of satellites, max 64
- */
-static unsigned short rtcm3_msm_count_sats(uint64_t n)
-{
-    unsigned int count = 0;
-    while (n) {
-        count += n & 1;
-        n >>= 1;
-    }
-    return count;
-}
-
-/* count signals from signal mask
- * Number of Signals "NSig" is hidden in DF395 (GNSS Signal Mask)
- * Counting the bits gives the number of signals in Message
- *
- * Return: number of signals, max 32
- */
-static unsigned short rtcm3_msm_count_sigs(uint32_t n)
-{
-    unsigned int count = 0;
-    while (n) {
-        count += n & 1;
-        n >>= 1;
-    }
-    return count;
-}
-
 /* decode MSM header
  * MSM1 to MSM7 share a common header
  * TODO: rtklib has C code for these.
