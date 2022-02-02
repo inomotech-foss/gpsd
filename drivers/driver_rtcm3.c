@@ -133,21 +133,6 @@ static bool rtcm3_101567(const struct gps_context_t *context,
     return false;
 }
 
-/* count satellites from satellite mask
- * Number of Satellites "NSat" is hidden in DF394 (GNSS Satellite Mask)
- * Counting the bits gives the number of satellites in Message
- *
- * Return: number of satellites, max 64
- */
-static unsigned short rtcm3_msm_count_sats(uint64_t n)
-{
-    unsigned int count = 0;
-    while (n) {
-        count += n & 1;
-        n >>= 1;
-    }
-    return count;
-}
 
 /* count signals from signal mask
  * Number of Signals "NSig" is hidden in DF395 (GNSS Signal Mask)
@@ -204,10 +189,27 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
     // FIXME: cell_mask is variable length!
     // rtcm->rtcmtypes.rtcm3_msm.cell_mask = (uint64_t)ugrab(64);
 
-    unsigned short n_sig;
-    rtcm->rtcmtypes.rtcm3_msm.n_sat = rtcm3_msm_count_sats(rtcm->rtcmtypes.rtcm3_msm.sat_mask);
-    n_sig = rtcm3_msm_count_sigs(rtcm->rtcmtypes.rtcm3_msm.sig_mask);
-    rtcm->rtcmtypes.rtcm3_msm.n_cell = rtcm->rtcmtypes.rtcm3_msm.n_sat * n_sig;
+    unsigned short n_sig = 0, n_sat = 0;
+    unsigned long mask_sat = rtcm->rtcmtypes.rtcm3_msm.sat_mask;
+    unsigned int mask_sig = rtcm->rtcmtypes.rtcm3_msm.sig_mask;
+
+    printf("SatMask: %lu, SigMask: %u", mask_sat, mask_sig);
+
+    // count satellites
+    while (mask_sat)
+    {
+        n_sat += mask_sat & 1;
+        mask_sat >>= 1;
+    }
+    rtcm->rtcmtypes.rtcm3_msm.n_sat = n_sat;
+    // count signals
+    while (mask_sig)
+    {
+        n_sig += mask_sig & 1;
+        mask_sig >>= 1;
+    }
+    // determine cells
+    rtcm->rtcmtypes.rtcm3_msm.n_cell = n_sat * n_sig;
     bitcount += rtcm->rtcmtypes.rtcm3_msm.n_cell;
 
     /* Decode Satellite Data */
