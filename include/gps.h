@@ -603,7 +603,6 @@ struct rtcm3_msm_hdr {
     unsigned short n_sat;       // Number of satellites derived from sat_mask
     unsigned short n_sig;       // Number of signals derived from sig_mask
     unsigned short n_cell;      // no. of sats * no. of sigs (<=64!)
-    unsigned short n_sig;
 };
 
 // satellite data from MSM1 and MSM7
