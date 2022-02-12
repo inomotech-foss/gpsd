@@ -211,181 +211,133 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
     /* Decode Satellite Data */
 
     // Decode DF397 (MSM 4-7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 4:
-        FALLTHROUGH
-    case 5:
-        FALLTHROUGH
-    case 6:
-        FALLTHROUGH
-    case 7:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
             rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_ms = (unsigned short)ugrab(8);
-        };
-        break;
-    default:
-        break;
+        }
     }
+
     // Decode Extended Info (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 5:
-        FALLTHROUGH
-    case 7:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
             rtcm->rtcmtypes.rtcm3_msm_sat[i].ext_info = (unsigned short)ugrab(4);
-        };
-        break;
-    default:
-        break;
+        }
     }
+
     // Decode DF398 (MSM 1-7)
     for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
         rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_m1 = (unsigned short)ugrab(10);
     };
+
     // Decode DF399 (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 5:
-        FALLTHROUGH
-    case 7:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
             rtcm->rtcmtypes.rtcm3_msm_sat[i].rates_rphr = (signed short)ugrab(14);
-        };
-        break;
-    default:
-        break;
+        }
     }
+
 
     /* Decode Signal Data */
 
     // Decode DF400 (MSM 1,3,4,5) resp. DF405 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 1:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 1 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(15);
-        };
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
+        }
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(20);
-        };
-        break;
-    default:
-        break;
+        }
     }
+
     // Decode DF401 (MSM 2,3,4,5) resp. DF406 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(22);
         }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(24);
         }
-        break;
-    default:
-        break;
     }
+
     // Decode DF402 (MSM 2,3,4,5) resp. DF407 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(4);
         }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(10);
         }
-        break;
-    default:
-        break;
     }
+
     // Decode DF420 (MSM 2-7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 2:
-        FALLTHROUGH
-    case 3:
-        FALLTHROUGH
-    case 4:
-        FALLTHROUGH
-    case 5:
-        FALLTHROUGH
-    case 6:
-        FALLTHROUGH
-    case 7:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].half_amb = (bool)ugrab(1);
         }
-        break;
-    default:
-        break;
     }
+
     // Decode DF403 (MSM 4+5) resp. DF408 (MSM 6+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 4:
-        FALLTHROUGH
-    case 5:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(6);
         }
-        break;
-    case 6:
-        FALLTHROUGH
-    case 7:
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(10);
         }
-        break;
-    default:
-        break;
     }
+
     // Decode DF404 (MSM 5+7)
-    switch (rtcm->rtcmtypes.rtcm3_msm.msm) {
-    case 5:
-        FALLTHROUGH
-    case 7:
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
         for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
         {
             rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (signed short)sgrab(15);
         }
-        break;
-    default:
-        break;
     }
 
     // (long long)tow for 32 bit machines.

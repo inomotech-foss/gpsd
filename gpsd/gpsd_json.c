@@ -2233,10 +2233,15 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     "\"steering\":%u,\"extclk\":%u,"
                     "\"smoothing\":%u,\"interval\":%u,"
 <<<<<<< HEAD
+<<<<<<< HEAD
                     "\"NSat\":%u,\"NSig\":%u,\"NCell\":%u,",
 =======
                     "\"NSat\":%u,\"NCell\":%u,",
 >>>>>>> Additinal Info in json for MSM
+=======
+                    "\"MaskSat\":%llu,\"MaskSig\":%u,"
+                    "\"NSat\":%u,\"NSig\":%u,\"NCell\":%u,",
+>>>>>>> 04ebb424ca7f5d5af17a6aa084bc3c922a7d149d
                     rtcm->rtcmtypes.rtcm3_msm.station_id,
                     // FIXME: make gnssid a string?
                     rtcm->rtcmtypes.rtcm3_msm.gnssid,
@@ -2248,11 +2253,18 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
                     rtcm->rtcmtypes.rtcm3_msm.ext_clk,
                     rtcm->rtcmtypes.rtcm3_msm.smoothing,
                     rtcm->rtcmtypes.rtcm3_msm.interval,
+<<<<<<< HEAD
                     rtcm->rtcmtypes.rtcm3_msm.n_sat,
 <<<<<<< HEAD
                     rtcm->rtcmtypes.rtcm3_msm.n_sig,
 =======
 >>>>>>> Additinal Info in json for MSM
+=======
+                    rtcm->rtcmtypes.rtcm3_msm.sat_mask,
+                    rtcm->rtcmtypes.rtcm3_msm.sig_mask,
+                    rtcm->rtcmtypes.rtcm3_msm.n_sat,
+                    rtcm->rtcmtypes.rtcm3_msm.n_sig,
+>>>>>>> 04ebb424ca7f5d5af17a6aa084bc3c922a7d149d
                     rtcm->rtcmtypes.rtcm3_msm.n_cell);
         break;
 
