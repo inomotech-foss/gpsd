@@ -2228,7 +2228,7 @@ void json_rtcm3_dump(const struct rtcm3_t *rtcm,
         FALLTHROUGH
     case 1127: // BD MSM 7
         str_appendf(buf, buflen,
-                    "\"station_id\":%u,\"gnssid\":%u,\"subtype\":\"MSM%d\","
+                    "\"station_id\":%u,\"gnssid\":%u,\"subtype\":\"MSM%u\","
                     "\"tow\":%lld,\"sync\":\"%u\",\"IODS\":%u,"
                     "\"steering\":%u,\"extclk\":%u,"
                     "\"smoothing\":%u,\"interval\":%u,"
