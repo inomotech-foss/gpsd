@@ -80,7 +80,8 @@ SPDX-License-Identifier: BSD-2-clause
  * https://software.rtcm-ntrip.org/export/HEAD/ntrip/trunk/BNC/src/bnchelp.html
  * Also look in the BNC source
  * and look at the tklib source: http://www.rtklib.com/
- */
+ */// Bismasks for MSM
+#define BITMASK_32
 
 #define ugrab(width)    (bitcount += width, ubits((unsigned char *)buf, \
                          bitcount - width, width, false))
@@ -143,10 +144,10 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
                              struct rtcm3_t *rtcm, char *buf)
 {
     int bitcount = 36;  // 8 preamble, 6 zero, 10 length, 12 type
-    unsigned n_sig = 0, n_sat = 0, n_cell = 0;
-    uint64_t sat_mask;
-    uint32_t sig_mask;
-    unsigned i;
+    int j;
+
+    unsigned int n_sig = 0, n_sat = 0, n_cell = 0;
+    // unsigned long long sat_mask = 0, sig_mask = 0, cell_mask = 0;
 
     if (22 > rtcm->length) {
         // need 169 bits, 21.125 bytes
@@ -159,170 +160,183 @@ static bool rtcm3_decode_msm(const struct gps_context_t *context,
 
     rtcm->rtcmtypes.rtcm3_msm.station_id = ugrab(12);
     rtcm->rtcmtypes.rtcm3_msm.tow = (time_t)ugrab(30);
-    rtcm->rtcmtypes.rtcm3_msm.sync = ugrab(1);
-    rtcm->rtcmtypes.rtcm3_msm.IODS = ugrab(3);
-    bitcount += 7;             // skip 7 reserved bits, DF001
-    rtcm->rtcmtypes.rtcm3_msm.steering = ugrab(2);
-    rtcm->rtcmtypes.rtcm3_msm.ext_clk = ugrab(2);
-    rtcm->rtcmtypes.rtcm3_msm.smoothing = ugrab(1);
-    rtcm->rtcmtypes.rtcm3_msm.interval = ugrab(3);
-    // FIXME: rtcm->rtcmtypes.rtcm3_msm.sat_mask = ugrab(64);
-    // ugrab(64) works on arm32, but not on amd64!
-    rtcm->rtcmtypes.rtcm3_msm.sat_mask = ugrab(32) << 32;
-    rtcm->rtcmtypes.rtcm3_msm.sat_mask |= ugrab(32);
-    rtcm->rtcmtypes.rtcm3_msm.sig_mask = ugrab(32);
+    rtcm->rtcmtypes.rtcm3_msm.sync = (bool)ugrab(1);
+    rtcm->rtcmtypes.rtcm3_msm.IODS = (unsigned short)ugrab(3);
+    ugrab(7);             // skip 7 reserved bits, DF001
+    rtcm->rtcmtypes.rtcm3_msm.steering = (unsigned short)ugrab(2);
+    rtcm->rtcmtypes.rtcm3_msm.ext_clk = (unsigned short)ugrab(2);
+    rtcm->rtcmtypes.rtcm3_msm.smoothing = (bool)ugrab(1);
+    rtcm->rtcmtypes.rtcm3_msm.interval = (unsigned)ugrab(3);
 
-    // count satellites
-    sat_mask = rtcm->rtcmtypes.rtcm3_msm.sat_mask;
-    while (sat_mask) {
-        n_sat += sat_mask & 1;
-        sat_mask >>= 1;
+    rtcm->rtcmtypes.rtcm3_msm.sat_mask = (unsigned long)ugrab(64);
+    while(rtcm->rtcmtypes.rtcm3_msm.sat_mask) {
+        n_sat += rtcm->rtcmtypes.rtcm3_msm.sat_mask & 1;
+        rtcm->rtcmtypes.rtcm3_msm.sat_mask >>= 1;
     }
-    // count signals
-    sig_mask = rtcm->rtcmtypes.rtcm3_msm.sig_mask;
-    while (sig_mask) {
-        n_sig += sig_mask & 1;
-        sig_mask >>= 1;
+    rtcm->rtcmtypes.rtcm3_msm.sig_mask = (unsigned)ugrab(32);
+    while(rtcm->rtcmtypes.rtcm3_msm.sig_mask) {
+        n_sig += rtcm->rtcmtypes.rtcm3_msm.sig_mask & 1;
+        rtcm->rtcmtypes.rtcm3_msm.sig_mask >>= 1;
     }
-    // determine cells
+
+    // rtcm->rtcmtypes.rtcm3_msm.sat_mask = 0ULL;
+    // for (j = 0; j<64; j++) {
+    //     if ((bool) ugrab(1)) {
+    //         rtcm->rtcmtypes.rtcm3_msm.sat_mask += (uint64_t)(1 << (64 - 1 - j));
+    //         n_sat++;
+    //     }
+    // }
+
+    // rtcm->rtcmtypes.rtcm3_msm.sig_mask = 0UL;
+    // for (j = 0; j<32; j++) {
+    //     if ((bool) ugrab(1)) {
+    //         rtcm->rtcmtypes.rtcm3_msm.sig_mask += (uint32_t)(1 << (32 - 1 - j));
+    //         n_sig++;
+    //     }
+    // }
+
     n_cell = n_sat * n_sig;
+    rtcm->rtcmtypes.rtcm3_msm.cell_mask = (unsigned long)ugrab(n_cell);
+
+    // FIXME: cell_mask is variable length!
+    // rtcm->rtcmtypes.rtcm3_msm.cell_mask = (uint64_t)ugrab(64);
+
+    // determine cells
     rtcm->rtcmtypes.rtcm3_msm.n_sat = n_sat;
     rtcm->rtcmtypes.rtcm3_msm.n_sig = n_sig;
-    rtcm->rtcmtypes.rtcm3_msm.n_cell = n_cell;
+    rtcm->rtcmtypes.rtcm3_msm.n_cell = n_sat * n_sig;
 
-    if (0 == n_sat ||
-        64 < n_cell) {
-        GPSD_LOG(LOG_WARN, &context->errout,
-                 "RTCM3: rtcm3_decode_msm(%u) interval %u  sat_mask x%llx "
-                 "sig_mask x%x invalid n_cell %u\n",
-                 rtcm->type,
-                 rtcm->rtcmtypes.rtcm3_msm.interval,
-                 (unsigned long long)rtcm->rtcmtypes.rtcm3_msm.sat_mask,
-                 rtcm->rtcmtypes.rtcm3_msm.sig_mask,
-                 n_cell);
-        return false;
-    }
+    // bitcount += n_cell;
 
-    // cell_mask is variable length!  Will fail on amd64 is n_cell > 32
-    if (32 >= n_cell) {
-        rtcm->rtcmtypes.rtcm3_msm.cell_mask = ugrab(n_cell);
-    } else {
-        // 33 to 64, breaks ugrab(), workaround it...
-        rtcm->rtcmtypes.rtcm3_msm.cell_mask = ugrab(32);
-        rtcm->rtcmtypes.rtcm3_msm.cell_mask <<= n_cell - 32;
-        rtcm->rtcmtypes.rtcm3_msm.cell_mask |= ugrab(n_cell - 32);
-    }
-
-    // Decode Satellite Data
+    /* Decode Satellite Data */
 
     // Decode DF397 (MSM 4-7)
-    if (4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sat[i].rr_ms = ugrab(8);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
+            rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_ms = (unsigned short)ugrab(8);
         }
     }
 
     // Decode Extended Info (MSM 5+7)
-    if (5 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sat[i].ext_info = ugrab(4);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
+            rtcm->rtcmtypes.rtcm3_msm_sat[i].ext_info = (unsigned short)ugrab(4);
         }
     }
 
     // Decode DF398 (MSM 1-7)
-    for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-        rtcm->rtcmtypes.rtcm3_msm.sat[i].rr_m1 = ugrab(10);
+    for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
+        rtcm->rtcmtypes.rtcm3_msm_sat[i].rr_m1 = (unsigned short)ugrab(10);
     };
 
     // Decode DF399 (MSM 5+7)
-    if (5 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sat[i].rates_rphr = ugrab(14);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_sat; i++) {
+            rtcm->rtcmtypes.rtcm3_msm_sat[i].rates_rphr = (signed short)ugrab(14);
         }
     }
 
-    // Decode Signal Data
+
+    /* Decode Signal Data */
 
     // Decode DF400 (MSM 1,3,4,5) resp. DF405 (MSM 6+7)
-    if (1 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        3 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].pseudo_r = sgrab(15);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 1 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(15);
         }
-    } else if (6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-               7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].pseudo_r = sgrab(20);
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].pseudo_r = sgrab(20);
         }
     }
 
     // Decode DF401 (MSM 2,3,4,5) resp. DF406 (MSM 6+7)
-    if (2 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        3 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].phase_r = sgrab(22);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(22);
         }
-    } else if (6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-               7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].phase_r = sgrab(24);
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].phase_r = sgrab(24);
         }
     }
 
     // Decode DF402 (MSM 2,3,4,5) resp. DF407 (MSM 6+7)
-    if (2 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        3 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].lti = ugrab(4);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(4);
         }
-    } else if (6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-               7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].lti = ugrab(10);
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].lti = (unsigned short)ugrab(10);
         }
     }
 
     // Decode DF420 (MSM 2-7)
-    if (2 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        3 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].half_amb = ugrab(1);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 2 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 3 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].half_amb = (bool)ugrab(1);
         }
     }
 
     // Decode DF403 (MSM 4+5) resp. DF408 (MSM 6+7)
-    if (4 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        5 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].cnr = ugrab(6);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 4 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 5) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(6);
         }
-    } else if (6 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-               7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].cnr = ugrab(10);
+    }
+    else if (
+        rtcm->rtcmtypes.rtcm3_msm.msm == 6 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (unsigned short)ugrab(10);
         }
     }
 
     // Decode DF404 (MSM 5+7)
-    if (5 == rtcm->rtcmtypes.rtcm3_msm.msm ||
-        7 == rtcm->rtcmtypes.rtcm3_msm.msm) {
-        for (i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++) {
-            rtcm->rtcmtypes.rtcm3_msm.sig[i].cnr = sgrab(15);
+    if (rtcm->rtcmtypes.rtcm3_msm.msm == 5 ||
+        rtcm->rtcmtypes.rtcm3_msm.msm == 7) {
+        for (int i = 0; i < rtcm->rtcmtypes.rtcm3_msm.n_cell; i++)
+        {
+            rtcm->rtcmtypes.rtcm3_msm_sig[i].cnr = (signed short)sgrab(15);
         }
     }
 
