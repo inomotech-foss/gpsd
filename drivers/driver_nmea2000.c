@@ -75,12 +75,30 @@ struct canfd_frame {
 };
 #endif // ! CAN_MAX_DLEN
 
+typedef enum {
+    t_u64,  t_u32, t_u16,  t_u8,
+    t_s64,  t_s32, t_s16,  t_s8,
+    t_x64,  t_x32, t_x16,  t_x8,
+    t_bool, t_str, t_bstr, t_double,
+} map_type;
+
+typedef struct {
+    char *key;
+    map_type bucket;
+    void *value;
+    char *formatter;
+    size_t *len;
+} map_attr_type;
+
 gps_mask_t fakepack_dispatch(struct gps_device_t*, unsigned char*, size_t);
+void meldstr2(char*, size_t*, char*);
+void xmeldstr2(char*, size_t*, char*, size_t);
 void fakepack_dump(struct can_frame*, struct timeval*, char*);
 gps_mask_t fakepack_dispatch_can(struct timeval*, char*,
                                  char[], struct gps_device_t*);
 gps_mask_t fakepack_dispatch_udp(struct timeval*, char*,
                                  char[], struct gps_device_t*);
+int mapprint(map_attr_type *);
 static struct gps_device_t *nmea2000_units[NMEA2000_NETS][NMEA2000_UNITS];
 static char can_interface_name[NMEA2000_NETS][CAN_NAMELEN+1];
 
@@ -344,6 +362,16 @@ static gps_mask_t hnd_129026(unsigned char *bu, int len, PGN *pgn,
     session->newdata.track           =  getleu16(bu, 2) * 1e-4 * RAD_2_DEG;
     session->newdata.speed           =  getleu16(bu, 4) * 1e-2;
 
+/*    map_attr_type map129026[] = {
+        {"PRN",     t_u32,      &129026},
+        {"desc"},   t_str,      &msg_129026},
+        {"rawish",  t_bstr,     &bu, NULL, &len);
+        {"track",   t_double,   session->newdata.track, "%e"},
+        {"speed",   t_double,   session->newdata.speed, "%g"},
+        {NULL},
+    };
+    mapprint(keying);
+*/
     return SPEED_SET | TRACK_SET | get_mode(session);
 }
 
@@ -2011,6 +2039,97 @@ const struct gps_type_t driver_nmea2000 = {
 
 #if defined(FAKEPACK_ENABLE)
 #define MICROBUF 125
+#define CUTPAGE 4000
+/*
+int mapprint(map_attr_type *keying) {
+    char buf[CUTPAGE];
+    //char *end = &buf + (size_t)CUTPAGE - 1;
+    char piece[MICROBUF];
+    size_t remnant = CUTPAGE - 2;
+    const map_attr_type *cursor;
+    bool first = true;
+
+    // {'a':0} = 7 runes + NUL
+    if (remnant < 7) {
+        return(-1);
+    }
+    meldstr2(buf, &remnant, "{");
+
+    for (cursor = keying; cursor->key != NULL; cursor++) {
+        size_t iGap = remnant, fmt3;
+        char *mid = (char*)&piece;
+        char *fmt, fmt2[MICROBUF];
+        char *fmtlen[] = {"ll", "l" "h", "hh", NULL};
+        char *second[] = {"u", "d", "x", NULL};
+        iGap -= snprintf(mid, iGap, "%s\"%s\":",
+                         first ? "" : ",",
+                         cursor->key);
+        first = false;
+        switch (cursor->bucket) {
+            case t_str:
+                iGap = snprintf(mid, iGap, "\"%s\"", (char*)cursor->value);
+                break;
+            case t_bstr:
+                meldstr2(mid, &iGap, (char*)&"\"x");
+                xmeldstr2(mid, &iGap, cursor->value, (size_t)cursor->len);
+                meldstr2(mid, &iGap, (char*)&"\"");
+                break;
+            case t_double:
+                *fmt = (cursor->formatter == NULL) ? &"%F" : cursor->formatter; 
+                iGap = snprintf(mid, iGap, fmt, (double*)cursor->value);
+                break;
+            case t_bool:
+                *fmt = ((bool*)cursor->value == true) ? &"true" : &"false"; 
+                iGap = snprintf(mid, iGap, "%s", fmt);
+                break;
+            default:
+                // My eyes bleed, the brokenness...
+                if ((0 <= cursor->bucket) && (cursor->bucket <= t_bool)) {
+                    fmt2[0] = '\0';
+                    fmt3 = MICROBUF;
+                    meldstr2(fmt2, &fmt3, fmtlen[cursor->bucket%4]);
+                    meldstr2(fmt2, &fmt3, second[cursor->bucket/4]);
+                    iGap = snprintf(mid, iGap, fmt2, cursor->value);
+                } else {
+                    iGap = snprintf(mid, iGap, "\"0x%p\"", cursor->value);
+                }
+        }
+        meldstr2(buf, &remnant, mid);
+    }
+
+    meldstr2(buf, &remnant, "}");
+    puts(buf);
+    return (CUTPAGE - remnant);
+}
+
+void meldstr2(char *target, size_t *cap, char *fragment) {
+    size_t target_len = strlen(target);
+    size_t loop;
+    for (loop = 0 ; loop < cap && fragment[loop] != '\0' ; loop++) {
+        target[target_len] = fragment[loop];
+    }
+    target[target_len + loop] = '\0';
+    cap -= loop;
+}
+
+void xmeldstr2(char *target, size_t *iGap, char *fragment, size_t f_len) {
+    size_t t_index = strlen(target), f_index = 0;
+    size_t len = (MICROBUF < f_len ? MICROBUF : f_len);
+    //const char *ibuf = (const char *)target;
+    const char *hexchar = "0123456789abcdef";
+    
+    if (NULL == fragment || 0 == f_len) {
+        return;
+    }
+    
+    for (f_index = 0 ; (f_index < len) && (t_index < len - 3); f_index++) {
+        target[t_index++] = hexchar[(fragment[f_index] & 0xf0) >> 4];
+        target[t_index++] = hexchar[(fragment[f_index] & 0x0f)];
+        iGap -= 2;
+    }
+    target[t_index] = '\0';
+}
+*/
 
 void fakepack_dump(struct can_frame *cf, struct timeval *then, char *unit) {
     printf("{\"type\": \"FakePack\", \"id\": \"x%08x\", \"len\": %3d, \"unit\": \"%s\", \"data\":\"x", cf->can_id, cf->can_dlc, unit);
@@ -2025,6 +2144,15 @@ void fakepack_dump(struct can_frame *cf, struct timeval *then, char *unit) {
     printf("\", \"was\": \"%04d-%02d-%02dT%02d:%02d:%02d.%09ldZ\"}\n",
            was.tm_year + 1900, was.tm_mon, was.tm_mday, was.tm_hour,
            was.tm_min, was.tm_sec, then->tv_usec);
+//     static const map_attr_type FakePack_map[] = {
+//         {"type", t_str, "FakePack"},
+//         {"id", t_u32, cf->can_id},
+//         {"len", t_u8, cf->len},
+//         {"flags", t_x8, cf->flags},
+//         {"data", t_bstr, cf->data, NULL, 8},
+//         {NULL}
+//     };
+//     mapprint(FakePack_map);
 }
 
 gps_mask_t fakepack_dispatch_can(
