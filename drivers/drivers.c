@@ -1675,6 +1675,7 @@ const struct gps_type_t driver_pps = {
 
 
 extern const struct gps_type_t driver_evermore;
+extern const struct gps_type_t driver_fakepack;
 extern const struct gps_type_t driver_garmin_ser_binary;
 extern const struct gps_type_t driver_garmin_usb_binary;
 extern const struct gps_type_t driver_geostar;
@@ -1782,6 +1783,10 @@ static const struct gps_type_t *gpsd_driver_array[] = {
 #ifdef GARMINTXT_ENABLE
     &driver_garmintxt,
 #endif  // GARMINTXT_ENABLE
+
+#ifdef FAKEPACK_ENABLE
+    &driver_fakepack,
+#endif  // FAKEPACK_ENABLE
 
     &driver_json_passthrough,
     &driver_pps,

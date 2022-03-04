@@ -308,6 +308,7 @@ boolopts = (
     ("ashtech",       True,  "alias for NMEA0183 support, deprecated"),
     ("earthmate",     True,  "DeLorme EarthMate Zodiac support"),
     ("evermore",      True,  "EverMore binary support"),
+    ("fakepack",      True,  "Fake packet support"),
     ("fury",          True,  "Jackson Labs Fury and Firefly support"),
     ("fv18",          True,  "San Jose Navigation FV-18 support"),
     ("garmin",        True,  "Garmin kernel driver support"),

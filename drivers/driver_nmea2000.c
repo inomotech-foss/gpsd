@@ -52,6 +52,35 @@
 #define NMEA2000_DEBUG_AIS 0
 #define NMEA2000_FAST_DEBUG 0
 
+#ifndef CAN_MAX_DLEN
+#warning "No kernel CANBUS support. We must be cautious."
+#define CAN_MAX_DLEN 8
+typedef __u32 canid_t;
+struct can_frame {
+        canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
+        __u8    can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
+        __u8    __pad;   /* padding */
+        __u8    __res0;  /* reserved / padding */
+        __u8    __res1;  /* reserved / padding */
+        __u8    data[CAN_MAX_DLEN] __attribute__((aligned(8)));
+};
+
+struct canfd_frame {
+        canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
+        __u8    len;     /* frame payload length in byte */
+        __u8    flags;   /* additional flags for CAN FD */
+        __u8    __res0;  /* reserved / padding */
+        __u8    __res1;  /* reserved / padding */
+        __u8    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
+};
+#endif // ! CAN_MAX_DLEN
+
+gps_mask_t fakepack_dispatch(struct gps_device_t*, unsigned char*, size_t);
+void fakepack_dump(struct can_frame*, struct timeval*, char*);
+gps_mask_t fakepack_dispatch_can(struct timeval*, char*,
+                                 char[], struct gps_device_t*);
+gps_mask_t fakepack_dispatch_udp(struct timeval*, char*,
+                                 char[], struct gps_device_t*);
 static struct gps_device_t *nmea2000_units[NMEA2000_NETS][NMEA2000_UNITS];
 static char can_interface_name[NMEA2000_NETS][CAN_NAMELEN+1];
 
@@ -318,6 +347,11 @@ static gps_mask_t hnd_129026(unsigned char *bu, int len, PGN *pgn,
     return SPEED_SET | TRACK_SET | get_mode(session);
 }
 
+/* Missing In Action
+061183 // NoDoc
+126975 // NoDoc
+
+*/
 
 /*
  * PGN: 126992 / 00370020 / 1F010 - 8 - System Time
@@ -1729,6 +1763,8 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
         }
     } else {
         // we got RTR or 2.0A CAN frame, not used
+        GPSD_LOG(LOG_INF, &session->context->errout,
+                 "NMEA2000 find_pgn: RTR or 2.0A CAN frame unused.\n");
     }
 }
 
@@ -1969,6 +2005,209 @@ const struct gps_type_t driver_nmea2000 = {
 /* *INDENT-ON* */
 
 /* end */
+
+#if defined(FAKEPACK_ENABLE)
+#define MICROBUF 125
+
+void fakepack_dump(struct can_frame *cf, struct timeval *then, char *unit) {
+    printf("{\"type\": \"FakePack\", \"id\": \"x%08x\", \"len\": %3d, \"unit\": \"%s\", \"data\":\"x", cf->can_id, cf->can_dlc, unit);
+    for (int index = 0; index < CAN_MAX_DLEN; index++) {
+        if (cf->can_dlc == index) {
+            puts(":");
+        }
+        printf("%02x", cf->data[index]);
+    }
+    struct tm was;
+    (void)gmtime_r(&then->tv_sec, &was);
+    printf("\", \"was\": \"%04d-%02d-%02dT%02d:%02d:%02d.%09ldZ\"}\n",
+           was.tm_year + 1900, was.tm_mon, was.tm_mday, was.tm_hour,
+           was.tm_min, was.tm_sec, then->tv_usec);
+}
+
+gps_mask_t fakepack_dispatch_can(
+    struct timeval *then,
+    char *unit,
+    char parts[MICROBUF],
+    struct gps_device_t *session
+) {
+    char payload[MICROBUF];
+    struct can_frame frame;
+    int ret, len;
+    canid_t fake_id;
+
+    if ((ret = sscanf(parts,
+        "%x#%s", &fake_id, (char*)&payload)) != 2) {
+                return 0;
+    }
+    frame.can_id = fake_id;
+    // Decode payload
+    len = strlen(payload);
+    frame.can_dlc =  gpsd_hexpack((char*)&payload, (char*)&(frame.data), len);
+    fakepack_dump(&frame, then, unit);
+    find_pgn(&frame, session);
+    return get_mode(session);
+}
+
+gps_mask_t fakepack_dispatch_udp(
+    struct timeval *then,
+    char *unit,
+    char *payload,
+    struct gps_device_t *session
+) {
+    char mid[MICROBUF]; //, out[MICROBUF];
+    struct can_frame frame;
+    char *magic = (char*)&"ISO11898";
+    int ulen, clen = strlen(magic), pivot=clen, loopi;
+    
+    ulen = gpsd_hexpack(payload+1, (char*)&mid, MICROBUF / 2);
+    if (ulen < 28) { // I had 44 why??
+        return 0; // 8 magic + 2 header + 3 trailer + N * (4 id + 1 len + 8? data + 2 trailer)
+    }
+
+    for (clen = strlen(magic) - 1; clen >= 0; clen--) {
+        if (mid[clen] != magic[clen]) {
+            return 0;
+        }
+    } 
+
+    if (1 != mid[pivot]) {
+            puts("LZ dispatch udp bad version.\n");
+        return 0;
+    }
+
+    loopi = mid[pivot + 1];
+    if (0 == loopi) {
+        return 0;
+    }
+    pivot += 2;
+    
+    for (; loopi > 0; loopi--) {
+        frame.can_id = getleu32(mid, pivot);
+        pivot+=4;
+        frame.can_dlc = (uint8_t)mid[pivot++];
+        for (clen = 0; clen < frame.can_dlc; clen++) {
+            frame.data[clen] = mid[pivot++];
+        }
+        pivot += 2; // skip extended, remote transmission request flags
+        fakepack_dump(&frame, then, unit);
+        find_pgn(&frame, session);
+    }
+    pivot += 3; // skip reserved options
+
+    return get_mode(session);
+}
+
+/**
+ * Parse the data from the device
+ */
+gps_mask_t fakepack_dispatch(struct gps_device_t *session,
+                            unsigned char *buf, size_t len)
+{
+    char *needle_pos = NULL;
+    
+    // Phase 1
+    static struct timeval log_tv;
+    static char device[MICROBUF], payload[MICROBUF];
+
+    
+    if (len == 0) {
+        return 0;
+    }
+    if (sscanf((char*)buf, "(%lu.%lu) %s %s",
+        &log_tv.tv_sec, &log_tv.tv_usec, (char*)&device, payload) != 4) {
+                return 0;
+    }
+
+    /*
+     * Set this if the driver reliably signals end of cycle.
+     * The core library zeroes it just before it calls each driver's
+     * packet analyzer.
+     */
+
+    needle_pos = strstr(device, "can");
+    if (NULL != needle_pos) {
+        return fakepack_dispatch_can(&log_tv, needle_pos, payload, session);
+    }
+    needle_pos = strstr(device, "udp");
+    if (NULL != needle_pos) {
+        return fakepack_dispatch_udp(&log_tv, needle_pos, payload, session);
+    }
+  return 0;
+}
+
+/**********************************************************
+ *
+ * Externally called routines below here
+ *
+ **********************************************************/
+
+/*
+ * This is the entry point to the driver. When the packet sniffer recognizes
+ * a packet for this driver, it calls this method which passes the packet to
+ * the binary processor or the nmea processor, depending on the session type.
+ */
+static gps_mask_t fakepack_parse_input(struct gps_device_t *session)
+{
+    if (FAKEPACK_PACKET == session->lexer.type) {
+        return fakepack_dispatch(session, session->lexer.outbuffer,
+                                session->lexer.outbuflen);
+    }
+    return 0;
+}
+
+/* The methods in this code take parameters and have */
+/* return values that conform to the requirements AT */
+/* THE TIME THE CODE WAS WRITTEN.                    */
+/*                                                   */
+/* These values may well have changed by the time    */
+/* you read this and methods could have been added   */
+/* or deleted. Unused methods can be set to NULL.    */
+/*                                                   */
+/* The latest version can be found by inspecting   */
+/* the contents of struct gps_type_t in gpsd.h.      */
+/*                                                   */
+/* This always contains the correct definitions that */
+/* any driver must use to compile.                   */
+
+/* This is everything we export */
+/* *INDENT-OFF* */
+const struct gps_type_t driver_fakepack = {
+    /* Full name of type */
+    .type_name        = "False Packet feeder thing.",
+    /* Associated lexer packet type */
+    .packet_type      = FAKEPACK_PACKET,
+    /* Driver tyoe flags */
+    .flags            = DRIVER_NOFLAGS,
+    /* Response string that identifies device (not active) */
+    .trigger          = NULL,
+    /* Number of satellite channels supported by the device */
+    .channels         = 12,
+    /* Startup-time device detector */
+    .probe_detect     = NULL,
+    /* Packet getter (using default routine) */
+    .get_packet       = generic_get,
+    /* Parse message packets */
+    .parse_packet     = fakepack_parse_input,
+    /* RTCM handler (using default routine) */
+    .rtcm_writer      = NULL,
+    /* non-perturbing initial query (e.g. for version) */
+    .init_query        = NULL,
+    /* fire on various lifetime events */
+    .event_hook       = NULL,
+    /* Speed (baudrate) switch */
+    .speed_switcher   = NULL,
+    /* Switch to NMEA mode */
+    .mode_switcher    = NULL,
+    /* Message delivery rate switcher (not active) */
+    .rate_switcher    = NULL,
+    /* Minimum cycle time of the device */
+    .min_cycle        = {1},
+    /* Control string sender - should provide checksum and headers/trailer */
+    .control_send   = NULL,
+    .time_offset     = NULL,
+/* *INDENT-ON* */
+};
+#endif // FAKEPACK_ENABLE
 
 #else   /* of  defined(NMEA2000_ENABLE) */
 /* dummy variable to some old linkers do not complain about empty

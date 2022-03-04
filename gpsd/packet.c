@@ -382,6 +382,11 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
             lexer->state = ZODIAC_LEADER_1;
             break;
 #endif  // ZODIAC_ENABLE
+#ifdef FAKEPACK_ENABLE
+        case '(':       // extracted from canplayer
+            lexer->state = FAKEPACK_LEADER_1;
+            break;
+#endif // FAKEPACK_ENABLE
         default:
 #ifdef RTCM104V2_ENABLE
             if (ISGPS_SYNC == (isgpsstat = rtcm2_decode(lexer, c))) {
@@ -1821,6 +1826,81 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         lexer->state = NMEA_DOLLAR;
         break;
 #endif  // STASH_ENABLE
+#ifdef FAKEPACK_ENABLE
+        case FAKEPACK_LEADER_1: /*\(%d*/
+            if (isdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_F1A;
+            break;
+        case FAKEPACK_F1A:
+            if (c == '.') {
+                lexer->state = FAKEPACK_F1B;
+            } else if (isdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            break;
+        case FAKEPACK_F1B:
+            if (isdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_F1C;
+            break;
+        case FAKEPACK_F1C:
+            if (c == ')') {
+                lexer->state = FAKEPACK_F1D;
+            } else if (isdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            break;
+        case FAKEPACK_F1D:
+            if (c != ' ') {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_G1;
+            break;
+        case FAKEPACK_G1:
+            if (isgraph(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_F2;
+            break;
+        case FAKEPACK_F2:
+            if (c == ' ') {
+                lexer->state = FAKEPACK_G2;
+            } else if (isalnum(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            break;
+        case FAKEPACK_G2:
+            if (isgraph(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = (c == 'u') ? FAKEPACK_F3C : FAKEPACK_F3A;
+            break;
+        case FAKEPACK_F3A:
+            if (c == '#') {
+                lexer->state = FAKEPACK_F3B;
+            } else if (isxdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            break;
+        case FAKEPACK_F3B:
+            if (isxdigit(c) == 0) {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_F3C;
+            break;
+        case FAKEPACK_F3C:
+            if (isxdigit(c) > 0) {
+                break;
+            } else if (c != '\n') {
+                return character_pushback(lexer, GROUND_STATE);
+            }
+            lexer->state = FAKEPACK_RECOGNIZED;
+            //puts("packet: F2K WIN YAY!!! -- now on to transport.");
+            break;
+#endif // FAKEPACK_ENABLE
     }
 
     return true;        // no pushback
@@ -2741,7 +2821,14 @@ void packet_parse(struct gps_lexer_t *lexer)
             packet_stash(lexer);
             packet_discard(lexer);
 #endif  // STASH_ENABLE
+#ifdef FAKEPACK_ENABLE
+        } else if (FAKEPACK_RECOGNIZED == lexer->state) {
+            packet_accept(lexer, FAKEPACK_PACKET);
+            packet_discard(lexer);
+            lexer->state = FAKEPACK_LEADER_1;
+            break;
         }
+#endif // FAKEPACK_ENABLE
     }                           // while
 }
 
