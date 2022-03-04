@@ -1595,8 +1595,6 @@ static PGN navpgn[] = {{ 59392, 0, 0, hnd_059392, &msg_059392[0]},
                        {130311, 0, 4, hnd_130311, &msg_130311[0]},
                        {0     , 0, 0, NULL,       &msg_error [0]}};
 
-
-
 static PGN *search_pgnlist(unsigned int pgn, PGN *pgnlist)
 {
     int l1;
@@ -2055,6 +2053,7 @@ const struct gps_type_t driver_nmea2000 = {
 
 /* end */
 
+
 #if defined(FAKEPACK_ENABLE)
 #define MICROBUF 125
 #define CUTPAGE 4000
@@ -2264,6 +2263,7 @@ gps_mask_t fakepack_dispatch(struct gps_device_t *session,
     char *needle_pos = NULL;
     
     // Phase 1
+    //size_t bufsz = MICROBUF-1, ptr;
     static struct timeval log_tv;
     static char device[MICROBUF], payload[MICROBUF];
 
@@ -2313,6 +2313,10 @@ static gps_mask_t fakepack_parse_input(struct gps_device_t *session)
         return fakepack_dispatch(session, session->lexer.outbuffer,
                                 session->lexer.outbuflen);
     }
+/*    if (NMEA_PACKET == session->lexer.type) {
+        return nmea_parse((char *)session->lexer.outbuffer, session);
+    }
+*/
     return 0;
 }
 
