@@ -2043,6 +2043,7 @@ gps_mask_t fakepack_dispatch_can(
     // Decode payload
     len = strlen(payload);
     frame.can_dlc =  gpsd_hexpack((char*)&payload, (char*)&(frame.data), len);
+    frame.can_id |= 0x80000000;
     fakepack_dump(&frame, then, unit);
     find_pgn(&frame, session);
     return get_mode(session);
@@ -2089,6 +2090,7 @@ gps_mask_t fakepack_dispatch_udp(
             frame.data[clen] = mid[pivot++];
         }
         pivot += 2; // skip extended, remote transmission request flags
+        frame.can_id |= 0x80000000;
         fakepack_dump(&frame, then, unit);
         find_pgn(&frame, session);
     }
