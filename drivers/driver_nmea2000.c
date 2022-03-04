@@ -95,7 +95,7 @@ void meldstr2(char*, size_t*, char*);
 void xmeldstr2(char*, size_t*, char*, size_t);
 void fakepack_dump(struct can_frame*, struct timeval*, char*);
 gps_mask_t fakepack_dispatch_can(struct timeval*, char*,
-                                 char[], struct gps_device_t*);
+                                 char*, struct gps_device_t*);
 gps_mask_t fakepack_dispatch_udp(struct timeval*, char*,
                                  char[], struct gps_device_t*);
 int mapprint(map_attr_type *);
@@ -2175,7 +2175,7 @@ void fakepack_dump(struct can_frame *cf, struct timeval *then, char *unit) {
 gps_mask_t fakepack_dispatch_can(
     struct timeval *then,
     char *unit,
-    char parts[MICROBUF],
+    char *parts,
     struct gps_device_t *session
 ) {
     char payload[MICROBUF];
