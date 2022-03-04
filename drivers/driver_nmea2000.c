@@ -1619,6 +1619,7 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
 {
     unsigned int can_net;
 
+    puts("LZ find_pgn early...\n");
     session->driver.nmea2000.workpgn = NULL;
     can_net = session->driver.nmea2000.can_net;
     if (can_net > (NMEA2000_NETS-1)) {
@@ -2185,6 +2186,8 @@ gps_mask_t fakepack_dispatch_can(
 
     if ((ret = sscanf(parts,
         "%x#%s", &fake_id, (char*)&payload)) != 2) {
+                //printf("%d: ", ret);
+                //perror("LZ dispatch can failed: ");
                 return 0;
     }
     frame.can_id = fake_id;
@@ -2194,6 +2197,7 @@ gps_mask_t fakepack_dispatch_can(
     frame.can_id |= 0x80000000;
     fakepack_dump(&frame, then, unit);
     find_pgn(&frame, session);
+    //puts("LZ dispatch can dun.\n");
     return get_mode(session);
 }
 
@@ -2210,11 +2214,13 @@ gps_mask_t fakepack_dispatch_udp(
     
     ulen = gpsd_hexpack(payload+1, (char*)&mid, MICROBUF / 2);
     if (ulen < 28) { // I had 44 why??
+        //printf("LZ dispatch udp no hexpack: %d - %s\n", ulen, payload);
         return 0; // 8 magic + 2 header + 3 trailer + N * (4 id + 1 len + 8? data + 2 trailer)
     }
 
     for (clen = strlen(magic) - 1; clen >= 0; clen--) {
         if (mid[clen] != magic[clen]) {
+            //puts("LZ dispatch udp bad magic.\n");
             return 0;
         }
     } 
@@ -2226,6 +2232,7 @@ gps_mask_t fakepack_dispatch_udp(
 
     loopi = mid[pivot + 1];
     if (0 == loopi) {
+        //puts("LZ dispatch udp no CANs.\n");
         return 0;
     }
     pivot += 2;
@@ -2244,6 +2251,7 @@ gps_mask_t fakepack_dispatch_udp(
     }
     pivot += 3; // skip reserved options
 
+    //puts("LZ dispatch udp dun.\n");
     return get_mode(session);
 }
 
@@ -2265,6 +2273,7 @@ gps_mask_t fakepack_dispatch(struct gps_device_t *session,
     }
     if (sscanf((char*)buf, "(%lu.%lu) %s %s",
         &log_tv.tv_sec, &log_tv.tv_usec, (char*)&device, payload) != 4) {
+                //puts("LZ dispatch failed.\n");
                 return 0;
     }
 
@@ -2282,6 +2291,7 @@ gps_mask_t fakepack_dispatch(struct gps_device_t *session,
     if (NULL != needle_pos) {
         return fakepack_dispatch_udp(&log_tv, needle_pos, payload, session);
     }
+    //puts("LZ dispatch can't.\n");
   return 0;
 }
 
@@ -2298,6 +2308,7 @@ gps_mask_t fakepack_dispatch(struct gps_device_t *session,
  */
 static gps_mask_t fakepack_parse_input(struct gps_device_t *session)
 {
+    // puts("---- fakepack_parse_input ----\n");
     if (FAKEPACK_PACKET == session->lexer.type) {
         return fakepack_dispatch(session, session->lexer.outbuffer,
                                 session->lexer.outbuflen);
