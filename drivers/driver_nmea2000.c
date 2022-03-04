@@ -1619,7 +1619,7 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
             daddr = 0xff;
         }
         GPSD_LOG(LOG_DATA, &session->context->errout,
-                 "nmea2000: source_prio %u daddr %u",
+                 "nmea2000: source_prio %u daddr %u\n",
                  source_prio, daddr);
 
         if (!session->driver.nmea2000.unit_valid) {
@@ -1640,6 +1640,9 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
             session->driver.nmea2000.unit_valid = true;
             nmea2000_units[can_net][source_unit] = session;
         }
+
+        GPSD_LOG(LOG_INF, &session->context->errout,
+                 "src %u:%d\n", can_net, source_unit);
 
         if (source_unit == session->driver.nmea2000.unit) {
             PGN *work;
