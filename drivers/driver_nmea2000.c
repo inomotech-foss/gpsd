@@ -1273,6 +1273,16 @@ static gps_mask_t hnd_129810(unsigned char *bu, int len, PGN *pgn,
 static gps_mask_t hnd_127506(unsigned char *bu, int len, PGN *pgn,
                              struct gps_device_t *session)
 {
+    // FIXME: Following 5 values mechanically extracted
+//     uint8_t sid = bu[0];
+//     uint8_t instance = bu[1];
+//     uint8_t dcType = bu[2];
+//     uint8_t stateOfCharge = bu[3];
+//     uint8_t stateOfHealth = bu[4];
+//     uint16_t timeRemaining = getleu16(bu, 5);
+//     uint16_t rippleVoltage = getleu16(bu, 7);
+//     uint16_t ampHours = getleu16(bu, 9);
+
     print_data(session->context, bu, len, pgn);
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "pgn %6d(%3d):\n", pgn->pgn, session->driver.nmea2000.unit);
@@ -1286,6 +1296,13 @@ static gps_mask_t hnd_127506(unsigned char *bu, int len, PGN *pgn,
 static gps_mask_t hnd_127508(unsigned char *bu, int len, PGN *pgn,
                              struct gps_device_t *session)
 {
+    // FIXME: Following 5 values mechanically extracted
+//     uint8_t instance = bu[0];
+//     int16_t voltage = getleu16(bu, 1);
+//     int16_t current = getleu16(bu, 3);
+//     uint16_t temperature = getleu16(bu, 5);
+//     uint8_t sid = bu[7];
+
     print_data(session->context, bu, len, pgn);
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "pgn %6d(%3d):\n", pgn->pgn, session->driver.nmea2000.unit);
