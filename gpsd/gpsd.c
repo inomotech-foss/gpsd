@@ -2142,12 +2142,13 @@ int main(int argc, char *argv[])
 #endif  // CONTROL_SOCKET_ENABLE
 
     while (1) {
-        const char *optstring = "?bD:F:f:GhlNnpP:rS:s:V";
+        const char *optstring = "?a:bD:F:f:GhlNnpP:rS:s:V";
         int ch;
 
 #ifdef HAVE_GETOPT_LONG
         int option_index = 0;
         static struct option long_options[] = {
+            {"alldevs", required_argument, NULL,'a'},
             {"badtime", no_argument, NULL, 'r'},
             {"debug", required_argument, NULL, 'D'},
             {"drivers", no_argument, NULL, 'l'},
@@ -2175,6 +2176,9 @@ int main(int argc, char *argv[])
         }
 
         switch (ch) {
+        case 'a':
+            max_devices = (int)strtol(optarg, 0, 0);
+            break;
         case 'b':
             context.readonly = true;
             break;
