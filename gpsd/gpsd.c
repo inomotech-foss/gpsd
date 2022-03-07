@@ -568,7 +568,7 @@ static struct subscriber_t *allocate_client(void)
 #if UNALLOCATED_FD == 0
 #error client allocation code will fail horribly
 #endif
-    for (si = 0; si < NITEMS(subscribers); si++) {
+    for (si = 0; si < max_clients; si++) {
         if (UNALLOCATED_FD == subscribers[si].fd) {
             subscribers[si].fd = 0;     // mark subscriber as allocated
             return &subscribers[si];
@@ -2589,7 +2589,7 @@ int main(int argc, char *argv[])
              "running with effective user ID %ld\n", (long)geteuid());
 
 #ifdef SOCKET_EXPORT_ENABLE
-    for (i = 0; i < NITEMS(subscribers); i++) {
+    for (i = 0; i < max_clients; i++) {
         subscribers[i].fd = UNALLOCATED_FD;
         (void)pthread_mutex_init(&subscribers[i].mutex, NULL);
     }
