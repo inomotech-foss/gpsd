@@ -307,11 +307,12 @@ static socket_t filesock(char *filename)
 
 /*
  * This array fills from the bottom, so as an extreme case you can
- * reduce MAX_DEVICES to 1 in the build recipe.
+ * reduce max_devices to 1 in the build recipe.
  * The static" ensure devices is zerod on startup.
  * Some compilers, in 2012, still choke on  = {0}.
  */
-static struct gps_device_t devices[MAX_DEVICES];
+int max_devices = MAX_DEVICES;
+static struct gps_device_t *devices;
 
 // track the largest fd currently in use
 static void adjust_max_fd(int fd, bool on)
@@ -721,7 +722,7 @@ static struct gps_device_t *find_device(const char *device_name)
     if (NULL == device_name) {
         return NULL;
     }
-    for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+    for (devp = devices; devp < devices + max_devices; devp++) {
         if (allocated_device(devp) &&
             0 == strcmp(devp->gpsdata.dev.path, device_name)) {
             return devp;
@@ -818,7 +819,7 @@ bool gpsd_add_device(const char *device_name, bool flag_nowait)
         return false;
     }
     // stash devicename away for probing when the first client connects
-    for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+    for (devp = devices; devp < devices + max_devices; devp++) {
         if (!allocated_device(devp)) {
             gpsd_init(devp, &context, device_name);
             ntpshm_session_init(devp);
@@ -1012,7 +1013,7 @@ static void handle_control(int sfd, char *buf)
         }
     } else if (strstr(buf, "?devices") == buf) {
         // write back devices list followed by OK
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             ignore_return(write(sfd, devp->gpsdata.dev.path,
                                 strnlen(devp->gpsdata.dev.path,
                                         sizeof(devp->gpsdata.dev.path))));
@@ -1186,7 +1187,7 @@ static void json_devicelist_dump(char *reply, size_t replylen)
     struct gps_device_t *devp;
     (void)strlcpy(reply, "{\"class\":\"DEVICES\",\"devices\":[", replylen);
 
-    for (devp = devices; devp < devices + MAX_DEVICES; devp++)
+    for (devp = devices; devp < devices + max_devices; devp++)
         if (allocated_device(devp) &&
             strlen(reply) + strlen(devp->gpsdata.dev.path) + 3 <
             replylen - 1) {
@@ -1259,7 +1260,7 @@ static void handle_request(struct subscriber_t *sub,
                 // enable:true
                 if (sub->policy.devpath[0] == '\0') {
                     // awaken all devices
-                    for (devp = devices; devp < devices + MAX_DEVICES; devp++)
+                    for (devp = devices; devp < devices + max_devices; devp++)
                         if (allocated_device(devp)) {
                             (void)awaken(devp);
                             if (SOURCE_GPSD == devp->sourcetype) {
@@ -1377,7 +1378,7 @@ static void handle_request(struct subscriber_t *sub,
                     // no path specified
                     int devcount = 0;
 
-                    for (devp = devices; devp < devices + MAX_DEVICES; devp++)
+                    for (devp = devices; devp < devices + max_devices; devp++)
                         if (allocated_device(devp)) {
                             device = devp;
                             devcount++;
@@ -1478,7 +1479,7 @@ static void handle_request(struct subscriber_t *sub,
             }
         }
         // dump a response for each selected channel
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             if (!allocated_device(devp)) {
                 continue;
             }
@@ -1495,7 +1496,7 @@ static void handle_request(struct subscriber_t *sub,
         int active = 0;
 
         buf += 6;
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             if (allocated_device(devp) && subscribed(sub, devp)) {
                 if (0 != (devp->observed & GPS_TYPEMASK)) {
                     active++;
@@ -1507,7 +1508,7 @@ static void handle_request(struct subscriber_t *sub,
                        "{\"class\":\"POLL\",\"time\":\"%s\",\"active\":%d,"
                        "\"tpv\":[",
                        now_to_iso8601(tbuf, sizeof(tbuf)), active);
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             if (allocated_device(devp) && subscribed(sub, devp)) {
                 if (0 != (devp->observed & GPS_TYPEMASK)) {
                     json_tpv_dump(NAVDATA_SET, devp, &sub->policy,
@@ -1520,7 +1521,7 @@ static void handle_request(struct subscriber_t *sub,
         }
         str_rstrip_char(reply, ',');
         (void)strlcat(reply, "],\"gst\":[", replylen);
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             if (allocated_device(devp) && subscribed(sub, devp)) {
                 if (0 != (devp->observed & GPS_TYPEMASK)) {
                     json_noise_dump(&devp->gpsdata,
@@ -1533,7 +1534,7 @@ static void handle_request(struct subscriber_t *sub,
         }
         str_rstrip_char(reply, ',');
         (void)strlcat(reply, "],\"sky\":[", replylen);
-        for (devp = devices; devp < devices + MAX_DEVICES; devp++) {
+        for (devp = devices; devp < devices + max_devices; devp++) {
             if (allocated_device(devp) && subscribed(sub, devp)) {
                 if (0 != (devp->observed & GPS_TYPEMASK)) {
                     json_sky_dump(&devp->gpsdata,
@@ -1720,7 +1721,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
                      device->lexer.outbuflen);
         } else {
             struct gps_device_t *dp;
-            for (dp = devices; dp < (devices + MAX_DEVICES); dp++) {
+            for (dp = devices; dp < (devices + max_devices); dp++) {
                 if (!allocated_device(dp) ||
                     0 > device->gpsdata.gps_fd) {
                     continue;
@@ -1789,7 +1790,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
         ntp_latch(device, &td);
 
         // propagate this in-band-time to all PPS-only devices
-        for (ppsonly = devices; ppsonly < (devices + MAX_DEVICES); ppsonly++)
+        for (ppsonly = devices; ppsonly < (devices + max_devices); ppsonly++)
             if (SOURCE_PPS == ppsonly->sourcetype) {
                 pps_thread_fixin(&ppsonly->pps_thread, &td);
             }
@@ -1833,7 +1834,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
              * netgnss_report() individual caster types get to
              * make filtering decisiona.
              */
-            for (dgnss = devices; dgnss < (devices + MAX_DEVICES); dgnss++) {
+            for (dgnss = devices; dgnss < (devices + max_devices); dgnss++) {
                 if (dgnss != device) {
                     netgnss_report(&context, device, dgnss);
                 }
@@ -2086,12 +2087,19 @@ static void gpsd_terminate(struct gps_context_t *context)
 {
     int dfd;
 
-    for (dfd = 0; dfd < MAX_DEVICES; dfd++) {
+    for (dfd = 0; dfd < max_devices; dfd++) {
         if (allocated_device(&devices[dfd])) {
             (void)gpsd_wrap(&devices[dfd]);
         }
     }
     context->pps_hook = NULL;   // tell any PPS-watcher thread to die
+}
+
+void freedom() {
+    if(NULL != devices) {
+        free(devices);
+        devices = NULL;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -2260,8 +2268,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Register a cleaner for callocs and then calloc device storage.
+    atexit(&freedom);
+    devices = calloc((size_t)max_devices, sizeof(struct gps_device_t));
+    if (NULL == devices) {
+        GPSD_LOG(LOG_ERROR, &context.errout,
+                 "Could not calloc devices storage.\n");
+        exit(1);
+    }
+    
+
     // sanity check
-    if (MAX_DEVICES < (argc - optind)) {
+    if (max_devices < (argc - optind)) {
         GPSD_LOG(LOG_ERROR, &context.errout,
                  "Too many devices on command line.\n");
         exit(1);
@@ -2643,7 +2661,7 @@ int main(int argc, char *argv[])
         case AWAIT_TIMEOUT:
             break;
         case AWAIT_NOT_READY:
-            for (device = devices; device < devices + MAX_DEVICES; device++) {
+            for (device = devices; device < devices + max_devices; device++) {
                 /*
                  * The file descriptor validity check is required on some ARM
                  * platforms to prevent a core dump.  This may be due to an
@@ -2769,7 +2787,7 @@ int main(int argc, char *argv[])
 
         // poll all active devices
         GPSD_LOG(LOG_RAW1, &context.errout, "poll active devices\n");
-        for (device = devices; device < devices + MAX_DEVICES; device++) {
+        for (device = devices; device < devices + max_devices; device++) {
             int multipoll_ret;
 
             if (!allocated_device(device) ||
@@ -2853,7 +2871,7 @@ int main(int argc, char *argv[])
 #ifdef __UNUSED_AUTOCONNECT__
         if (0 < context.fixcnt &&
             !context.autconnect) {
-            for (device = devices; device < devices + MAX_DEVICES; device++) {
+            for (device = devices; device < devices + max_devices; device++) {
                 if (MODE_NO_FIX < device->gpsdata.fix.mode) {
                     netgnss_autoconnect(&context,
                                         device->gpsdata.fix.latitude,
@@ -2938,7 +2956,7 @@ int main(int argc, char *argv[])
          * Re-poll devices that are disconnected, but have potential
          * subscribers in the same cycle.
          */
-        for (device = devices; device < devices + MAX_DEVICES; device++) {
+        for (device = devices; device < devices + max_devices; device++) {
             bool device_needed = nowait;
 
             if (!allocated_device(device)) {
@@ -3016,7 +3034,7 @@ int main(int argc, char *argv[])
                 }
             }
 #endif  // SOCKET_EXPORT_ENABLE
-            for (device = devices; device < devices + MAX_DEVICES; device++) {
+            for (device = devices; device < devices + max_devices; device++) {
                 if (allocated_device(device)) {
                     ++devcount;
                 }
