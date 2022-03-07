@@ -547,7 +547,8 @@ struct subscriber_t
 #define subscribed(sub, devp)    (sub->policy.watcher && (sub->policy.devpath[0]=='\0' || strcmp(sub->policy.devpath, devp->gpsdata.dev.path)==0))
 
 // indexed by client file descriptor
-static struct subscriber_t subscribers[MAX_CLIENTS];
+static struct subscriber_t *subscribers;
+int max_clients = MAX_CLIENTS;
 
 static void lock_subscriber(struct subscriber_t *sub)
 {
@@ -682,7 +683,7 @@ static void notify_watchers(struct gps_device_t *device,
     (void)vsnprintf(buf, sizeof(buf), sentence, ap);
     va_end(ap);
 
-    for (sub = subscribers; sub < subscribers + MAX_CLIENTS; sub++) {
+    for (sub = subscribers; sub < subscribers + max_clients; sub++) {
         if (0 != sub->active &&
             subscribed(sub, device)) {
             if ((onjson &&
@@ -1094,7 +1095,7 @@ static bool privileged_user(struct gps_device_t *device)
     struct subscriber_t *sub;
     int subcount = 0;
 
-    for (sub = subscribers; sub < subscribers + MAX_CLIENTS; sub++) {
+    for (sub = subscribers; sub < subscribers + max_clients; sub++) {
         if (subscribed(sub, device)) {
             subcount++;
         }
@@ -1676,7 +1677,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
     if (0 != (changed & DRIVER_IS)) {
         bool listeners = false;
         for (sub = subscribers;
-             sub < subscribers + MAX_CLIENTS; sub++) {
+             sub < subscribers + max_clients; sub++) {
             if (0 != sub->active &&
                 sub->policy.watcher &&
                 subscribed(sub, device)) {
@@ -1859,7 +1860,7 @@ static void all_reports(struct gps_device_t *device, gps_mask_t changed)
 
 #ifdef SOCKET_EXPORT_ENABLE
     // update all subscribers associated with this device
-    for (sub = subscribers; sub < (subscribers + MAX_CLIENTS); sub++) {
+    for (sub = subscribers; sub < (subscribers + max_clients); sub++) {
         if (0 == sub->active ||
             !subscribed(sub, device)) {
             continue;
@@ -2100,6 +2101,10 @@ void freedom() {
         free(devices);
         devices = NULL;
     }
+    if(NULL != subscribers) {
+        free(subscribers);
+        subscribers = NULL;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -2142,13 +2147,14 @@ int main(int argc, char *argv[])
 #endif  // CONTROL_SOCKET_ENABLE
 
     while (1) {
-        const char *optstring = "?a:bD:F:f:GhlNnpP:rS:s:V";
+        const char *optstring = "?a:A:bD:F:f:GhlNnpP:rS:s:V";
         int ch;
 
 #ifdef HAVE_GETOPT_LONG
         int option_index = 0;
         static struct option long_options[] = {
             {"alldevs", required_argument, NULL,'a'},
+            {"allsubs", required_argument, NULL,'a'},
             {"badtime", no_argument, NULL, 'r'},
             {"debug", required_argument, NULL, 'D'},
             {"drivers", no_argument, NULL, 'l'},
@@ -2178,6 +2184,9 @@ int main(int argc, char *argv[])
         switch (ch) {
         case 'a':
             max_devices = (int)strtol(optarg, 0, 0);
+            break;
+        case 'A':
+            max_clients = (int)strtol(optarg, 0, 0);
             break;
         case 'b':
             context.readonly = true;
@@ -2278,6 +2287,12 @@ int main(int argc, char *argv[])
     if (NULL == devices) {
         GPSD_LOG(LOG_ERROR, &context.errout,
                  "Could not calloc devices storage.\n");
+        exit(1);
+    }
+    subscribers = calloc((size_t)max_clients, sizeof(struct subscriber_t));
+    if (NULL == subscribers) {
+        GPSD_LOG(LOG_ERROR, &context.errout,
+                 "Could not calloc subscribers storage.\n");
         exit(1);
     }
     
@@ -2889,7 +2904,7 @@ int main(int argc, char *argv[])
 
 #ifdef SOCKET_EXPORT_ENABLE
         // accept and execute commands for all clients
-        for (sub = subscribers; sub < subscribers + MAX_CLIENTS; sub++) {
+        for (sub = subscribers; sub < subscribers + max_clients; sub++) {
             if (0 == sub->active) {
                 continue;
             }
@@ -2967,7 +2982,7 @@ int main(int argc, char *argv[])
                 continue;
             }
             if (!device_needed) {
-                for (sub = subscribers; sub < subscribers + MAX_CLIENTS;
+                for (sub = subscribers; sub < subscribers + max_clients;
                      sub++) {
                     if (0 == sub->active) {
                         continue;
@@ -3032,7 +3047,7 @@ int main(int argc, char *argv[])
             0 < highwater) {
             int subcount = 0, devcount = 0;
 #ifdef SOCKET_EXPORT_ENABLE
-            for (sub = subscribers; sub < (subscribers + MAX_CLIENTS); sub++) {
+            for (sub = subscribers; sub < (subscribers + max_clients); sub++) {
                 if (0 != sub->active) {
                     ++subcount;
                 }
@@ -3072,7 +3087,7 @@ shutdown:
      * This is an attempt to avoid the sporadic race errors at the ends
      * of our regression tests.
      */
-    for (sub = subscribers; sub < (subscribers + MAX_CLIENTS); sub++) {
+    for (sub = subscribers; sub < (subscribers + max_clients); sub++) {
         if (0 != sub->active) {
             detach_client(sub);
         }
