@@ -1349,7 +1349,7 @@ int main(int argc, char *argv[])
         if (!gps_waiting(&gpsdata, 500000)) {
             // 240 tries at 0.5 seconds a try is a 2 minute timeout
             if (240 < wait_clicks++) {
-                (void)fprintf(stderr, "cgps: timeout contactong gpsd\n");
+                (void)fprintf(stderr, "cgps: timeout contacting gpsd\n");
                 die(GPS_TIMEOUT);
             }
         } else {
