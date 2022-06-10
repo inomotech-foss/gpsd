@@ -1556,5 +1556,27 @@ int main(int argc, char **argv)
     exit(EXIT_SUCCESS);
 }
 
+/* pastef() - prints n/a or finite float at a point in a window 
+ *
+ * win: Pointer to the window to print in
+ * y: The row in the window
+ * x: The start colmun in that row
+ * flen: a leghth for to end of the n/a (should match fmt)
+ * fmt: a printf(3) style format string for f
+ * f: a ieee-754 double float (prefereably finite).
+ *
+ * returns: Noyhing as void
+ *
+ * caveat: flen is not passed if f is finite, write fmt with all
+ *         numbers hardcoded.
+ */
+void pastef(WINDOW *win, int y, int x, int flen, char *fmt, double f) {
+    if (0 != isfinite(f)) {
+        (void)mvwprintw(win, y, x, fmt, f);
+    } else {
+        (void)mvwprintw(win, y, x, "%*s", flen, "n/a");
+    }
+}
+
 // gpsmon.c ends here
 // vim: set expandtab shiftwidth=4
