@@ -34,7 +34,7 @@ static bool ubx_initialize(void)
     (void)wattrset(satwin, A_BOLD);
     display(satwin, 1, 1, "Ch PRN  Az  El S/N H Q U");
     for (i = 0; i < 16; i++)
-        display(satwin, (int)(i + 2), 1, "%2d", i);
+        display(satwin, i + 2, 1, "%2d", i);
     display(satwin, 18, 7, " NAV_SVINFO ");
     (void)wattrset(satwin, A_NORMAL);
 
@@ -121,7 +121,7 @@ static void display_ubx_sat(void)
 
     /* clear potentially stale sat lines unconditionally */
     for (; i < MAXSKYCHANS; i++) {
-        (void)wmove(satwin, (int)(i + 2), 4);
+        (void)wmove(satwin, i + 2, 4);
         (void)wprintw(satwin, "%21s", " ");
     }
 #undef MAXSKYCHANS
