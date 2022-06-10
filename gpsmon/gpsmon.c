@@ -1209,7 +1209,7 @@ int main(int argc, char **argv)
     };
 #endif
 
-    gethostname(hostname, sizeof(hostname)-1);
+    gethostname(hostname, sizeof(hostname) - 1);
     (void)putenv("TZ=UTC");     // for ctime()
     gps_context_init(&context, "gpsmon");       // initialize the report mutex
     context.serial_write = gpsmon_serial_write;
@@ -1487,7 +1487,7 @@ int main(int argc, char **argv)
                         (void)fputs(promptgen(), stdout);
                         (void)fputs("> ", stdout);
                         (void)putchar(inbuf[0]);
-                        cmdline = fgets(inbuf+1, sizeof(inbuf)-1, stdin);
+                        cmdline = fgets(inbuf + 1, sizeof(inbuf) - 1, stdin);
                         if (cmdline) {
                             cmdline--;
                         }
