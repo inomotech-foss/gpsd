@@ -20,7 +20,6 @@
 extern const struct gps_type_t driver_ubx;
 static WINDOW *satwin, *navsolwin, *dopwin, *ppswin;
 
-extern gps_mask_t ubx_parse(struct gps_device_t*, unsigned char*, size_t);
 #define display (void)mvwprintw
 
 static bool ubx_initialize(void)
