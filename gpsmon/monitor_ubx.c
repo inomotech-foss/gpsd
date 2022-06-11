@@ -186,8 +186,13 @@ static void display_ubx_nav(gps_mask_t mask)
         pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
         pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
     }
-    pastef(navsolwin, 5, 21, 4, "%5.1f", SF.track);
-    pastef(navsolwin, 5, 28, 5, "%6.2f", SF.climb);
+    if (0 != (TRACK_SET & mask)) {
+        // coverity says g.fix.track never set.
+        pastef(navsolwin, 5, 21, 4, "%5.1f", SF.track);
+    }
+    if (0 != (CLIMB_SET & mask)) {
+        pastef(navsolwin, 5, 28, 5, "%6.2f", SF.climb);
+    }
     (void)mvwaddch(navsolwin, 5, 26, ACS_DEGREE);
     (void)wattrset(navsolwin, A_NORMAL);
     if (0 != (STATUS_SET & mask)) {
