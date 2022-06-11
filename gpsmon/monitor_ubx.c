@@ -175,6 +175,7 @@ static void display_ubx_nav(gps_mask_t mask)
     if (0 != (LATLON_SET & mask)) {
         pastef(navsolwin, 4, 11, 11, "%12.9f", SF.latitude);
         pastef(navsolwin, 4, 25, 12, "%13.9f", SF.longitude);
+        pastef(navsolwin, 10, 12, 6, "%7.2f", session.newdata.eph);
     }
     if (0 != (ALTITUDE_SET & mask)) {
         pastef(navsolwin, 4, 40,  7, "%8.2f", SF.altHAE);
@@ -185,15 +186,16 @@ static void display_ubx_nav(gps_mask_t mask)
     // coverity says g.fix.track never set.
     (void)wprintw(navsolwin, "%6sm/s%6so%7sm/s",
                   "", "", "");
-    pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
+    if (0 != (SPEED_SET & mask)) {
+        pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
+        pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
+    }
     pastef(navsolwin, 5, 21, 4, "%5.1f", SF.track);
     pastef(navsolwin, 5, 28, 5, "%6.2f", SF.climb);
     (void)mvwaddch(navsolwin, 5, 26, ACS_DEGREE);
     (void)wattrset(navsolwin, A_NORMAL);
-    pastef(navsolwin, 10, 12, 6, "%7.2f", session.newdata.eph);
-    pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
-    (void)wmove(navsolwin, 11, 25);
     if (0 != (STATUS_SET & mask)) {
+        (void)wmove(navsolwin, 11, 25);
         (void)wprintw(navsolwin, "0x%02x", session.newdata.mode);
     }
 #undef SF
