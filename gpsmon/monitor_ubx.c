@@ -66,6 +66,11 @@ static bool ubx_initialize(void)
 
     display(navsolwin, 12, 22, " NAV ");
     (void)wattrset(navsolwin, A_NORMAL);
+    display(navsolwin, 1, 11, "%11sm %11sm %11sm", "", "", "");
+    display(navsolwin, 2, 11, "%9sm/s %9sm/s %9sm/s", "", "", "");
+    display(navsolwin, 4, 48, "m");
+    display(navsolwin, 5, 11, "%6sm/s%6so%7sm/s", "", "", "");
+
 
     if (NULL == (dopwin = derwin(devicewin, 3, 51, 13, 28))) {
         return false;
@@ -154,14 +159,11 @@ static void display_ubx_nav(gps_mask_t mask)
 
 #define SE session.newdata.ecef
     if (0 != (ECEF_SET & mask)) {
-        (void)mvwprintw(navsolwin, 1, 11, "%11sm %11sm %11sm", "", "", "");
         pastef(navsolwin, 1, 11, 9, "%+10.2f", SE.x);
         pastef(navsolwin, 1, 24, 9, "%+10.2f", SE.y);
         pastef(navsolwin, 1, 37, 9, "%+10.2f", SE.z);
     }
     if (0 != (VECEF_SET & mask)) {
-        (void)wmove(navsolwin, 2, 11);
-        (void)wprintw(navsolwin, "%9sm/s %9sm/s %9sm/s", "", "", "");
         pastef(navsolwin, 2, 11, 8, "%+9.2f", SE.vx);
         pastef(navsolwin, 2, 24, 8, "%+9.2f", SE.vy);
         pastef(navsolwin, 2, 37, 8, "%+9.2f", SE.vz);
@@ -169,9 +171,7 @@ static void display_ubx_nav(gps_mask_t mask)
 #undef SE
 
 #define SF session.newdata
-    (void)wmove(navsolwin, 4, 11);
     (void)wattrset(navsolwin, A_UNDERLINE);
-    (void)mvwprintw(navsolwin, 4, 48, "m");
     if (0 != (LATLON_SET & mask)) {
         pastef(navsolwin, 4, 11, 11, "%12.9f", SF.latitude);
         pastef(navsolwin, 4, 25, 12, "%13.9f", SF.longitude);
@@ -182,10 +182,6 @@ static void display_ubx_nav(gps_mask_t mask)
     }
     (void)mvwaddch(navsolwin, 4, 23, ACS_DEGREE);
     (void)mvwaddch(navsolwin, 4, 38, ACS_DEGREE);
-    (void)wmove(navsolwin, 5, 11);
-    // coverity says g.fix.track never set.
-    (void)wprintw(navsolwin, "%6sm/s%6so%7sm/s",
-                  "", "", "");
     if (0 != (SPEED_SET & mask)) {
         pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
         pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
