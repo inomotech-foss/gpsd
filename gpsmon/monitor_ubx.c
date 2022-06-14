@@ -190,9 +190,6 @@ static void display_ubx_nav(gps_mask_t mask)
         // coverity says g.fix.track never set.
         pastef(navsolwin, 5, 21, 4, "%5.1f", SF.track);
     }
-    if (0 != (CLIMB_SET & mask)) {
-        pastef(navsolwin, 5, 28, 5, "%6.2f", SF.climb);
-    }
     (void)mvwaddch(navsolwin, 5, 26, ACS_DEGREE);
     (void)wattrset(navsolwin, A_NORMAL);
     if (0 != (STATUS_SET & mask)) {
