@@ -66,10 +66,10 @@ static bool ubx_initialize(void)
 
     display(navsolwin, 12, 22, " NAV ");
     (void)wattrset(navsolwin, A_NORMAL);
-    display(navsolwin, 1, 11, "%11sm %11sm %11sm", "", "", "");
-    display(navsolwin, 2, 11, "%9sm/s %9sm/s %9sm/s", "", "", "");
+    display(navsolwin, 1, 22, "m %11sm %11sm", "", "");
+    display(navsolwin, 2, 20, "m/s %9sm/s %9sm/s", "", "");
     display(navsolwin, 4, 48, "m");
-    display(navsolwin, 5, 11, "%6sm/s%6so%7sm/s", "", "", "");
+    display(navsolwin, 5, 17, "m/s%6so", "");
 
 
     if (NULL == (dopwin = derwin(devicewin, 3, 51, 13, 28))) {
