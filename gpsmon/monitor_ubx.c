@@ -210,16 +210,14 @@ static void display_ubx_nav(gps_mask_t mask)
 
         (void)wmove(navsolwin, 7, 7);
         (void)wattrset(navsolwin, A_UNDERLINE);
-        (void)wprintw(navsolwin, "%u %02u:%02u:%02u.%02u", day, h, m, s, ms);
+        (void)wprintw(navsolwin, "%u %02u:%02u:%02u.%03u", day, h, m, s, ms);
         (void)wattrset(navsolwin, A_NORMAL);
 
         (void)wmove(navsolwin, 8, 11);
         (void)wprintw(navsolwin, "%d+%10.3lf", session.context->gps_week,
                       (double)(tow / 1000.0));
         (void)wmove(navsolwin, 8, 36);
-        // FIXME: isn't this just day?
-        (void)wprintw(navsolwin, "%llu",
-                      (unsigned long long)(tow / 86400000UL));
+        (void)wprintw(navsolwin, "%u", day);
     }
 
     (void)wnoutrefresh(navsolwin);
