@@ -243,8 +243,9 @@ struct gps_lexer_t {
 #define RTCM2_PACKET            17
 #define RTCM3_PACKET            18
 #define JSON_PACKET             19
-#define PACKET_TYPES            20      // increment this as necessary
-#define SKY_PACKET              21
+#define SKY_PACKET              20
+#define FAKEPACK_PACKET         21
+#define PACKET_TYPES            22      // increment this as necessary
 #define TEXTUAL_PACKET_TYPE(n)  ((((n)>=NMEA_PACKET) && ((n)<=MAX_TEXTUAL_TYPE)) || (n)==JSON_PACKET)
 #define GPS_PACKET_TYPE(n)      (((n)>=NMEA_PACKET) && ((n)<=MAX_GPSPACKET_TYPE))
 #define LOSSLESS_PACKET_TYPE(n) (((n)>=RTCM2_PACKET) && ((n)<=RTCM3_PACKET))

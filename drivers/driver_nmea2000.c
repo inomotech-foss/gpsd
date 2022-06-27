@@ -52,6 +52,53 @@
 #define NMEA2000_DEBUG_AIS 0
 #define NMEA2000_FAST_DEBUG 0
 
+#ifndef CAN_MAX_DLEN
+#warning "No kernel CANBUS support. We must be cautious."
+#define CAN_MAX_DLEN 8
+typedef __u32 canid_t;
+struct can_frame {
+    canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
+    __u8    can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
+    __u8    __pad;   /* padding */
+    __u8    __res0;  /* reserved / padding */
+    __u8    __res1;  /* reserved / padding */
+    __u8    data[CAN_MAX_DLEN] __attribute__((aligned(8)));
+};
+
+struct canfd_frame {
+    canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
+    __u8    len;     /* frame payload length in byte */
+    __u8    flags;   /* additional flags for CAN FD */
+    __u8    __res0;  /* reserved / padding */
+    __u8    __res1;  /* reserved / padding */
+    __u8    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
+};
+#endif // ! CAN_MAX_DLEN
+
+typedef enum {
+    t_u64,  t_u32, t_u16,  t_u8,
+    t_s64,  t_s32, t_s16,  t_s8,
+    t_x64,  t_x32, t_x16,  t_x8,
+    t_bool, t_str, t_bstr, t_double,
+} map_type;
+
+typedef struct {
+    char *key;
+    map_type bucket;
+    void *value;
+    char *formatter;
+    size_t *len;
+} map_attr_type;
+
+gps_mask_t fakepack_dispatch(struct gps_device_t*, unsigned char*, size_t);
+void meldstr2(char*, size_t*, char*);
+void xmeldstr2(char*, size_t*, char*, size_t);
+void fakepack_dump(struct can_frame*, struct timeval*, char*);
+gps_mask_t fakepack_dispatch_can(struct timeval*, char*,
+                                char*, struct gps_device_t*);
+gps_mask_t fakepack_dispatch_udp(struct timeval*, char*,
+                                char[], struct gps_device_t*);
+int mapprint(map_attr_type *);
 static struct gps_device_t *nmea2000_units[NMEA2000_NETS][NMEA2000_UNITS];
 static char can_interface_name[NMEA2000_NETS][CAN_NAMELEN+1];
 
@@ -315,9 +362,24 @@ static gps_mask_t hnd_129026(unsigned char *bu, int len, PGN *pgn,
     session->newdata.track           =  getleu16(bu, 2) * 1e-4 * RAD_2_DEG;
     session->newdata.speed           =  getleu16(bu, 4) * 1e-2;
 
+/*    map_attr_type map129026[] = {
+        {"PRN",     t_u32,      &129026},
+        {"desc"},   t_str,      &msg_129026},
+        {"rawish",  t_bstr,     &bu, NULL, &len);
+        {"track",   t_double,   session->newdata.track, "%e"},
+        {"speed",   t_double,   session->newdata.speed, "%g"},
+        {NULL},
+    };
+    mapprint(keying);
+*/
     return SPEED_SET | TRACK_SET | get_mode(session);
 }
 
+/* Missing In Action
+061183 // NoDoc
+126975 // NoDoc
+
+*/
 
 /*
  * PGN: 126992 / 00370020 / 1F010 - 8 - System Time
@@ -1211,6 +1273,16 @@ static gps_mask_t hnd_129810(unsigned char *bu, int len, PGN *pgn,
 static gps_mask_t hnd_127506(unsigned char *bu, int len, PGN *pgn,
                              struct gps_device_t *session)
 {
+    // FIXME: Following 5 values mechanically extracted
+//     uint8_t sid = bu[0];
+//     uint8_t instance = bu[1];
+//     uint8_t dcType = bu[2];
+//     uint8_t stateOfCharge = bu[3];
+//     uint8_t stateOfHealth = bu[4];
+//     uint16_t timeRemaining = getleu16(bu, 5);
+//     uint16_t rippleVoltage = getleu16(bu, 7);
+//     uint16_t ampHours = getleu16(bu, 9);
+
     print_data(session->context, bu, len, pgn);
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "pgn %6d(%3d):\n", pgn->pgn, session->driver.nmea2000.unit);
@@ -1224,6 +1296,13 @@ static gps_mask_t hnd_127506(unsigned char *bu, int len, PGN *pgn,
 static gps_mask_t hnd_127508(unsigned char *bu, int len, PGN *pgn,
                              struct gps_device_t *session)
 {
+    // FIXME: Following 5 values mechanically extracted
+//     uint8_t instance = bu[0];
+//     int16_t voltage = getleu16(bu, 1);
+//     int16_t current = getleu16(bu, 3);
+//     uint16_t temperature = getleu16(bu, 5);
+//     uint8_t sid = bu[7];
+
     print_data(session->context, bu, len, pgn);
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "pgn %6d(%3d):\n", pgn->pgn, session->driver.nmea2000.unit);
@@ -1516,8 +1595,6 @@ static PGN navpgn[] = {{ 59392, 0, 0, hnd_059392, &msg_059392[0]},
                        {130311, 0, 4, hnd_130311, &msg_130311[0]},
                        {0     , 0, 0, NULL,       &msg_error [0]}};
 
-
-
 static PGN *search_pgnlist(unsigned int pgn, PGN *pgnlist)
 {
     int l1;
@@ -1540,6 +1617,7 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
 {
     unsigned int can_net;
 
+    puts("LZ find_pgn early...\n");
     session->driver.nmea2000.workpgn = NULL;
     can_net = session->driver.nmea2000.can_net;
     if (can_net > (NMEA2000_NETS-1)) {
@@ -1585,7 +1663,7 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
             daddr = 0xff;
         }
         GPSD_LOG(LOG_DATA, &session->context->errout,
-                 "nmea2000: source_prio %u daddr %u",
+                 "nmea2000: source_prio %u daddr %u\n",
                  source_prio, daddr);
 
         if (!session->driver.nmea2000.unit_valid) {
@@ -1606,6 +1684,9 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
             session->driver.nmea2000.unit_valid = true;
             nmea2000_units[can_net][source_unit] = session;
         }
+
+        GPSD_LOG(LOG_INF, &session->context->errout,
+                 "src %u:%d\n", can_net, source_unit);
 
         if (source_unit == session->driver.nmea2000.unit) {
             PGN *work;
@@ -1729,6 +1810,8 @@ static void find_pgn(struct can_frame *frame, struct gps_device_t *session)
         }
     } else {
         // we got RTR or 2.0A CAN frame, not used
+        GPSD_LOG(LOG_INF, &session->context->errout,
+                 "NMEA2000 find_pgn: RTR or 2.0A CAN frame unused.\n");
     }
 }
 
@@ -1969,6 +2052,327 @@ const struct gps_type_t driver_nmea2000 = {
 /* *INDENT-ON* */
 
 /* end */
+
+
+#if defined(FAKEPACK_ENABLE)
+#define MICROBUF 125
+#define CUTPAGE 4000
+/*
+ * int mapprint(map_attr_type *keying) {
+ *    char buf[CUTPAGE];
+ *    //char *end = &buf + (size_t)CUTPAGE - 1;
+ *    char piece[MICROBUF];
+ *    size_t remnant = CUTPAGE - 2;
+ *    const map_attr_type *cursor;
+ *    bool first = true;
+ * 
+ *    // {'a':0} = 7 runes + NUL
+ *    if (remnant < 7) {
+ *        return(-1);
+ *    }
+ *    meldstr2(buf, &remnant, "{");
+ * 
+ *    for (cursor = keying; cursor->key != NULL; cursor++) {
+ *        size_t iGap = remnant, fmt3;
+ *        char *mid = (char*)&piece;
+ *        char *fmt, fmt2[MICROBUF];
+ *        char *fmtlen[] = {"ll", "l" "h", "hh", NULL};
+ *        char *second[] = {"u", "d", "x", NULL};
+ *        iGap -= snprintf(mid, iGap, "%s\"%s\":",
+ *                        first ? "" : ",",
+ *                        cursor->key);
+ *        first = false;
+ *        switch (cursor->bucket) {
+ *            case t_str:
+ *                iGap = snprintf(mid, iGap, "\"%s\"", (char*)cursor->value);
+ *                break;
+ *            case t_bstr:
+ *                meldstr2(mid, &iGap, (char*)&"\"x");
+ *                xmeldstr2(mid, &iGap, cursor->value, (size_t)cursor->len);
+ *                meldstr2(mid, &iGap, (char*)&"\"");
+ *                break;
+ *            case t_double:
+ *fmt = (cursor->formatter == NULL) ? &"%F" : cursor->formatter; 
+ *                iGap = snprintf(mid, iGap, fmt, (double*)cursor->value);
+ *                break;
+ *            case t_bool:
+ *fmt = ((bool*)cursor->value == true) ? &"true" : &"false"; 
+ *                iGap = snprintf(mid, iGap, "%s", fmt);
+ *                break;
+ *            default:
+ *                // My eyes bleed, the brokenness...
+ *                if ((0 <= cursor->bucket) && (cursor->bucket <= t_bool)) {
+ *                    fmt2[0] = '\0';
+ *                    fmt3 = MICROBUF;
+ *                    meldstr2(fmt2, &fmt3, fmtlen[cursor->bucket%4]);
+ *                    meldstr2(fmt2, &fmt3, second[cursor->bucket/4]);
+ *                    iGap = snprintf(mid, iGap, fmt2, cursor->value);
+ *                } else {
+ *                    iGap = snprintf(mid, iGap, "\"0x%p\"", cursor->value);
+ *                }
+ *        }
+ *        meldstr2(buf, &remnant, mid);
+ *    }
+ * 
+ *    meldstr2(buf, &remnant, "}");
+ *    puts(buf);
+ *    return (CUTPAGE - remnant);
+ * }
+ * 
+ * void meldstr2(char *target, size_t *cap, char *fragment) {
+ *    size_t target_len = strlen(target);
+ *    size_t loop;
+ *    for (loop = 0 ; loop < cap && fragment[loop] != '\0' ; loop++) {
+ *        target[target_len] = fragment[loop];
+ *    }
+ *    target[target_len + loop] = '\0';
+ *    cap -= loop;
+ * }
+ * 
+ * void xmeldstr2(char *target, size_t *iGap, char *fragment, size_t f_len) {
+ *    size_t t_index = strlen(target), f_index = 0;
+ *    size_t len = (MICROBUF < f_len ? MICROBUF : f_len);
+ *    //const char *ibuf = (const char *)target;
+ *    const char *hexchar = "0123456789abcdef";
+ *    
+ *    if (NULL == fragment || 0 == f_len) {
+ *        return;
+ *    }
+ *    
+ *    for (f_index = 0 ; (f_index < len) && (t_index < len - 3); f_index++) {
+ *        target[t_index++] = hexchar[(fragment[f_index] & 0xf0) >> 4];
+ *        target[t_index++] = hexchar[(fragment[f_index] & 0x0f)];
+ *        iGap -= 2;
+ *    }
+ *    target[t_index] = '\0';
+ * }
+ */
+
+void fakepack_dump(struct can_frame *cf, struct timeval *then, char *unit) {
+    printf("{\"type\": \"FakePack\", \"id\": \"x%08x\", \"len\": %3d, \"unit\": \"%s\", \"data\":\"x", cf->can_id, cf->can_dlc, unit);
+    for (int index = 0; index < CAN_MAX_DLEN; index++) {
+        if (cf->can_dlc == index) {
+            puts(":");
+        }
+        printf("%02x", cf->data[index]);
+    }
+    struct tm was;
+    (void)gmtime_r(&then->tv_sec, &was);
+    printf("\", \"was\": \"%04d-%02d-%02dT%02d:%02d:%02d.%09ldZ\"}\n",
+           was.tm_year + 1900, was.tm_mon, was.tm_mday, was.tm_hour,
+           was.tm_min, was.tm_sec, then->tv_usec);
+    //     static const map_attr_type FakePack_map[] = {
+    //         {"type", t_str, "FakePack"},
+    //         {"id", t_u32, cf->can_id},
+    //         {"len", t_u8, cf->len},
+    //         {"flags", t_x8, cf->flags},
+    //         {"data", t_bstr, cf->data, NULL, 8},
+    //         {NULL}
+    //     };
+    //     mapprint(FakePack_map);
+}
+
+gps_mask_t fakepack_dispatch_can(
+    struct timeval *then,
+    char *unit,
+    char *parts,
+    struct gps_device_t *session
+) {
+    char payload[MICROBUF];
+    struct can_frame frame;
+    int ret, len;
+    canid_t fake_id;
+    
+    if ((ret = sscanf(parts,
+        "%x#%s", &fake_id, (char*)&payload)) != 2) {
+        //printf("%d: ", ret);
+        //perror("LZ dispatch can failed: ");
+        return 0;
+        }
+        frame.can_id = fake_id;
+    // Decode payload
+    len = strlen(payload);
+    frame.can_dlc =  gpsd_hexpack((char*)&payload, (char*)&(frame.data), len);
+    frame.can_id |= 0x80000000;
+    fakepack_dump(&frame, then, unit);
+    find_pgn(&frame, session);
+    //puts("LZ dispatch can dun.\n");
+    return get_mode(session);
+}
+
+gps_mask_t fakepack_dispatch_udp(
+    struct timeval *then,
+    char *unit,
+    char *payload,
+    struct gps_device_t *session
+) {
+    char mid[MICROBUF]; //, out[MICROBUF];
+    struct can_frame frame;
+    char *magic = (char*)&"ISO11898";
+    int ulen, clen = strlen(magic), pivot=clen, loopi;
+    
+    ulen = gpsd_hexpack(payload+1, (char*)&mid, MICROBUF / 2);
+    if (ulen < 28) { // I had 44 why??
+        //printf("LZ dispatch udp no hexpack: %d - %s\n", ulen, payload);
+        return 0; // 8 magic + 2 header + 3 trailer + N * (4 id + 1 len + 8? data + 2 trailer)
+    }
+    
+    for (clen = strlen(magic) - 1; clen >= 0; clen--) {
+        if (mid[clen] != magic[clen]) {
+            //puts("LZ dispatch udp bad magic.\n");
+            return 0;
+        }
+    } 
+    
+    if (1 != mid[pivot]) {
+        puts("LZ dispatch udp bad version.\n");
+        return 0;
+    }
+    
+    loopi = mid[pivot + 1];
+    if (0 == loopi) {
+        //puts("LZ dispatch udp no CANs.\n");
+        return 0;
+    }
+    pivot += 2;
+    
+    for (; loopi > 0; loopi--) {
+        frame.can_id = getleu32(mid, pivot);
+        pivot+=4;
+        frame.can_dlc = (uint8_t)mid[pivot++];
+        for (clen = 0; clen < frame.can_dlc; clen++) {
+            frame.data[clen] = mid[pivot++];
+        }
+        pivot += 2; // skip extended, remote transmission request flags
+        frame.can_id |= 0x80000000;
+        fakepack_dump(&frame, then, unit);
+        find_pgn(&frame, session);
+    }
+    //    pivot += 3; // skip reserved options
+    
+    //puts("LZ dispatch udp dun.\n");
+    return get_mode(session);
+}
+
+/**
+ * Parse the data from the device
+ */
+gps_mask_t fakepack_dispatch(struct gps_device_t *session,
+                             unsigned char *buf, size_t len)
+{
+    char *needle_pos = NULL;
+    
+    // Phase 1
+    //size_t bufsz = MICROBUF-1, ptr;
+    static struct timeval log_tv;
+    static char device[MICROBUF], payload[MICROBUF];
+    
+    
+    if (len == 0) {
+        return 0;
+    }
+    if (sscanf((char*)buf, "(%lu.%lu) %s %s",
+        &log_tv.tv_sec, &log_tv.tv_usec, (char*)&device, payload) != 4) {
+        //puts("LZ dispatch failed.\n");
+        return 0;
+        }
+        
+        /*
+         * Set this if the driver reliably signals end of cycle.
+         * The core library zeroes it just before it calls each driver's
+         * packet analyzer.
+         */
+        
+        needle_pos = strstr(device, "can");
+        if (NULL != needle_pos) {
+            return fakepack_dispatch_can(&log_tv, needle_pos, payload, session);
+        }
+        needle_pos = strstr(device, "udp");
+        if (NULL != needle_pos) {
+            return fakepack_dispatch_udp(&log_tv, needle_pos, payload, session);
+        }
+        //puts("LZ dispatch can't.\n");
+        return 0;
+}
+
+/**********************************************************
+ * 
+ * Externally called routines below here
+ *
+ **********************************************************/
+
+/*
+ * This is the entry point to the driver. When the packet sniffer recognizes
+ * a packet for this driver, it calls this method which passes the packet to
+ * the binary processor or the nmea processor, depending on the session type.
+ */
+static gps_mask_t fakepack_parse_input(struct gps_device_t *session)
+{
+    // puts("---- fakepack_parse_input ----\n");
+    if (FAKEPACK_PACKET == session->lexer.type) {
+        return fakepack_dispatch(session, session->lexer.outbuffer,
+                                 session->lexer.outbuflen);
+    }
+    /*    if (NMEA_PACKET == session->lexer.type) {
+     *        return nmea_parse((char *)session->lexer.outbuffer, session);
+}
+*/
+    return 0;
+}
+
+/* The methods in this code take parameters and have */
+/* return values that conform to the requirements AT */
+/* THE TIME THE CODE WAS WRITTEN.                    */
+/*                                                   */
+/* These values may well have changed by the time    */
+/* you read this and methods could have been added   */
+/* or deleted. Unused methods can be set to NULL.    */
+/*                                                   */
+/* The latest version can be found by inspecting   */
+/* the contents of struct gps_type_t in gpsd.h.      */
+/*                                                   */
+/* This always contains the correct definitions that */
+/* any driver must use to compile.                   */
+
+/* This is everything we export */
+/* *INDENT-OFF* */
+const struct gps_type_t driver_fakepack = {
+    /* Full name of type */
+    .type_name        = "False Packet feeder thing.",
+    /* Associated lexer packet type */
+    .packet_type      = FAKEPACK_PACKET,
+    /* Driver tyoe flags */
+    .flags            = DRIVER_NOFLAGS,
+    /* Response string that identifies device (not active) */
+    .trigger          = NULL,
+    /* Number of satellite channels supported by the device */
+    .channels         = 12,
+    /* Startup-time device detector */
+    .probe_detect     = NULL,
+    /* Packet getter (using default routine) */
+    .get_packet       = generic_get,
+    /* Parse message packets */
+    .parse_packet     = fakepack_parse_input,
+    /* RTCM handler (using default routine) */
+    .rtcm_writer      = NULL,
+    /* non-perturbing initial query (e.g. for version) */
+    .init_query        = NULL,
+    /* fire on various lifetime events */
+    .event_hook       = NULL,
+    /* Speed (baudrate) switch */
+    .speed_switcher   = NULL,
+    /* Switch to NMEA mode */
+    .mode_switcher    = NULL,
+    /* Message delivery rate switcher (not active) */
+    .rate_switcher    = NULL,
+    /* Minimum cycle time of the device */
+    .min_cycle        = {1},
+    /* Control string sender - should provide checksum and headers/trailer */
+    .control_send   = NULL,
+    .time_offset     = NULL,
+    /* *INDENT-ON* */
+};
+#endif // FAKEPACK_ENABLE
 
 #else   /* of  defined(NMEA2000_ENABLE) */
 /* dummy variable to some old linkers do not complain about empty

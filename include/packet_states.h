@@ -234,4 +234,21 @@
    STASH_RECOGNIZED,    /* stashable prefix recognized */
 #endif
 
+#ifdef FAKEPACK_ENABLE
+   FAKEPACK_LEADER_1,   /* CANplayer fragment recognized */
+   FAKEPACK_F1A,
+   FAKEPACK_F1B,
+   FAKEPACK_F1C,
+   FAKEPACK_F1D,
+   FAKEPACK_G1,
+   FAKEPACK_F2,
+   FAKEPACK_G2,
+   FAKEPACK_F3A,
+   FAKEPACK_F3A2,
+   FAKEPACK_F3B,
+   FAKEPACK_F3C,
+   FAKEPACK_F3C2,
+   FAKEPACK_RECOGNIZED,
+#endif // FAKEPACK_ENABLE
+
 /* end of packet_states.h */
