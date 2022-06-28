@@ -70,6 +70,9 @@ static bool ubx_initialize(void)
     display(navsolwin, 2, 20, "m/s %9sm/s %9sm/s", "", "");
     display(navsolwin, 4, 48, "m");
     display(navsolwin, 5, 17, "m/s%6so", "");
+    (void)mvwaddch(navsolwin, 4, 23, ACS_DEGREE);
+    (void)mvwaddch(navsolwin, 4, 38, ACS_DEGREE);
+    (void)mvwaddch(navsolwin, 5, 26, ACS_DEGREE);
 
 
     if (NULL == (dopwin = derwin(devicewin, 3, 51, 13, 28))) {
@@ -180,8 +183,6 @@ static void display_ubx_nav(gps_mask_t mask)
     if (0 != (ALTITUDE_SET & mask)) {
         pastef(navsolwin, 4, 40,  7, "%8.2f", SF.altHAE);
     }
-    (void)mvwaddch(navsolwin, 4, 23, ACS_DEGREE);
-    (void)mvwaddch(navsolwin, 4, 38, ACS_DEGREE);
     if (0 != (SPEED_SET & mask)) {
         pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
         pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
@@ -190,7 +191,6 @@ static void display_ubx_nav(gps_mask_t mask)
         // coverity says g.fix.track never set.
         pastef(navsolwin, 5, 21, 4, "%5.1f", SF.track);
     }
-    (void)mvwaddch(navsolwin, 5, 26, ACS_DEGREE);
     (void)wattrset(navsolwin, A_NORMAL);
     if (0 != (STATUS_SET & mask)) {
         (void)wmove(navsolwin, 11, 25);
