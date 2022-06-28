@@ -120,7 +120,7 @@ static void display_ubx_sat(void)
                         SV.qualityInd, (SV.used) ? 'Y' : ' ');
         pastef(satwin, i + 2,  8, 3, "%3.0f", SV.azimuth);
         pastef(satwin, i + 2, 12, 3, "%3.0f", SV.elevation);
-        pastef(satwin, i + 2, 16, 3, "%3.0f", SV.ss);
+        pastef(satwin, i + 2, 17, 3, "%2.0f", SV.ss);
     }
     (void)wmove(navsolwin, 11, 7);
     (void)wprintw(navsolwin, "%2d", session.gpsdata.satellites_used);
