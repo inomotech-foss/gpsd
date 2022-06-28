@@ -178,6 +178,8 @@ static void display_ubx_nav(gps_mask_t mask)
     if (0 != (LATLON_SET & mask)) {
         pastef(navsolwin, 4, 11, 11, "%12.9f", SF.latitude);
         pastef(navsolwin, 4, 25, 12, "%13.9f", SF.longitude);
+    }
+    if (0 != (HERR_SET & mask)) {
         pastef(navsolwin, 10, 12, 6, "%7.2f", session.newdata.eph);
     }
     if (0 != (ALTITUDE_SET & mask)) {
@@ -185,6 +187,8 @@ static void display_ubx_nav(gps_mask_t mask)
     }
     if (0 != (SPEED_SET & mask)) {
         pastef(navsolwin, 5, 11, 5, "%6.2f", SF.speed);
+    }
+    if (0 != (VERR_SET & mask)) {
         pastef(navsolwin, 10, 33, 5, "%6.2f", session.newdata.epv);
     }
     if (0 != (TRACK_SET & mask)) {
