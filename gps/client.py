@@ -145,7 +145,7 @@ class gpscommon(object):
                 frag = self.sock.recv(8192)
 
             self.linebuffer += frag
-            if not self.linebuffer:
+            if not frag or not self.linebuffer:
                 if self.verbose > 1:
                     sys.stderr.write(
                         "poll: no available data: returning -1.\n")
