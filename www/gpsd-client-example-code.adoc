@@ -31,13 +31,44 @@ and run it. i The example builds and runs fine as a normal user as it
 does not require any special permissions. Use "^C" to exit.  Like
 this:
 
+[source%nowrap,terminal]
 ----
 $ wget -o example1.c https://gpsd.io/example1.c.txt
 $ gcc example1.c -o example1 -lgps -lm
 $ ./example1
-Fix mode: 3D (3) Time: 1615325173.000000000 Lat 44.068861 Lon -121.314085
-Fix mode: 3D (3) Time: 1615325174.000000000 Lat 44.068861 Lon -121.314085
-Fix mode: 3D (3) Time: 1615325175.000000000 Lat 44.068861 Lon -121.314085
+pECEF  -1999227.86 m: X:  -3929865.50 m: Y:  4593852.52 m: Z        5.50m: pAcc
+
+vECEF     +0.01 m/s: vX:      +0.00 m/s: vY:      +0.01 m/s: vZ      +0.27 m/s :vAcc
+
+DOP [h]: +0.9 [v]: +1.5 [p]: +1.8 [t]: +0.9 [g]: +2.0
+
+Fix mode: 3D (3) Time: 1656776419.000000000 Lat 46.367406 Lon -116.963660
+
+skyview: using 11 of 19 satellites for /dev/ttyUSB0
+
+        Sig Frq Hlt Qlt U con sat   s/n    el     az prRes
+        === === === === = === === ===== ===== ====== ===== 
+          0  -1   1   0 Y   0   2  22.0  48.0  190.0   0.0
+          0  -1   1   0 Y   0   3  26.0   9.0   32.0   0.0
+          0  -1   1   0 Y   0   6  34.0  67.0  102.0   0.0
+          0  -1   1   0 Y   0  11  32.0  47.0  179.0   0.0
+          0  -1   1   0 Y   0  12  34.0  55.0  305.0   0.0
+          0  -1   1   0 -   0  14   0.0   1.0  121.0   0.0
+          0  -1   1   0 Y   0  17  32.0  25.0   66.0   0.0
+          0  -1   1   0 Y   0  19  40.0  48.0   59.0   0.0
+          0  -1   1   0 -   0  20   0.0   4.0  160.0   0.0
+          0  -1   1   0 -   0  22   0.0   2.0  338.0   0.0
+          0  -1   1   0 Y   0  24  35.0  43.0  238.0   0.0
+          0  -1   1   0 Y   0  25  30.0  14.0  303.0   0.0
+          0  -1   1   0 -   0  28  34.0  26.0  117.0   0.0
+          0  -1   1   0 -   0  32  30.0   3.0  317.0   0.0
+          0  -1   1   0 Y   1 133  35.0  35.0  197.0   0.0
+          0  -1   1   0 Y   1 135  30.0  36.0  191.0   0.0
+          0  -1   1   0 -   1 138   0.0  35.0  167.0   0.0
+          0  -1   1   0 -   5   1   0.0   n/a    0.0   0.0
+          0  -1   1   0 -   5   2   0.0   1.0  297.0   0.0
+
+pECEF  -1999227.86 m: X:  -3929865.50 m: Y:  4593852.52 m: Z        5.50m: pAcc
 ^C
 ----
  
@@ -59,68 +90,7 @@ The complete example1.c:
 
 [source%nowrap,c,numbered]
 ----
-// example  gpsd client
-// compile this way:
-//    gcc example1.c -o example1 -lgps -lm
-#include <gps.h>
-#include <math.h>        // for isfinite()
-
-
-#define MODE_STR_NUM 4
-static char *mode_str[MODE_STR_NUM] = {
-    "n/a",
-    "None",
-    "2D",
-    "3D"
-};
-
-int main(int argc, char *argv[])
-{
-    struct gps_data_t gps_data;
-
-    if (0 != gps_open("localhost", "2947", &gps_data)) {
-        printf("Open error.  Bye, bye\n");
-        return 1;
-    }
-
-    (void)gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
-
-    while (gps_waiting(&gps_data, 5000000)) {
-        if (-1 == gps_read(&gps_data, NULL, 0)) {
-            printf("Read error.  Bye, bye\n");
-            break;
-        }
-        if (MODE_SET != (MODE_SET & gps_data.set)) {
-            // did not even get mode, nothing to see here
-            continue;
-        }
-        if (0 > gps_data.fix.mode ||
-            MODE_STR_NUM <= gps_data.fix.mode) {
-            gps_data.fix.mode = 0;
-        }
-        printf("Fix mode: %s (%d) Time: ",
-               mode_str[gps_data.fix.mode],
-               gps_data.fix.mode);
-        if (TIME_SET == (TIME_SET & gps_data.set)) {
-            // not 32 bit safe
-            printf("%ld.%09ld ", gps_data.fix.time.tv_sec,
-                   gps_data.fix.time.tv_nsec);
-        } else {
-            puts("n/a ");
-        }
-        if (isfinite(gps_data.fix.latitude) &&
-            isfinite( gps_data.fix.longitude)) {
-            // Display data from the GPS receiver if valid.
-            printf("Lat %.6f Lon %.6f\n",
-                   gps_data.fix.latitude, gps_data.fix.longitude);
-        }
-    }
-
-    // When you are done...
-    (void)gps_stream(&gps_data, WATCH_DISABLE, NULL);
-    (void)gps_close(&gps_data);
-    return 0;
-}
+include::example1.c.txt[]
 ----
 
 === COMMENTARY
@@ -130,10 +100,7 @@ Line by line commentary:
 Lines 1 to 4::
 [source%nowrap,c,numbered]
 ----
-// example  gpsd client
-// compile this way:
-//    gcc example1.c -o example1 -lgps -lm
-#include <gps.h>
+include::example1.c.txt[tags=Head]
 ----
 
 All you need to compile this example is *libgps*, and *gps.h*, installed
@@ -142,57 +109,78 @@ installed *gpsd* on your system.  The gcc option *-lgps* links in
 *libgps* and *-lm* links in libm.  Some systems will automatically link
 in *libm*.
 
-Line 5::
+Line 5 to 9::
 [source%nowrap,c,numbered,start=5]
 ----
-#include <math.h>        // for isfinite()
+include::example1.c.txt[tags=Include]
 ----
 
-The system includes are to get prototypes for *isfinite()*.
+The system includes are to get prototypes for the listed functions.
 
-Lines 8 to 14::
-[source%nowrap,c,numbered,start=8]
+Lines 11 to 21::
+[source%nowrap,c,numbered,start=11]
 ----
-#define MODE_STR_NUM 4
-static char *mode_str[MODE_STR_NUM] = {
-    "n/a",
-    "None",
-    "2D",
-    "3D"
-};
+include::example1.c.txt[tags=Macros]
+----
+Several definitions that will be useful later. GPS_HAS_BIT_SET is useful for
+testing if data is valid, MS_IN_US is useful for gps_waiting, and NS_IN_SEC
+is useful for splitting timestamps.
+
+Lines 11 to 21::
+[source%nowrap,c,numbered,start=21]
+----
+include::example1.c.txt[tags=Mode]
 ----
 An array of strings used to convert _gps_data.fix.mode_ integer to a
 nice Fix Type string.
 
-Lines 16 to 17::
-[source%nowrap,c,numbered,start=16]
+Lines 23 to 34::
+[source%nowrap,c,numbered,start=23]
 ----
-int main(int argc, char *argv[])
-{
+include::example1.c.txt[tags=Float]
+----
+A useful little function if flen is less than 3 (the width of n/a) the
+program exits with an error. In the typical case though, it prints prep,
+and then f in a fmt formatted field when f is finite and 'n/a' (sans
+quotes if f is not finite.
+
+Lines 36 to 42::
+[source%nowrap,c,numbered,start=36]
+----
+include::example1.c.txt[tags=Toff]
+----
+A less used function which prints out two numeric timestamps for GPS and
+host system time.
+
+Lines 43 to 44::
+[source%nowrap,c,numbered,start=43]
+----
+include::example1.c.txt[tags=main]
 ----
 
 All we need is a simple main().  For clarity no options handling is done
 in this example.  Real programs will implement options and arguments:
 *-h*; *-V*; *[server[;port[;device]]*; etc.
 
-Line 18::
-[source%nowrap,c,numbered,start=18]
+Line 45 to 47::
+[source%nowrap,c,numbered,start=45]
 ----
-    struct gps_data_t gps_data;
+include::example1.c.txt[tags=vars]
 ----
 
 Every variable we care about, all variables, are contained in
 *struct gps_data_t gps_data* which is defined, and documented, in
 *gps.h*. *gps_data* contains a *struct gps_fix_t fix* which is also
 defined in *gps.h*.  The _TPV_ data we will use is in _gps_data.fix_.
+pps is a variable to save us from having two duplicate code blocks which
+print out struct timedelta_t from PPS and TOFF sentences respectively.
+live is a loop continuation variable when 0 the loop breaks.
+Also set errno to zero.
 
-Line 20 to 23::
-[source%nowrap,c,numbered,start=20]
+Line 48 to 51::
+[source%nowrap,c,numbered,start=48]
 ----
-    if (0 != gps_open("localhost", "2947", &gps_data)) {
-        printf("Open error.  Bye, bye\n");
-        return 1;
-    }
+include::example1.c.txt[tags=open]
 ----
 
 Connect to the already running *gpsd* on the _localhost_ running on the
@@ -205,46 +193,41 @@ function calls.
 Note the use of <<Yoda>> conditions.  These prevent many hard to spot
 code errors.
 
-Line 25::
-[source%nowrap,c,numbered,start=25]
+Line 54::
+[source%nowrap,c,numbered,start=54]
 ----
-    (void)gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
+include::example1.c.txt[tags=stream]
 ----
 
 Tell *gpsd* to send us reports using JSON. Later on *gpsd_read()* will
 decode those JSON messsages for us.  See the <<gpsd_json>> man page for
 details on the JSON messages.
 
-Line 27::
-[source%nowrap,c,numbered,start=27]
+Line 56 to 63::
+[source%nowrap,c,numbered,start=56]
 ----
-    while (gps_waiting(&gps_data, 5000000)) {
+include::example1.c.txt[tags=wait]
 ----
 
 The main loop. Wait, using *gps_waiting()* until data from the *gpsd*
-connection is available, then run the body of the loop.  Exit if no data
-seen in 5 seconds (5000000 micro seconds).
+connection is available, then run the body of the loop. Stop if there
+is an error or we no longer wish to proceed. Wait a maximum of five
+milliseconds between loops.
 
-Lines 28 to 31::
-[source%nowrap,c,numbered,start=28]
+Lines 64 to 67::
+[source%nowrap,c,numbered,start=64]
 ----
-        if (-1 == gps_read(&gps_data, NULL, 0)) {
-            printf("Read error.  Bye, bye\n");
-            break;
-        }
+include::example1.c.txt[tags=read]
 ----
 
 Read the waiting data using *gpsd_read()* and parse it into *gps_data*.
 Exit loudly on errors. No telling, yet, what the data is.  It could be
 from *TPV*, *SKY*, *AIS*, or other message classes.
 
-Lines 32 to 35::
-[source%nowrap,c,numbered,start=32]
+Lines 68 to 71::
+[source%nowrap,c,numbered,start=68]
 ----
-        if (MODE_SET != (MODE_SET & gps_data.set)) {
-            // did not even get mode, nothing to see here
-            continue;
-        }
+include::example1.c.txt[tags=hasmode]
 ----
 
 Here is a part that most programmers miss.  Check that *TPV* data was
@@ -252,13 +235,10 @@ received, not some other data, like *SKY*.  The flag *MODE_SET* is set
 IFF a *TPV* JSON sentence was received.  If no *MODE_SET* then do not
 bother to look at the rest of the data in _gpsdata.fix_.
 
-Lines 36 to 39::
-[source%nowrap,c,numbered,start=36]
+Lines 72 to 75::
+[source%nowrap,c,numbered,start=72]
 ----
-        if (0 > gps_data.fix.mode ||
-            MODE_STR_NUM <= gps_data.fix.mode) {
-            gps_data.fix.mode = 0;
-        }
+include::example1.c.txt[tags=clipmode]
 ----
 
 Range check _gpsdata.fix.mode_ so we can use it as an index into
@@ -266,26 +246,18 @@ _mode_str_.  New versions of *gpsd* often extend the range of
 unenumerated types, so protect yourself from an array overrun.  Array
 overruns are bad.
 
-Lines 40 to 42::
-[source%nowrap,c,numbered,start=40]
+Lines 76 to 78::
+[source%nowrap,c,numbered,start=76]
 ----
-        printf("Fix mode: %s (%d) Time: ",
-               mode_str[gps_data.fix.mode],
-               gps_data.fix.mode);
+include::example1.c.txt[tags=printmode]
 ----
 
 Print the Fix mode as an integer, and a string.
 
-Lines 43 to 48::
-[source%nowrap,c,numbered,start=43]
+Lines 79 to 85::
+[source%nowrap,c,numbered,start=79]
 ----
-        if (TIME_SET == (TIME_SET & gps_data.set)) {
-            // not 32 bit safe
-            printf("%ld.%09ld ", gps_data.fix.time.tv_sec,
-                   gps_data.fix.time.tv_nsec);
-        } else {
-            puts("n/a ");
-        }
+include::example1.c.txt[tags=time]
 ----
 
 Print the _gps_data.fix.time_ as seconds and nano seconds into the UNIX
@@ -298,15 +270,10 @@ to UTC.  Many GPS/GNSS receivers output random time when they do not
 have a fix.  Worse, some continue to do so for minutes after reporting
 that they have a valid fix.
 
-Lines 50 to 55::
-[source%nowrap,c,numbered,start=50]
+Lines 86 to 91::
+[source%nowrap,c,numbered,start=86]
 ----
-        if (isfinite(gps_data.fix.latitude) &&
-            isfinite( gps_data.fix.longitude)) {
-            // Display data from the GPS receiver if valid.
-            printf("Lat %.6f Lon %.6f\n",
-                   gps_data.fix.latitude, gps_data.fix.longitude);
-        }
+include::example1.c.txt[tags=latlon]
 ----
 
 Just because we have a "3D" fix does not mean we have _latitude_ and
@@ -321,13 +288,47 @@ _latitude_ and _longitude_ are set by seeing if they are finite numbers by
 using *isfinite()* from *libm*.  Do not use *isnan()*!  See <<NUMBERS>>
 for a more detailed explanation about this issue.
 
-Lines 58 to 61::
-[source%nowrap,c,numbered,start=58]
+Lines 94 to 119::
+[source%nowrap,c,numbered,start=94]
 ----
-    // When you are done...
-    (void)gps_stream(&gps_data, WATCH_DISABLE, NULL);
-    (void)gps_close(&gps_data);
-    return 0;
+include::example1.c.txt[tags=SkyView]
+----
+print out sky view data if available.
+
+
+Lines 121 to 128::
+[source%nowrap,c,numbered,start=121]
+----
+include::example1.c.txt[tags=pECEF]
+----
+Output Earth Centered Earth Fixed positioning data if available.
+
+Lines 130 to 137::
+[source%nowrap,c,numbered,start=130]
+----
+include::example1.c.txt[tags=vECEF]
+----
+Output ECEF Velocity information if available.
+
+Lines 139 to 146::
+[source%nowrap,c,numbered,start=139]
+----
+include::example1.c.txt[tags=DoP]
+----
+Checks if Dilution Of Precision data is available and dump it.
+
+Lines 148 to 159::
+[source%nowrap,c,numbered,start=148]
+----
+include::example1.c.txt[tags=PPSTOff]
+----
+If your gpsd instance gets enough information to produce PPS or TOFF data
+this is the code that will print out that data.
+
+Lines 163 to 167::
+[source%nowrap,c,numbered,start=163]
+----
+include::example1.c.txt[tags=Done]
 ----
 
 When falling out of the loop, close the TCP connection nicely
