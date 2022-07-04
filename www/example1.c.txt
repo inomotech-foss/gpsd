@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
         if (0 != (PPS_SET & gps_data.set)) {
             pps = &gps_data.pps;
             printf("PPS Quantization error adjustment: %6ld.%09ldns\n",
-                   gps_data.qErr/NS_IN_SEC, gps_data.qErr%NS_IN_SEC);
+                   gps_data.qErr / NS_IN_SEC, gps_data.qErr % NS_IN_SEC);
             toff_dump(pps);
         }
 
