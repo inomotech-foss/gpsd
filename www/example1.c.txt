@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
             printf("\nskyview: using %d of %d satellites for %s\n\n",
                 gps_data.satellites_used,
                 gps_data.satellites_visible,
-                ((GPS_PATH_MAX > strnlen(gps_data.dev.path, GPS_PATH_MAX))
+                ((sizeof(gps.data.dev.path) > strnlen(gps_data.dev.path, GPS_PATH_MAX))
                  &&(gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
             printf("\t%s\n",
                    "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes");
