@@ -138,8 +138,13 @@ int main(int argc, char *argv[])
             printf("\nskyview: using %d of %d satellites for %s\n\n",
                 gps_data.satellites_used,
                 gps_data.satellites_visible,
-                ((sizeof(gps_data.dev.path) > strnlen(gps_data.dev.path, (sizeof(gps_data.dev.path))))
-                 && (gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
+                (
+                 (sizeof(gps_data.dev.path) > 
+                 strnlen(gps_data.dev.path,
+                         (sizeof(gps_data.dev.path))
+                        )
+                 ) && (gps_data.dev.path[0] != 0)
+                ) ? gps_data.dev.path : "???");
             printf("\t%s\n\t%s",
                    "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes",                   "=== === === === = === === === ===== ===== ====== ===== ");
             for (int i = 0; i < gps_data.satellites_visible; i ++) {
