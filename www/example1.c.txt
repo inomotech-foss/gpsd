@@ -5,11 +5,11 @@
 #include <gps.h>
 // end::Head[]
 // tag::Include[]
-#include <errno.h>      // for errno
-#include <math.h>       // for infinite()
-#include <stdio.h>      // for puts(), printf(), perror()
-#include <stdlib.h>     // for exit()
-#include <string.h>     // for strnlen()
+#include <errno.h>  // for errno
+#include <math.h>   // for infinite()
+#include <stdio.h>  // for puts(), printf(), perror()
+#include <stdlib.h> // for exit()
+#include <string.h> // for strnlen()
 // end::Include[]
 
 // tag::Macros[]
@@ -54,9 +54,9 @@ void printfloat(char *prep, int flen, char *fmt, double f) {
 //
 // struct timedelta_t * pps:    GPS and system times in time_val
 void toff_dump(struct timedelta_t *pps) {
-    printf("\nReal  Time: %10lld.%09ld\n",
+    printf("\nReal  Time: %10ld.%09ld\n",
         pps->real.tv_sec, pps->real.tv_nsec);
-    printf("Clock Time: %10lld.%09ld\n",
+    printf("Clock Time: %10ld.%09ld\n",
         pps->clock.tv_sec, pps->clock.tv_nsec);
 }
 // end::Toff[]
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 // tag::time[]
         if (IS_GPS(TIME_SET)) {
             // not 32 bit safe
-            printf("%lld.%09ld ", gps_data.fix.time.tv_sec,
+            printf("%ld.%09ld ", gps_data.fix.time.tv_sec,
                    gps_data.fix.time.tv_nsec);
         } else {
             puts("n/a ");
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
             printf("\nskyview: using %d of %d satellites for %s\n\n",
                 gps_data.satellites_used,
                 gps_data.satellites_visible,
-                ((sizeof(gps.data.dev.path) > strnlen(gps_data.dev.path, GPS_PATH_MAX))
+                ((sizeof(gps_data.dev.path) > strnlen(gps_data.dev.path, (sizeof(gps_data.dev.path))))
                  &&(gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
             printf("\t%s\n",
                    "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes");
