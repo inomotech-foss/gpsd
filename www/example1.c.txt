@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 // end::stream[]
 
 // tag::wait[]
-    while ((0 == errno)&&(0 < live)) {
+    while ((0 == errno) && (0 < live)) {
         if (0 == gps_waiting(&gps_data, MS_IN_US * 5)) {
             if (0 != errno) {
                 perror("gps_waiting()");
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
                 gps_data.satellites_used,
                 gps_data.satellites_visible,
                 ((sizeof(gps_data.dev.path) > strnlen(gps_data.dev.path, (sizeof(gps_data.dev.path))))
-                 &&(gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
+                 && (gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
             printf("\t%s\n",
                    "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes");
             printf("\t%s",
