@@ -29,6 +29,12 @@ static char *mode_str[MODE_STR_NUM] = {
 // end::Mode[]
 
 // tag::Float[]
+// void printfloat: print text label, then either a finite double or n/a
+//
+// char * prep: text lablel to prepend
+// int flen:    width of n/a if not finite (minimum 3)
+// char * fmt:  printf format string for f if finite
+// double f:    double floating point number to print if finite
 void printfloat(char *prep, int flen, char *fmt, double f) {
     if (3 < flen) {
         
@@ -44,6 +50,9 @@ void printfloat(char *prep, int flen, char *fmt, double f) {
 // end::Float[]
 
 // tag::Toff[]
+// void toff_dump:  print the GPS and host time stored in pps
+//
+// struct timedelta_t * pps:    GPS and system times in time_val
 void toff_dump(struct timedelta_t *pps) {
     printf("\nReal  Time: %10lld.%09ld\n",
         pps->real.tv_sec, pps->real.tv_nsec);
