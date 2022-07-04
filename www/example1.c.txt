@@ -164,9 +164,9 @@ int main(int argc, char *argv[])
 //        if (IS_GPS(ECEF_SET)) { // libgps set ECEF_SET broken?
         if (isfinite(gps_data.fix.ecef.x)) {
             printfloat("pECEF ",  11, " %10.2f", gps_data.fix.ecef.x);
-            printfloat(" m: X: ",    11, " %10.2f", gps_data.fix.ecef.y);
-            printfloat(" m: Y: ",    11, " %10.2f", gps_data.fix.ecef.z);
-            printfloat(" m: Z ", 11, " %10.2f", gps_data.fix.ecef.pAcc);
+            printfloat(" m: pX ",    11, " %10.2f", gps_data.fix.ecef.y);
+            printfloat(" m: pY ",    11, " %10.2f", gps_data.fix.ecef.z);
+            printfloat(" m: pZ ", 11, " %10.2f", gps_data.fix.ecef.pAcc);
             fputs("m: pAcc\n\n", stdout);
         }
         // end::pECEF[]
