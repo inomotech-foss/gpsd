@@ -36,10 +36,6 @@ static char *mode_str[MODE_STR_NUM] = {
 // char * fmt:  printf format string for f if finite
 // double f:    double floating point number to print if finite
 void printfloat(char *prep, int flen, char *fmt, double f) {
-    if (3 < flen) {
-        
-        exit(1);
-    }
     if (0 != isfinite(f)) {
         (void)printf("%s", prep);
         (void)printf(fmt, f);
