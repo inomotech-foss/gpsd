@@ -140,11 +140,9 @@ int main(int argc, char *argv[])
                 gps_data.satellites_visible,
                 ((sizeof(gps_data.dev.path) > strnlen(gps_data.dev.path, (sizeof(gps_data.dev.path))))
                  && (gps_data.dev.path[0] != 0)) ? gps_data.dev.path : "???");
-            printf("\t%s\n",
-                   "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes");
-            printf("\t%s",
-                   "=== === === === = === === === ===== ===== ====== ===== ");
-            for (int i=0; i < gps_data.satellites_visible; i++) {
+            printf("\t%s\n\t%s",
+                   "Sig Frq Hlt Qlt U PRN con sat   s/n    el     az prRes",                   "=== === === === = === === === ===== ===== ====== ===== ");
+            for (int i = 0; i < gps_data.satellites_visible; i ++) {
                 sat = gps_data.skyview[i];
                 printf("\n\t%3d %3d %3d %3d %1s %3d %3d %3d",
                     sat.sigid, sat.freqid,
