@@ -1,17 +1,24 @@
+// tag::Head[]
 // example  gpsd client
 // compile this way:
 //    gcc example1.c -o example1 -lgps -lm
 #include <gps.h>
+// end::Head[]
+// tag::Include[]
 #include <errno.h>      // for errno
 #include <math.h>       // for infinite()
 #include <stdio.h>      // for puts(), printf(), perror()
 #include <stdlib.h>     // for exit()
 #include <string.h>     // for strnlen()
+// end::Include[]
 
+// tag::Macros[]
 #define GPS_HAS_BIT_SET(x) (x == (x & gps_data.set))
 #define MS_IN_US (1000)
 #define NS_IN_SEC (1000 * 1000 * 1000)
+// end::Macros[]
 
+// tag::Mode[]
 #define MODE_STR_NUM 4
 static char *mode_str[MODE_STR_NUM] = {
     "n/a",
@@ -19,7 +26,9 @@ static char *mode_str[MODE_STR_NUM] = {
     "2D",
     "3D"
 };
+// end::Mode[]
 
+// tag::Float[]
 void printfloat(char *prep, int flen, char *fmt, double f) {
     if (3 < flen) {
         
@@ -32,28 +41,40 @@ void printfloat(char *prep, int flen, char *fmt, double f) {
         (void)printf("%s%*s", prep, flen, "n/a");
     }
 }
+// end::Float[]
 
+// tag::Toff[]
 void toff_dump(struct timedelta_t *pps) {
     printf("\nReal  Time: %10lld.%09ld\n",
         pps->real.tv_sec, pps->real.tv_nsec);
     printf("Clock Time: %10lld.%09ld\n",
         pps->clock.tv_sec, pps->clock.tv_nsec);
 }
+// end::Toff[]
 
+// tag::main[]
 int main(int argc, char *argv[])
 {
+// end::main[]
+// tag::vars[]
     struct gps_data_t gps_data;
     struct timedelta_t *pps;
     int live = 1;
     errno = 0;
+// end::vars[]
 
+// tag::open[]
     if (0 != gps_open("localhost", "2947", &gps_data)) {
         printf("Open error.  Bye, bye\n");
         return 1;
     }
+// end::open[]
 
+// tag::stream[]
     (void)gps_stream(&gps_data, WATCH_ENABLE | WATCH_JSON, NULL);
+// end::stream[]
 
+// tag::wait[]
     while ((0 == errno)&&(0 < live)) {
         if (0 == gps_waiting(&gps_data, MS_IN_US * 5)) {
             if (0 != errno) {
@@ -62,21 +83,31 @@ int main(int argc, char *argv[])
             }
             continue;
         }
+// end::wait[]
+// tag::read[]
         if (-1 == gps_read(&gps_data, NULL, 0)) {
             printf("Read error.  Bye, bye\n");
             break;
         }
+// end::read[]
+// tag::hasmode[]
         if (!GPS_HAS_BIT_SET(MODE_SET)) {
             // did not even get mode, nothing to see here
             continue;
         }
+// end::hasmode[]
+// tag::clipmode[]
         if (0 > gps_data.fix.mode ||
             MODE_STR_NUM <= gps_data.fix.mode) {
             gps_data.fix.mode = 0;
         }
+// end::clipmode[]
+// tag::printmode[]
         printf("Fix mode: %s (%d) Time: ",
                mode_str[gps_data.fix.mode],
                gps_data.fix.mode);
+// end::printmode[]
+// tag::time[]
         if (GPS_HAS_BIT_SET(TIME_SET)) {
             // not 32 bit safe
             printf("%lld.%09ld ", gps_data.fix.time.tv_sec,
@@ -84,14 +115,18 @@ int main(int argc, char *argv[])
         } else {
             puts("n/a ");
         }
+// end::time[]
+// tag::latlon[]
         if (GPS_HAS_BIT_SET(LATLON_SET)) {
             // Display data from the GPS receiver if valid.
             printfloat("Lat ", 3, " %.6f", gps_data.fix.latitude);
             printfloat("Lon ", 3, " %.6f", gps_data.fix.longitude);
         }
         puts("");
+// end::latlon[]
 
 
+        // tag::SkyView[]
         if (GPS_HAS_BIT_SET(SATELLITE_SET)) {
             struct satellite_t sat;
             printf("\nskyview: using %d of %d satellites for %s\n\n",
@@ -117,7 +152,10 @@ int main(int argc, char *argv[])
             }
             puts("\n");
         }
+        // end::SkyView[]
+        
 
+        // tag::pECEF[]
 //        if (GPS_HAS_BIT_SET(ECEF_SET)) { // libgps set ECEF_SET broken?
         if (isfinite(gps_data.fix.ecef.x)) {
             printfloat("pECEF ",  11, " %10.2f", gps_data.fix.ecef.x);
@@ -126,7 +164,9 @@ int main(int argc, char *argv[])
             printfloat(" m: Z ", 11, " %10.2f", gps_data.fix.ecef.pAcc);
             puts("m: pAcc\n");
         }
+        // end::pECEF[]
 
+        // tag::vECEF[]
 //        if (GPS_HAS_BIT_SET(VECEF_SET)) { // libgps set VECEF_SET broken?
         if (isfinite(gps_data.fix.ecef.vx)) {
             printfloat("vECEF",       8, " %+9.2f", gps_data.fix.ecef.vx);
@@ -135,7 +175,9 @@ int main(int argc, char *argv[])
             printfloat(" m/s: vZ ",   8, " %+9.2f", gps_data.fix.ecef.vAcc);
             puts(" m/s :vAcc\n");
         }
+        // end::vECEF[]
 
+        // tag::DoP[]
         if (GPS_HAS_BIT_SET(DOP_SET)) {
             printfloat("DOP [h]: ", 3, "%+4.1f", gps_data.dop.hdop);
             printfloat(" [v]: ",    3, "%+4.1f", gps_data.dop.vdop);
@@ -144,7 +186,9 @@ int main(int argc, char *argv[])
             printfloat(" [g]: ",    3, "%+4.1f", gps_data.dop.gdop);
             puts("\n");
         }
+        // end::DoP[]
 
+        // tag::PPSTOff[]
         if (GPS_HAS_BIT_SET(PPS_SET)) {
             pps = &gps_data.pps;
             printf("PPS Quantization error adjustment: %6ld.%09ldns\n",
@@ -157,12 +201,13 @@ int main(int argc, char *argv[])
             pps = &gps_data.toff;
             toff_dump(pps);
         }
-
-        //gps_data.set = 0;
+        // end::PPSTOff[]
     }
     
+    // tag::Done[]
     // When you are done...
     (void)gps_stream(&gps_data, WATCH_DISABLE, NULL);
     (void)gps_close(&gps_data);
     return 0;
+    // end::Done[]
 }
