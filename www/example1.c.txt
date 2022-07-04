@@ -7,7 +7,7 @@
 // tag::Include[]
 #include <errno.h>  // for errno
 #include <math.h>   // for infinite()
-#include <stdio.h>  // for puts(), printf(), perror()
+#include <stdio.h>  // for fputs(), printf(), perror()
 #include <stdlib.h> // for exit()
 #include <string.h> // for strnlen()
 // end::Include[]
@@ -37,7 +37,7 @@ static char *mode_str[MODE_STR_NUM] = {
 // double f:    double floating point number to print if finite
 void printfloat(char *prep, int flen, char *fmt, double f) {
     if (0 != isfinite(f)) {
-        (void)printf("%s", prep);
+        (void)fputs(prep, stdout);
         (void)printf(fmt, f);
     } else {
         (void)printf("%s%*s", prep, flen, "n/a");
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
             printf("%ld.%09ld", gps_data.fix.time.tv_sec,
                    gps_data.fix.time.tv_nsec);
         } else {
-            puts("n/a");
+            fputs("n/a\n", stdout);
         }
 // end::time[]
 // tag::latlon[]
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
             printfloat("\tLat ", 3, " %.6f", gps_data.fix.latitude);
             printfloat("\tLon ", 3, " %.6f", gps_data.fix.longitude);
         }
-        puts("");
+        fputs("\n", stdout);
 // end::latlon[]
 
 
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
                 printfloat("", 7, " %6.1f", sat.azimuth);
                 printfloat("", 6, " %5.1f", sat.prRes);
             }
-            puts("\n");
+            fputs("\n\n", stdout);
         }
         // end::SkyView[]
         
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
             printfloat(" m: X: ",    11, " %10.2f", gps_data.fix.ecef.y);
             printfloat(" m: Y: ",    11, " %10.2f", gps_data.fix.ecef.z);
             printfloat(" m: Z ", 11, " %10.2f", gps_data.fix.ecef.pAcc);
-            puts("m: pAcc\n");
+            fputs("m: pAcc\n\n", stdout);
         }
         // end::pECEF[]
 
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
             printfloat(" m/s: vX: ",  8, " %+9.2f", gps_data.fix.ecef.vy);
             printfloat(" m/s: vY: ",  8, " %+9.2f", gps_data.fix.ecef.vz);
             printfloat(" m/s: vZ ",   8, " %+9.2f", gps_data.fix.ecef.vAcc);
-            puts(" m/s :vAcc\n");
+            fputs(" m/s :vAcc\n\n", stdout);
         }
         // end::vECEF[]
 
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
             printfloat(" [p]: ",    3, "%+4.1f", gps_data.dop.pdop);
             printfloat(" [t]: ",    3, "%+4.1f", gps_data.dop.tdop);
             printfloat(" [g]: ",    3, "%+4.1f", gps_data.dop.gdop);
-            puts("\n");
+            fputs("\n\n", stdout);
         }
         // end::DoP[]
 
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
         }
 
         if (IS_GPS(TOFF_SET)) {
-            puts("Time Offest");
+            fputs("Time Offest\n", stdout);
             pps = &gps_data.toff;
             toff_dump(pps);
         }
