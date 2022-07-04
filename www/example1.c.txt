@@ -119,17 +119,17 @@ int main(int argc, char *argv[])
 // tag::time[]
         if (IS_GPS(TIME_SET)) {
             // not 32 bit safe
-            printf("%ld.%09ld ", gps_data.fix.time.tv_sec,
+            printf("%ld.%09ld", gps_data.fix.time.tv_sec,
                    gps_data.fix.time.tv_nsec);
         } else {
-            puts("n/a ");
+            puts("n/a");
         }
 // end::time[]
 // tag::latlon[]
         if (IS_GPS(LATLON_SET)) {
             // Display data from the GPS receiver if valid.
-            printfloat("Lat ", 3, " %.6f", gps_data.fix.latitude);
-            printfloat("Lon ", 3, " %.6f", gps_data.fix.longitude);
+            printfloat("\tLat ", 3, " %.6f", gps_data.fix.latitude);
+            printfloat("\tLon ", 3, " %.6f", gps_data.fix.longitude);
         }
         puts("");
 // end::latlon[]
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
         }
         // end::PPSTOff[]
     }
-    
+
     // tag::Done[]
     // When you are done...
     (void)gps_stream(&gps_data, WATCH_DISABLE, NULL);
