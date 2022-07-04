@@ -232,7 +232,7 @@ include::example1.c.txt[tags=hasmode]
 
 Here is a part that most programmers miss.  Check that *TPV* data was
 received, not some other data, like *SKY*.  The flag *MODE_SET* is set
-IF a *TPV* JSON sentence was received.  If no *MODE_SET* then do not
+IFF a *TPV* JSON sentence was received.  If no *MODE_SET* then do not
 bother to look at the rest of the data in _gpsdata.fix_.
 
 Lines 72 to 75::
