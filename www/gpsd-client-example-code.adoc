@@ -41,7 +41,7 @@ Fix mode: 3D (3) Time: 1615325175.000000000 Lat 44.068861 Lon -121.314085
 ^C
 ----
  
-The paranoid reader will have read https://gpsd.io/example1.c[example1.c]
+The paranoid reader will have read https://gpsd.io/example1.c.txt[example1.c]
 before running it so as not to lose all their Bitcoin.
 
 As you can see above, this client prints the "Fix Mode" ("mode"), Time
