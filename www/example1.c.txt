@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     int live = 1;
     errno = 0;
 
-    if (0 != gps_open("::1", "2947", &gps_data)) {
+    if (0 != gps_open("localhost", "2947", &gps_data)) {
         printf("Open error.  Bye, bye\n");
         return 1;
     }
