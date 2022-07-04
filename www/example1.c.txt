@@ -34,9 +34,9 @@ void printfloat(char *prep, int flen, char *fmt, double f) {
 }
 
 void toff_dump(struct timedelta_t *pps) {
-    printf("\nReal  Time: %10ld.%09ld\n",
+    printf("\nReal  Time: %10lld.%09ld\n",
         pps->real.tv_sec, pps->real.tv_nsec);
-    printf("Clock Time: %10ld.%09ld\n",
+    printf("Clock Time: %10lld.%09ld\n",
         pps->clock.tv_sec, pps->clock.tv_nsec);
 }
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
                gps_data.fix.mode);
         if (GPS_HAS_BIT_SET(TIME_SET)) {
             // not 32 bit safe
-            printf("%ld.%09ld ", gps_data.fix.time.tv_sec,
+            printf("%lld.%09ld ", gps_data.fix.time.tv_sec,
                    gps_data.fix.time.tv_nsec);
         } else {
             puts("n/a ");
