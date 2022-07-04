@@ -21,7 +21,7 @@ static char *mode_str[MODE_STR_NUM] = {
 };
 
 void printfloat(char *prep, int flen, char *fmt, double f) {
-    if (flen < 3) {
+    if (3 < flen) {
         
         exit(1);
     }
