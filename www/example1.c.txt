@@ -51,9 +51,9 @@ void printfloat(char *prep, int flen, char *fmt, double f) {
  * struct timedelta_t * pps:    GPS and system times in time_val
  */
 void toff_dump(struct timedelta_t *pps) {
-    printf("\nReal  Time: %10ld.%09ld\n",
+    printf("\nReal  Time: %10lld.%09lld\n",
         pps->real.tv_sec, pps->real.tv_nsec);
-    printf("Clock Time: %10ld.%09ld\n",
+    printf("Clock Time: %10lld.%09lld\n",
         pps->clock.tv_sec, pps->clock.tv_nsec);
 }
 // end::Toff[]
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 // tag::time[]
         if (0 != (TIME_SET & gps_data.set)) {
             // not 32 bit safe
-            printf("%ld.%09ld", gps_data.fix.time.tv_sec,
+            printf("%lld.%09lld", gps_data.fix.time.tv_sec,
                    gps_data.fix.time.tv_nsec);
         } else {
             fputs("n/a\n", stdout);
