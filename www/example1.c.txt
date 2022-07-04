@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
     struct gps_data_t gps_data;
     struct timedelta_t *pps;
     int live = 1;
+    errno = 0;
 
     if (0 != gps_open("::1", "2947", &gps_data)) {
         printf("Open error.  Bye, bye\n");
