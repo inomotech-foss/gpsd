@@ -237,7 +237,7 @@ to UTC.  Many GPS/GNSS receivers output random time when they do not
 have a fix.  Worse, some continue to do so for minutes after reporting
 that they have a valid fix.
 
-Lines 50 to 55::
+Lines 50 to 57::
 [source%nowrap,c,numbered,start=50]
 ----
         if (isfinite(gps_data.fix.latitude) &&
@@ -245,6 +245,8 @@ Lines 50 to 55::
             // Display data from the GPS receiver if valid.
             printf("Lat %.6f Lon %.6f\n",
                    gps_data.fix.latitude, gps_data.fix.longitude);
+        } else {
+            printf("Lat n/a Lon n/a\n");
         }
 ----
 
@@ -260,7 +262,7 @@ _latitude_ and _longitude_ are set by seeing if they are finite numbers by
 using *isfinite()* from *libm*.  Do not use *isnan()*!  See <<NUMBERS>>
 for a more detailed explanation about this issue.
 
-Lines 58 to 61::
+Lines 60 to 63::
 [source%nowrap,c,numbered,start=58]
 ----
     // When you are done...
