@@ -169,7 +169,6 @@ all_manpages = {
     "man/gpsd_json.5": "man/gpsd_json.adoc",
     "man/gpsfake.1": "man/gpsfake.adoc",
     "man/gpsinit.8": "man/gpsinit.adoc",
-    "man/gpsmon.1": "man/gpsmon.adoc",
     "man/gpspipe.1": "man/gpspipe.adoc",
     "man/gpsplot.1": "man/gpsplot.adoc",
     "man/gpsprof.1": "man/gpsprof.adoc",
@@ -1931,18 +1930,6 @@ gpsd_sources = [
 if env['systemd']:
     gpsd_sources.append("gpsd/sd_socket.c")
 
-gpsmon_sources = [
-    'gpsmon/gpsmon.c',
-    'gpsmon/monitor_garmin.c',
-    'gpsmon/monitor_italk.c',
-    'gpsmon/monitor_nmea0183.c',
-    'gpsmon/monitor_oncore.c',
-    'gpsmon/monitor_sirf.c',
-    'gpsmon/monitor_superstar2.c',
-    'gpsmon/monitor_tnt.c',
-    'gpsmon/monitor_ubx.c',
-]
-
 # Python dependencies
 # For generated dependencies, this causes them to be generated as needed.
 # For non-generated dependencies, it causes them to be duplicated into
@@ -2026,10 +2013,6 @@ gpsdctl = env.Program('clients/gpsdctl', ['clients/gpsdctl.c'],
 gpsdecode = env.Program('clients/gpsdecode', ['clients/gpsdecode.c'],
                         LIBS=[libgpsd_static, libgps_static],
                         parse_flags=gpsdflags + gpsflags)
-# FIXME: gpsmon should not link to gpsd server sources!
-gpsmon = env.Program('gpsmon/gpsmon', gpsmon_sources,
-                     LIBS=[libgpsd_static, libgps_static],
-                     parse_flags=gpsdflags + gpsflags + ncurseslibs)
 gpspipe = env.Program('clients/gpspipe', ['clients/gpspipe.c'],
                       LIBS=[libgps_static],
                       parse_flags=gpsflags)
@@ -2080,9 +2063,9 @@ if env["timeservice"] or env["gpsdclients"]:
         bin_binaries += [ppscheck]
 
     if env["ncurses"]:
-        bin_binaries += [cgps, gpsmon]
+        bin_binaries += [cgps]
     else:
-        announce("WARNING: ncurses not found, not building cgps or gpsmon.",
+        announce("WARNING: ncurses not found, not building cgps.",
                  end=True)
 
 # Test programs - always link locally and statically
@@ -3283,8 +3266,7 @@ misc_sources = ['clients/cgps.c',
                 'clients/ppscheck.c',
                 'gpsctl.c',
                 ]
-sources = libgpsd_sources + libgps_sources + gpsd_sources + gpsmon_sources + \
-    misc_sources
+sources = libgpsd_sources + libgps_sources + gpsd_sources + misc_sources
 env.Command('#TAGS', sources, ['etags ' + " ".join(sources)])
 
 # Release machinery begins here
