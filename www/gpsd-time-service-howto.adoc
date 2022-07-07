@@ -37,17 +37,17 @@ into more detail about the steps.
   ports.  A random cheap consumer-grade GPS receiver won't do; you
   may have to do some hunting to find a usable one.
 
-. Check that it actually emits PPS by pointing GPSD's gpsmon utility
-  at the port.  If it has a good (3D-mode) fix, lines marked "PPS"
-  should scroll by in the packet-logging window.  A new device out of
-  the box may take up to 30 minutes for the first 3D fix.  If gpsmon
+. Check that it actually emits PPS by pointing GPSD's gpspipe utility
+  at gpsd.  If it has a good (3D-mode) fix, lines of class "PPS"
+  should scroll by.  A new device out of
+  the box may take up to 30 minutes for the first 3D fix.  If gpspipe
   shows a 3D fix, but does not show PPS lines, try running ppscheck.
 
 . If you persistently fail to get live PPS, (a) you may have a
   skyview problem, (b) you may have a cabling problem, (c) your GPS
   may not support PPS, (d) you may have a gpsd or kernel configuration
   problem, (e) you may have a device problem, (e) there may be a bug
-  in the core GPSD code used by gpsmon.  These are listed in roughly
+  in the core GPSD code.  These are listed in roughly
   decreasing probability.  Troubleshoot appropriately.
 
 . Edit your ntpd or chronyd configuration to tell your NTP daemon to
@@ -510,13 +510,13 @@ board.
 == Enabling PPS
 
 You can determine whether your GPS receiver emits 1PPS, and gpsd is
-detecting it, by running the gpsmon utility (giving it the GPS
-receiver's serial-device path as argument).  Watch for lines of dashes
-marked 'PPS' in the packet-logging window; for most GPS receiver types
-there will also be a "PPS offset:" field in the data panels above
-showing the delta between PPS and your local clock.
+detecting it, by running the gpspipe utility (including the GPS
+receiver's serial-device path as argument).  Watch for lines of class
+'PPS' in the packet-logging window; for most GPS receiver types
+there will also be fields in the sentence
+showing the PPS and your local clock.
 
-If you don't have gpsmon available, or you don't see PPS lines in it,
+If you don't have gpspipe available, or you don't see PPS lines in it,
 you can run ppscheck.  As a last resort you can gpsd at -D 5 and watch
 for PPS state change messages in the logfile.
 

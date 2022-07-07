@@ -255,7 +255,7 @@ not accidents, they are essential to ensure that the basic
 GPS-monitoring code is not merely correct but <em>demonstrably</em>
 correct.</p>
 
-<p>We support a tool, <code>gpsmon</code>, which is a low-level packet
+<p>We pretended to support a tool, <code>gpsmon</code>, which is a low-level packet
 monitor and diagnostic tool. <code>gpsmon</code> is capable of tuning
 some device-specific control settings such as the SiRF
 static-navigation mode.  A future direction of the project is to
@@ -535,6 +535,7 @@ them, add a brief description of the change.</p></li>
 <li><p>Update the JSON parse templates in libgps_json.c.  If you don't do this,
 clients (possibly including gpsmon) will throw an error when they trip over the
 new field.</p></li>
+<!-- is this a thing with the wildcard ignore flag JamesB192 added support for?-->
 
 <li><p>There may be a unit test for parsing of the JSON object in
 test_json.c.  If there is, it needs to be modified.  If not, add
@@ -690,7 +691,7 @@ whole cycle's worth of data can be a second or longer (this has been
 observed in some NMEA GPSes).  At 9600bps a GPS with a 1s cycle time
 emitting the normal NMEA set of {GPRMC,GGA,GPVTG,GPGLL,GSA,GPGSV) will
 have a quiet time minimum duration of 250ms; the pause is readily
-observable by eyeball in <code>gpsmon</code>.  At higher speeds, or
+observable by eyeball in <code>cgps</code>.  At higher speeds, or
 with (slightly) more compact binary protocols, quiet time increases.</li>
 </ol>
 
@@ -822,7 +823,7 @@ contained in the gpsd.c source file.</p>
 <p>The first three components (other than the multiplexer) are linked
 together in a library called libgpsd and can be used separately from
 the multiplexer. Our other tools that talk to GPSes directly, such as
-<code>gpsmon</code> and <code>gpsctl</code>, do it by calling into the
+<code>gpsdecode</code> and <code>gpsctl</code>, do it by calling into the
 core library and driver layer directly.</p>
 
 <p>Under some circumstances, the packet sniffer by itself is
@@ -1335,11 +1336,13 @@ existing drivers for clues.</p>
 <p>You can read an implementer's <a href="writing-a-driver.html">Notes
 On Writing A GPSD Driver.</a></p>
 
+<!--
 <p>There's a second kind of driver architecture for
 <code>gpsmon</code>, the real-time packet monitor and diagnostic tool.
 It works from monitor-object definitions that include a pointer to the
 device driver for the GPS type you want to monitor.  See
 monitor_proto.c for a prototype and technical details.</p>
+-->
 
 <h2 id="notdriver">When not to add a driver</h2>
 
@@ -1587,7 +1590,7 @@ Each has a different risk profile.</p>
 <h3>1) Exterior code</h3>
 
 <p>Test clients and test tools: <code>xgps</code>, <code>cgps</code>,
-<code>gpsfake</code>, <code>gpsprof</code>, <code>gpsmon</code>, etc.
+<code>gpsfake</code>, <code>gpsprof</code>, etc.
 These are at low risk of breakage and are easy to eyeball-check for
 correctness -- when they go wrong they tend to do so in obvious ways.
 Point errors in a tool don't compromise the other tools or the
@@ -1716,7 +1719,7 @@ gpsd regression tests will break (times one second off) and the testloads
 will have to be rebuilt.</p></dd>
 
 <dt>9. Live-test PPS</dt>
-<dd><p>Point gpsmon at a GR601-W or other PPS-capable GPS and verify
+<dd><p>Point gpspipe at a GR601-W or other PPS-capable GPS and verify
 that PPS events are visible.</p></dd>
 
 <dt>10. Push and pull from the public repo</dt>

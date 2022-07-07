@@ -178,7 +178,7 @@ and watch it report fixes.</p>
 <p>5. If your test client fails to run, a good test to try is to,
 after stopping any instances of gpsd that are running
 (eg, <code>killall gpsd</code> ),
-run <code>gpsmon</code> on the device (give it the device path as an
+run <code>gpscat</code> on the device (give it the device path as an
 argument). If yours reports no data at all, you probably have some
 low-level system problem with serial or USB that you'll need to fix
 before <code>gpsd</code> will operate.</p>
@@ -467,7 +467,7 @@ gpsfake and gpson.  A stack trace is also useful in those cases.</p>
 
 <p>A good technique in all such cases is to try to reproduce the bug
 by feeding a log with the bad packet in it to gpsdecode.  This utility
-exercises the same packet decoders as gpsd/gpsfake/gpsmon but without
+exercises the same packet decoders as gpsd/gpsfake but without
 involving nearly as much other code.  If you can send a test log that
 crashes gpsdecode, you can expect the bug to be fixed very quickly.</p>
 
