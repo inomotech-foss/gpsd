@@ -700,6 +700,7 @@ Or maybe a gpsd JSON file.
 
     def read(self):
         """Read and interpret data from the daemon."""
+        self.valid = 0
         status = gpscommon.read(self)
         if status <= 0:
             return status
@@ -713,7 +714,7 @@ Or maybe a gpsd JSON file.
         """Python 3 version of next()."""
         if self.read() == -1:
             raise StopIteration
-        if hasattr(self, "data"):
+        if self.valid & PACKET_SET and hasattr(self, "data"):
             return self.data
 
         return self.response
