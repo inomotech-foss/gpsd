@@ -270,6 +270,8 @@ class plotter(object):
                 if self.session.read() == -1:
                     sys.stderr.write("gpsprof: gpsd has vanished.\n")
                     sys.exit(1)
+                if not (self.session.valid & gps.PACKET_SET):
+                    continue
                 baton.twirl()
                 if self.session.data["class"] == "ERROR":
                     sys.stderr.write(" ERROR: %s.\n"
