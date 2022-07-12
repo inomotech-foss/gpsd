@@ -198,6 +198,8 @@ if __name__ == "__main__":
         try:
             while True:
                 report = session.next()
+                if not report or 'class' not in report:
+                    continue
                 if report['class'] == 'TPV':
                     f = open(os.path.join(options.kmldir,
                              'Realtime_GPS.kml'), 'w')

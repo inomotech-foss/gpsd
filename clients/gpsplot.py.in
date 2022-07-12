@@ -365,17 +365,27 @@ else:
 
 count = 0
 if 0 < options.seconds:
-    end_seconds = time.time() + options.seconds
+    end_seconds = time.monotonic() + options.seconds
 else:
     end_seconds = 0
 
 try:
     while True:
-        try:
-            report = session.next()
-        except StopIteration:
-            # end of data
-            break
+        if 0 < options.seconds:
+            if time.monotonic() > end_seconds:
+                break
+
+        if session.waiting(0.5):
+            try:
+                report = session.next()
+            except StopIteration:
+                # end of data
+                break
+        else:
+            report = None
+
+        if not report or 'class' not in report:
+            continue
 
         if report['class'] != options.mclass:
             continue
@@ -387,10 +397,6 @@ try:
             if count >= options.count:
                 break
 
-        if 0 < options.seconds:
-            if time.time() > end_seconds:
-                break
-
 except KeyboardInterrupt:
     # caught control-C
     # FIXME: plot is in different process, does not come here...
@@ -400,8 +406,10 @@ except KeyboardInterrupt:
 if options.image_name:
     fig.savefig(options.image_name, dpi=200)
 
+print("Done.")
 if options.exit:
     sys.exit(0)
 
 # make the plot persist until window closed.
+print("Waiting for plot gets closed...")
 matplotlib.pyplot.show(block=True)
