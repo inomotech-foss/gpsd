@@ -384,7 +384,7 @@ try:
         else:
             report = None
 
-        if not (session.valid & gps.PACKET_SET) or not report:
+        if not report or 'class' not in report:
             continue
 
         if report['class'] != options.mclass:
