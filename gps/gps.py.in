@@ -700,7 +700,6 @@ Or maybe a gpsd JSON file.
 
     def read(self):
         """Read and interpret data from the daemon."""
-        self.valid = 0
         status = gpscommon.read(self)
         if status <= 0:
             return status
