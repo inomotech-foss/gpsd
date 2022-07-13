@@ -404,4 +404,5 @@ if options.exit:
     sys.exit(0)
 
 # make the plot persist until window closed.
+print("Waiting for plot to close...")
 matplotlib.pyplot.show(block=True)
