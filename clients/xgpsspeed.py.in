@@ -808,7 +808,7 @@ class Main(object):
     def handle_response(self, source, condition):
         """Handle_response."""
         if -1 == self.daemon.read():
-             self.handle_hangup(source, condition)
+            self.handle_hangup(source, condition)
         if 'VERSION' == self.daemon.data['class']:
             self.update_version(self.daemon.version)
         elif 'TPV' == self.daemon.data['class']:
