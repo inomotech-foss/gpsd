@@ -1982,7 +1982,7 @@ class ubx(object):
         """Find a config item by key"""
 
         for item in self.cfgs:
-            if key == item[1]:
+            if item[1] == key:
                 return item
 
         # not found, build a fake item, guess on decode
@@ -2001,7 +2001,7 @@ class ubx(object):
         """Find a config item by name"""
 
         for item in self.cfgs:
-            if name == item[0]:
+            if item[0] == name:
                 return item
 
         return None
