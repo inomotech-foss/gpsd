@@ -179,7 +179,7 @@ if __name__ == '__main__':
         seqno = 0
         while True:
             rlist, wlist, xlist = select.select([tty], [], [])
-            if [tty] == rlist:
+            if rlist == [tty]:
                 if options.rawmode:
                     buf = os.read(tty, NMEA_MAX)
                     if not buf:
