@@ -226,7 +226,7 @@ class gps_io(object):
         self.verbosity_level = verbosity_level
         self.prog_name = os.path.basename(sys.argv[0])
         Serial = serial
-        Serial_v3 = '3' <= Serial and Serial.VERSION.split('.')[0]
+        Serial_v3 = Serial and '3' <= Serial.VERSION.split('.')[0]
         # buffer to hold read data
         self.out = b''
 

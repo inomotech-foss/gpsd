@@ -1427,7 +1427,7 @@ Three types of GPS I/O
     def __init__(self):
         """Initialize class."""
         Serial = serial
-        Serial_v3 = '3' <= Serial and Serial.VERSION.split('.')[0]
+        Serial_v3 = Serial and '3' <= Serial.VERSION.split('.')[0]
         # buffer to hold read data
         self.out = b''
 
