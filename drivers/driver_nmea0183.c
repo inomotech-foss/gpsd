@@ -670,7 +670,7 @@ static gps_mask_t processRMC(int count, char *field[],
             }
         }
 
-        if (12 <= count) {
+        if (12 < count) {
             newstatus = faa_mode(field[12][0]);
             /* QUectel uses
              * S = Safe  (s/b Simulated)
