@@ -237,40 +237,44 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
 
 #ifdef RMC_FAA_ENABLE
     char faa_mode;
-    switch(session->gpsdata.fix.status) {
-    case STATUS_UNK:
-        faa_mode = 'N'; //FAA_MODE_NOT_VALID
-        break;
-    case STATUS_GPS:
-        faa_mode = 'A'; //FAA_MODE_AUTONOMOUS
-        break;
-    case STATUS_DGPS:
-        faa_mode = 'D'; //FAA_MODE_DIFFERENTIAL
-        break;
-    case STATUS_RTK_FIX:
-        faa_mode = 'R'; //FAA_MODE_RTK_FIX
-        break;
-    case STATUS_RTK_FLT:
-        faa_mode = 'F'; //FAA_MODE_RTK_FLT
-        break;
-    case STATUS_DR:
-        FALLTHROUGH
-    case STATUS_GNSSDR:
-        faa_mode = 'E' //FAA_MODE_ESTIMATED
-        break;
-    case STATUS_TIME:
-        faa_mode = 'M' //FAA_MODE_MANUAL
-        break;
-    case STATUS_SIM:
-        faa_mode = 'S' //FAA_MODE_SIMULATED
-        break;
-    case STATUS_PPS_FIX:
-        faa_mode = 'P' //FAA_MODE_PRECISE
-        break;
-    default:
-        faa_mode = 'N' //FAA_MODE_NOT_VALID
-        break;
+    if (MODE_NO_FIX < session->gpsdata.fix.mode) {
+        switch(session->gpsdata.fix.status) {
+        case STATUS_GPS:
+            faa_mode = 'A'; //FAA_MODE_AUTONOMOUS
+            break;
+        case STATUS_DGPS:
+            faa_mode = 'D'; //FAA_MODE_DIFFERENTIAL
+            break;
+        case STATUS_RTK_FIX:
+            faa_mode = 'R'; //FAA_MODE_RTK_FIX
+            break;
+        case STATUS_RTK_FLT:
+            faa_mode = 'F'; //FAA_MODE_RTK_FLT
+            break;
+        case STATUS_DR:
+            FALLTHROUGH
+        case STATUS_GNSSDR:
+            faa_mode = 'E'; //FAA_MODE_ESTIMATED
+            break;
+        case STATUS_TIME:
+            faa_mode = 'M'; //FAA_MODE_MANUAL
+            break;
+        case STATUS_SIM:
+            faa_mode = 'S'; //FAA_MODE_SIMULATED
+            break;
+        case STATUS_PPS_FIX:
+            faa_mode = 'P'; //FAA_MODE_PRECISE
+            break;
+        case STATUS_UNK:
+            FALLTHROUGH
+        default:
+            faa_mode = 'N'; //FAA_MODE_NOT_VALID
+            break;
+        }
+    } else {
+        faa_mode='N'; //FAA_MODE_NOT_VALID
     }
+
 #endif // RMC_FAA_ENABLE
 
     (void)snprintf(bufp, len,
