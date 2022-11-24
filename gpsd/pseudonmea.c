@@ -195,18 +195,6 @@ void gpsd_position_fix_dump(struct gps_device_t *session,
     }
 }
 
-#define FAA_MODE_AUTONOMOUS 'A'
-#define FAA_MODE_CAUTION 'C'
-#define FAA_MODE_DIFFERENTIAL 'D'
-#define FAA_MODE_ESTIMATED 'E'
-#define FAA_MODE_RTK_FLT 'F'
-#define FAA_MODE_NOT_VALID 'N'
-#define FAA_MODE_PRECISE 'P'
-#define FAA_MODE_RTK_FIX 'R'
-#define FAA_MODE_MANUAL 'M'
-#define FAA_MODE_SIMULATED 'S'
-#define FAA_MODE_UNSAFE 'U'
-
 static void gpsd_transit_fix_dump(struct gps_device_t *session,
                                   char bufp[], size_t len)
 {
@@ -220,7 +208,7 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
     char *var_dir = "";
     struct tm tm;
     char valid;
-    char faa_mode;
+
 
     utc_to_hhmmss(session->gpsdata.fix.time, time_str, sizeof(time_str), &tm);
     if ('\0' == time_str[0]) {
@@ -247,40 +235,50 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
         valid = 'A';      // Status: Valid
     }
 
+#ifdef RMC_FAA_ENABLE
+    char faa_mode;
     switch(session->gpsdata.fix.status) {
     case STATUS_UNK:
-        faa_mode = FAA_MODE_NOT_VALID;
+        faa_mode = 'N'; //FAA_MODE_NOT_VALID
         break;
     case STATUS_GPS:
-        faa_mode = FAA_MODE_AUTONOMOUS;
+        faa_mode = 'A'; //FAA_MODE_AUTONOMOUS
         break;
     case STATUS_DGPS:
-        faa_mode = FAA_MODE_DIFFERENTIAL;
+        faa_mode = 'D'; //FAA_MODE_DIFFERENTIAL
         break;
     case STATUS_RTK_FIX:
-        faa_mode = FAA_MODE_RTK_FIX;
+        faa_mode = 'R'; //FAA_MODE_RTK_FIX
         break;
     case STATUS_RTK_FLT:
-        faa_mode = FAA_MODE_RTK_FLT;
+        faa_mode = 'F'; //FAA_MODE_RTK_FLT
         break;
     case STATUS_DR:
         FALLTHROUGH
     case STATUS_GNSSDR:
-        faa_mode = FAA_MODE_ESTIMATED;
+        faa_mode = 'E' //FAA_MODE_ESTIMATED
         break;
     case STATUS_TIME:
-        faa_mode = FAA_MODE_MANUAL;
+        faa_mode = 'M' //FAA_MODE_MANUAL
         break;
     case STATUS_SIM:
-        faa_mode = FAA_MODE_SIMULATED;
+        faa_mode = 'S' //FAA_MODE_SIMULATED
+        break;
+    case STATUS_PPS_FIX:
+        faa_mode = 'P' //FAA_MODE_PRECISE
         break;
     default:
-        faa_mode = FAA_MODE_NOT_VALID;
+        faa_mode = 'N' //FAA_MODE_NOT_VALID
         break;
     }
-    
+#endif // RMC_FAA_ENABLE
+
     (void)snprintf(bufp, len,
+#ifdef RMC_FAA_ENABLE
                    "$GPRMC,%s,%c,%s,%c,%s,%c,%s,%s,%s,%s,%s,%c",
+#else
+                   "$GPRMC,%s,%c,%s,%c,%s,%c,%s,%s,%s,%s,%s",
+#endif // RMC_FAA_ENABLE
                    time_str,
                    valid,
                    degtodm_str(session->gpsdata.fix.latitude, "%09.4f",
@@ -292,8 +290,11 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
                    f_str(session->gpsdata.fix.speed * MPS_TO_KNOTS, "%.4f",
                             speed_str),
                    f_str(session->gpsdata.fix.track, "%.3f", track_str),
-                   time2_str,
-                   var_str, var_dir, faa_mode);
+                   time2_str, var_str, var_dir
+#ifdef RMC_FAA_ENABLE
+                   , faa_mode
+#endif
+                   );
     nmea_add_checksum(bufp);
 }
 
