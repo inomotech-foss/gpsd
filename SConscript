@@ -379,8 +379,6 @@ boolopts = (
     ("xgps",          True,  "include xgps and xgpsspeed."),
     # Test control
     ("slow",          False, "run tests with realistic (slow) delays"),
-    # Optional
-    ("rmc_faa",       False, "fill FAA-mode-field in pseudonmea RMC sentences"),
 )
 
 # now step on the boolopts just read from '.scons-option-cache'

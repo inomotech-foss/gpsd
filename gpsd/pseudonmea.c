@@ -208,7 +208,7 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
     char *var_dir = "";
     struct tm tm;
     char valid;
-
+    char faa_mode;
 
     utc_to_hhmmss(session->gpsdata.fix.time, time_str, sizeof(time_str), &tm);
     if ('\0' == time_str[0]) {
@@ -235,21 +235,25 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
         valid = 'A';      // Status: Valid
     }
 
-#ifdef RMC_FAA_ENABLE
-    char faa_mode;
     if (MODE_NO_FIX < session->gpsdata.fix.mode) {
         switch(session->gpsdata.fix.status) {
         case STATUS_GPS:
             faa_mode = 'A'; //FAA_MODE_AUTONOMOUS
             break;
+        case STATUS_RTK_FIX:
+            // NMEA 4.10+
+            // faa_mode = 'R'; //FAA_MODE_RTK_FIX
+            FALLTHROUGH
+        case STATUS_RTK_FLT:
+            // NMEA 4.10+
+            //faa_mode = 'F'; //FAA_MODE_RTK_FLT
+            FALLTHROUGH
+        case STATUS_PPS_FIX:
+            // NMEA 4.10+
+            //faa_mode = 'P'; //FAA_MODE_PRECISE
+            FALLTHROUGH
         case STATUS_DGPS:
             faa_mode = 'D'; //FAA_MODE_DIFFERENTIAL
-            break;
-        case STATUS_RTK_FIX:
-            faa_mode = 'R'; //FAA_MODE_RTK_FIX
-            break;
-        case STATUS_RTK_FLT:
-            faa_mode = 'F'; //FAA_MODE_RTK_FLT
             break;
         case STATUS_DR:
             FALLTHROUGH
@@ -262,9 +266,6 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
         case STATUS_SIM:
             faa_mode = 'S'; //FAA_MODE_SIMULATED
             break;
-        case STATUS_PPS_FIX:
-            faa_mode = 'P'; //FAA_MODE_PRECISE
-            break;
         case STATUS_UNK:
             FALLTHROUGH
         default:
@@ -272,17 +273,18 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
             break;
         }
     } else {
+        // enable clients to use mode field to check for NO_FIX
         faa_mode='N'; //FAA_MODE_NOT_VALID
     }
 
-#endif // RMC_FAA_ENABLE
+    // only 'A' and 'D' are valid in NMEA 3.01
+    if (!(faa_mode == 'A' || faa_mode == 'D')) {
+        // not considered a valid NMEA fix; make consistent
+        valid='V'
+    }
 
     (void)snprintf(bufp, len,
-#ifdef RMC_FAA_ENABLE
                    "$GPRMC,%s,%c,%s,%c,%s,%c,%s,%s,%s,%s,%s,%c",
-#else
-                   "$GPRMC,%s,%c,%s,%c,%s,%c,%s,%s,%s,%s,%s",
-#endif // RMC_FAA_ENABLE
                    time_str,
                    valid,
                    degtodm_str(session->gpsdata.fix.latitude, "%09.4f",
@@ -294,11 +296,7 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
                    f_str(session->gpsdata.fix.speed * MPS_TO_KNOTS, "%.4f",
                             speed_str),
                    f_str(session->gpsdata.fix.track, "%.3f", track_str),
-                   time2_str, var_str, var_dir
-#ifdef RMC_FAA_ENABLE
-                   , faa_mode
-#endif
-                   );
+                   time2_str, var_str, var_dir, faa_mode);
     nmea_add_checksum(bufp);
 }
 
