@@ -280,7 +280,7 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
     // only 'A' and 'D' are valid in NMEA 3.01
     if (!(faa_mode == 'A' || faa_mode == 'D')) {
         // not considered a valid NMEA fix; make consistent
-        valid='V'
+        valid='V';
     }
 
     (void)snprintf(bufp, len,
