@@ -294,7 +294,7 @@ static void gpsd_transit_fix_dump(struct gps_device_t *session,
     //V = Navigational invalid, No navigational status indication
     //we don't evaluate this field atm.
     //we report that we don't provide valid information in this field
-    nav_stat='V'
+    nav_stat='V';
     //this does't invalidate the fix!
 
     //NMEA 4.10
