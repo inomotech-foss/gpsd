@@ -624,9 +624,9 @@ for i in ["ARFLAGS",
         env.MergeFlags({t: Split(os.getenv(i))})
 
 
-# Keep scan-build options in the environment
+# Keep scan-build and rpm options in the environment
 for key, value in os.environ.items():
-    if key.startswith('CCC_'):
+    if key.startswith('CCC_') or key.startswith('RPM_'):
         env.Append(ENV={key: value})
 
 # Placeholder so we can kluge together something like VPATH builds.
