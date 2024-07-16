@@ -170,7 +170,7 @@ class SkyView(Gtk.DrawingArea):
 
     """Satellite skyview, encapsulates pygtk's draw-on-expose behavior."""
     # See <http://faq.pygtk.org/index.py?req=show&file=faq18.008.htp>
-    HORIZON_PAD = 50    # How much whitespace to leave around horizon
+    HORIZON_PAD = 65   # How much whitespace to leave around horizon
 
     def __init__(self, rotation=None):
         """Initialize class SkyView."""
@@ -289,8 +289,9 @@ class SkyView(Gtk.DrawingArea):
                     health = "Unk"
 
                 label = Gtk.Label()
-                s = ("<span font_desc='monospace " +
-                     str(options.circlefont) + "'>PRN %13d\n"
+                s = ("<span font_desc='monospace "
+                     "%2d'>"
+                     "PRN %13d\n"
                      "%s"
                      "Elevation    %4.1f\n"
                      "Azimuth     %5.1f\n"
@@ -300,8 +301,8 @@ class SkyView(Gtk.DrawingArea):
                      "Quality  %7s\n"
                      "Health  %9s\n"
                      "Used  %11s</span>" %
-                     (sat.PRN, gnss_str, sat.el, sat.az, sig_str, snr_str,
-                      prres_str, qual_str, health, use_str))
+                     (options.circlefont, sat.PRN, gnss_str, sat.el, sat.az,
+                      sig_str, snr_str, prres_str, qual_str, health, use_str))
                 label.set_markup(s)
                 rectangle = Gdk.Rectangle()
                 rectangle.x = x - 25
@@ -796,9 +797,9 @@ class IMUView(object):
             colbase = (i // IMUView.ROWS) * 2
             # attribute / label
             label = Gtk.Label()
-            label.set_markup("<span font_desc='sans " +
-                             str(options.infofont) + "'> %s:</span>" %
-                             IMUView.imufields[i][0])
+            label.set_markup("<span font_desc='sans "
+                             "%2d'> %s:</span>" %
+                             (options.infofont, IMUView.imufields[i][0]))
             # force right alignment
             label.set_halign(Gtk.Align.END)
             self.widget.attach(label, colbase, i % IMUView.ROWS, 1, 1)
@@ -806,9 +807,8 @@ class IMUView(object):
             entry = Gtk.Label()
             entry.set_xalign(1)            # right align data
             # span gets lost later
-            entry.set_markup("<span font_desc='monospace " +
-                             str(options.infofont) +
-                             "'> n/a </span>")
+            entry.set_markup("<span font_desc='monospace %2d'> n/a </span>" %
+                             (options.infofont))
             entry.set_width_chars(10)
             self.widget.attach_next_to(entry, label,
                                        Gtk.PositionType.RIGHT, 1, 1)
@@ -816,8 +816,8 @@ class IMUView(object):
 
     def update(self, msg):
         """Update the IMU data fields."""
-        markup = "<span font_desc='monospace " + str(options.infofont)
-        + "'>%s </span>"
+        markup = ("<span font_desc='monospace %2d'>%s </span>" %
+                  options.infofont)
         for (attrname, widget) in self.imuwidgets:
             if hasattr(msg, attrname):
                 s = str(getattr(msg, attrname))
@@ -853,25 +853,22 @@ class NoiseView(object):
         for i in range(len(NoiseView.noisefields)):
             colbase = (i // NoiseView.ROWS) * 2
             label = Gtk.Label()
-            label.set_markup("<span font_desc='sans " +
-                             str(options.infofont) + "'> %s:</span>" %
-                             NoiseView.noisefields[i][0])
+            label.set_markup("<span font_desc='sans %2d'> %s:</span>" %
+                             (options.infofont, NoiseView.noisefields[i][0]))
             # force right alignment
             label.set_halign(Gtk.Align.END)
             self.widget.attach(label, colbase, i % NoiseView.ROWS, 1, 1)
             entry = Gtk.Label()
             # span gets lost later
-            entry.set_markup("<span font_desc='monospace " +
-                             str(options.infofont) +
-                             "'> n/a </span>")
+            entry.set_markup("<span font_desc='monospace %2d'> n/a </span>" %
+                             options.infofont)
             self.widget.attach_next_to(entry, label,
                                        Gtk.PositionType.RIGHT, 1, 1)
             self.noisewidgets.append((NoiseView.noisefields[i][1], entry))
 
     def update(self, noise):
         """Update the GPGST data fields."""
-        markup = "<span font_desc='monospace " + str(options.infofont)
-        + "'>%s </span>"
+        markup = "<span font_desc='monospace %2d'>%s </span>" %options.infofont
         for (attrname, widget) in self.noisewidgets:
             if hasattr(noise, attrname):
                 s = str(getattr(noise, attrname))
@@ -911,9 +908,8 @@ class RTKView(object):
             colbase = (i // RTKView.ROWS) * 2
             # attribute / label
             label = Gtk.Label()
-            label.set_markup("<span font_desc='sans " +
-                             str(options.infofont) + "'> %s:</span>" %
-                             RTKView.rtkfields[i][0])
+            label.set_markup("<span font_desc='sans %2d'> %s:</span>" %
+                             (options.infofont, RTKView.rtkfields[i][0]))
             # force right alignment
             label.set_halign(Gtk.Align.END)
             self.widget.attach(label, colbase, i % RTKView.ROWS, 1, 1)
@@ -921,9 +917,8 @@ class RTKView(object):
             entry = Gtk.Label()
             entry.set_xalign(1)            # right align data
             # span gets lost later
-            entry.set_markup("<span font_desc='monospace " +
-                             str(options.infofont) +
-                             "'> n/a </span>")
+            entry.set_markup("<span font_desc='monospace %2d'> n/a </span>" %
+                             options.infofont)
             entry.set_width_chars(10)
             self.widget.attach_next_to(entry, label,
                                        Gtk.PositionType.RIGHT, 1, 1)
@@ -931,8 +926,8 @@ class RTKView(object):
 
     def update(self, msg):
         """Update the RTK data fields."""
-        markup = "<span font_desc='monospace " + str(options.infofont)
-        + "'>%s </span>"
+        markup = ("<span font_desc='monospace %2d'>%s </span>" %
+                 options.infofont)
         for (attrname, widget) in self.rtkwidgets:
             if hasattr(msg, attrname):
                 s = str(getattr(msg, attrname))
@@ -1000,8 +995,8 @@ class Base(object):
                           (gps_version, gi.version_info[0],
                            gi.version_info[1], gi.version_info[2]))
         about.set_copyright("Copyright 2010 by The GPSD Project")
-        about.set_website("https://gpsd.io/")
-        about.set_website_label("https://gpsd.io/")
+        about.set_website("@WEBSITE@")
+        about.set_website_label("@WEBSITE@")
         about.set_license("BSD-2-clause")
         iconpath = gps.__iconpath__ + '/gpsd-logo.png'
         if os.access(iconpath, os.R_OK):
@@ -1291,9 +1286,8 @@ frame * {
         for i in range(len(Base.gpsfields)):
             colbase = (i // Base.ROWS) * 2
             label = Gtk.Label()
-            label.set_markup("<span font_desc='sans " +
-                             str(options.infofont) + "'> %s:</span>" %
-                             Base.gpsfields[i][0])
+            label.set_markup("<span font_desc='sans %2d'> %s:</span>" %
+                             (options.infofont, Base.gpsfields[i][0]))
             # force right alignment
             label.set_halign(Gtk.Align.END)
             datatable.attach(label, colbase, i % Base.ROWS, 1, 1)
@@ -1302,9 +1296,8 @@ frame * {
                 entry.set_width_chars(widths[colbase + 1])
             entry.set_selectable(True)
             # span gets lost later
-            entry.set_markup("<span font_desc='monospace " +
-                             str(options.infofont) +
-                             "'> n/a </span>")
+            entry.set_markup("<span font_desc='monospace %2d'> n/a </span>" %
+                             options.infofont)
             datatable.attach_next_to(entry, label,
                                      Gtk.PositionType.RIGHT, 1, 1)
             gpswidgets.append(entry)
@@ -1615,8 +1608,8 @@ frame * {
         # the first 28 fields are updated using TPV data
         # the next 9 fields are updated using SKY data
 
-        markup = ("<span font_desc='monospace " + str(options.infofont)
-                  + "'>%s </span>")
+        markup = ("<span font_desc='monospace %2d'>%%s </span>" %
+                  options.infofont)
         for (hook, widget) in Base.gpsfields[:27]:
             if hook:  # Remove this guard when we have all hooks
                 widget.set_markup(markup % hook(self, tpv))
@@ -1748,8 +1741,8 @@ frame * {
             self.sky_view.redraw(satellites)
         # else:   #  a SKY with just DOPs
 
-        markup = ("<span font_desc='monospace " + str(options.infofont)
-                  + "'>%s </span>")
+        markup = ("<span font_desc='monospace %2d'>%%s </span>" %
+                  options.infofont)
         # the first 27 fields are updated using TPV data
         # the next 9 fields are updated using SKY data
         for (hook, widget) in Base.gpsfields[27:36]:
@@ -2045,20 +2038,9 @@ if __name__ == "__main__":
         sys.stderr.write("xgps: ERROR: DISPLAY not set\n")
         sys.exit(1)
 
-    if options.marker > MARKER_MAX:
-        options.marker = MARKER_MAX
-    if options.marker < MARKER_MIN:
-        options.marker = MARKER_MIN
-
-    if options.infofont > 30:
-        options.infofont = 30
-    if options.infofont < 10:
-        options.infofont = 10
-
-    if options.circlefont > 30:
-        options.circlefont = 30
-    if options.circlefont < 10:
-        options.circlefont = 10
+    options.marker = min(MARKER_MAX, max(MARKER_MIN, options.marker))
+    options.infofont = min(30, max(10, options.infofont))
+    options.circlefont = min(30, max(10, options.circlefont))
 
     base = Base(deg_type=options.degreefmt, rotation=options.rotate,
                 title=target)
