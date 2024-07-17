@@ -1696,10 +1696,10 @@ frame * {
                 if 0 == options.constellation:
                     (self.set_satlist_field(i, 0,
                                             gnss_details[satellite.gnssid]
-                                            .gnss))
+                                            .abbvr))
                 elif 1 == options.constellation:
                     (self.set_satlist_field(i, 0, gnss_details[satellite
-                                                               .gnssid].abbvr))
+                                                               .gnssid].full))
                 else:
                     (self.set_satlist_field(i, 0, gnss_details[satellite
                                                                .gnssid].flag
