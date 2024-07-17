@@ -123,13 +123,13 @@ MARKER_MIN = 5
 
 gnss_details = (gnss_text(0, 'GP', 'GPS', '\U0001F1FA\U0001F1F8',
                           MARKER_CIRCLE, MARKER_NULL),  # US
-                gnss_text(1, 'SB', 'SBAS', '\U0001F1FA\U0001F1F3',  # UN
+                gnss_text(1, 'SB', 'SBAS', '\U0001F30E',  # Earth
                           MARKER_SQUARE, MARKER_SQUARE_REGULAR),
                 gnss_text(2, 'GA', 'Galileo', '\U0001F1EA\U0001F1FA',  # EU
                           MARKER_TRIANGLE, MARKER_TRIANGLE_SOUTH),
                 gnss_text(3, 'BD', 'BeiDou', '\U0001F1E8\U0001F1F3',  # China
                           MARKER_TRIANGLE, MARKER_TRIANGLE_NORTH),
-                gnss_text(4, 'IM', 'IMES', '\U0001F1EF\U0001F1F5',  # Japan
+                gnss_text(4, 'IM', 'IMES', '\U0001F30E',  # Earth
                           MARKER_TRIANGLE, MARKER_TRIANGLE_WEST),
                 gnss_text(5, 'QZ', 'QZSS', '\U0001F1EF\U0001F1F5',  # Japan
                           MARKER_TRIANGLE, MARKER_TRIANGLE_EAST),
@@ -289,9 +289,7 @@ class SkyView(Gtk.DrawingArea):
                     health = "Unk"
 
                 label = Gtk.Label()
-                s = ("<span font_desc='monospace "
-                     "%2d'>"
-                     "PRN %13d\n"
+                s = ("<span font_desc='monospace %2d'>PRN %13d\n"
                      "%s"
                      "Elevation    %4.1f\n"
                      "Azimuth     %5.1f\n"
@@ -560,14 +558,14 @@ class SkyView(Gtk.DrawingArea):
             else:
                 self.set_color(0, 255, 180)        # green and some blue
 
-            if gnss_details[sat.gnssid].marker_type == MARKER_CIRCLE:
+            if MARKER_CIRCLE == gnss_details[sat.gnssid].marker_type:
                 self.draw_circle(x, y, options.marker, sat.used)
 
-            elif gnss_details[sat.gnssid].marker_type == MARKER_SQUARE:
+            elif MARKER_SQUARE == gnss_details[sat.gnssid].marker_type:
                 self.draw_square(x, y, options.marker, sat.used,
                                  gnss_details[sat.gnssid].marker_subtype)
 
-            elif gnss_details[sat.gnssid].marker_type == MARKER_TRIANGLE:
+            elif MARKER_TRIANGLE == gnss_details[sat.gnssid].marker_type:
                 self.draw_triangle(x, y, options.marker, sat.used,
                                    gnss_details[sat.gnssid].marker_subtype)
             else:
@@ -608,29 +606,40 @@ class SkyView(Gtk.DrawingArea):
         for sat_type in satellites:
             if sat_type.gnssid in Legend_Done:
                 continue
+            if not 1 <= sat_type.PRN <= 437:
+                # Bad PRN, skip.  NMEA uses up to 437
+                continue
+            if not 0 <= sat_type.az <= 359:
+                # Bad azimuth, skip.
+                continue
+            if not -10 <= sat_type.el <= 90:
+                # Bad elevation, skip.  Allow just below horizon
+                continue
+            # See note on Navika-100 above
+            if ((0 == sat_type.az and
+                 0 == sat_type.el)):
+                continue
 
             Legend_Done.append(sat_type.gnssid)
             y1 = y1 + max_height
             y2 = y2 + max_height
 
-            if options.constellation == 0:
+            if 0 == options.constellation:
                 legend_str = gnss_details[sat_type.gnssid].abbvr
             else:
                 legend_str = gnss_details[sat_type.gnssid].full
 
-            if gnss_details[sat_type.gnssid].marker_type == MARKER_CIRCLE:
+            if MARKER_CIRCLE == gnss_details[sat_type.gnssid].marker_type:
                 self.draw_string(5, y1, legend_str + ':', False)
                 self.draw_circle(x1, y2, options.marker, MARKER_EMPTY)
                 self.draw_circle(x2, y2, options.marker, MARKER_FILLED)
-
-            elif gnss_details[sat_type.gnssid].marker_type == MARKER_SQUARE:
+            elif MARKER_SQUARE == gnss_details[sat_type.gnssid].marker_type:
                 self.draw_string(5, y1, legend_str + ':', False)
                 self.draw_square(x1, y2, options.marker, MARKER_EMPTY,
                                  gnss_details[sat_type.gnssid].marker_subtype)
                 self.draw_square(x2, y2, options.marker, MARKER_FILLED,
                                  gnss_details[sat_type.gnssid].marker_subtype)
-
-            elif gnss_details[sat_type.gnssid].marker_type == MARKER_TRIANGLE:
+            elif MARKER_TRIANGLE == gnss_details[sat_type.gnssid].marker_type:
                 self.draw_string(5, y1, legend_str + ':', False)
                 self.draw_triangle(x1, y2, options.marker, MARKER_EMPTY,
                                    gnss_details[sat_type.gnssid]
@@ -797,8 +806,7 @@ class IMUView(object):
             colbase = (i // IMUView.ROWS) * 2
             # attribute / label
             label = Gtk.Label()
-            label.set_markup("<span font_desc='sans "
-                             "%2d'> %s:</span>" %
+            label.set_markup("<span font_desc='sans %2d'> %s:</span>" %
                              (options.infofont, IMUView.imufields[i][0]))
             # force right alignment
             label.set_halign(Gtk.Align.END)
@@ -927,7 +935,7 @@ class RTKView(object):
     def update(self, msg):
         """Update the RTK data fields."""
         markup = ("<span font_desc='monospace %2d'>%s </span>" %
-                 options.infofont)
+                  options.infofont)
         for (attrname, widget) in self.rtkwidgets:
             if hasattr(msg, attrname):
                 s = str(getattr(msg, attrname))
@@ -1685,11 +1693,11 @@ frame * {
                     # more than can be displaced
                     continue
 
-                if options.constellation == 0:
+                if 0 == options.constellation:
                     (self.set_satlist_field(i, 0,
                                             gnss_details[satellite.gnssid]
                                             .GNSS))
-                elif options.constellation == 1:
+                elif 1 == options.constellation:
                     (self.set_satlist_field(i, 0, gnss_details[satellite
                                                                .gnssid].abbvr))
                 else:
@@ -1946,7 +1954,9 @@ if __name__ == "__main__":
         dest='marker',
         default=marker,
         type=int,
-        help='Size of the marker in sky view (5 - 15). [Default %(default)s]',
+        choices=range(5, 16),
+        metavar='[5 - 15]',
+        help='Size of the marker in sky view. [Default %(default)s]',
     )
     parser.add_argument(
         '-i',
@@ -1954,7 +1964,9 @@ if __name__ == "__main__":
         dest='infofont',
         default=infofont,
         type=int,
-        help='Size of the fonts in the info area (10 - 30). ' +
+        choices=range(10, 31),
+        metavar='[10 - 30]',
+        help='Size of the fonts in the info area. ' +
         '[Default %(default)s]',
     )
     parser.add_argument(
@@ -1963,7 +1975,9 @@ if __name__ == "__main__":
         dest='circlefont',
         default=circlefont,
         type=int,
-        help='Size of the fonts in the great circle (10 - 30). ' +
+        choices=range(10, 31),
+        metavar='[10 - 30]',
+        help='Size of the fonts in the great circle. ' +
         ' [Default %(default)s]',
     )
     parser.add_argument(
