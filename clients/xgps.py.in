@@ -588,7 +588,7 @@ class SkyView(Gtk.DrawingArea):
 
     def legend(self, satellites):
         Legend_Done = []
-        self.set_color(200, 200, 255)
+        self.set_color(255, 255, 255)
         self.cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL,
                                  cairo.FONT_WEIGHT_NORMAL)
         self.cr.set_font_size(options.circlefont)

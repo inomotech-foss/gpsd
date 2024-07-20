@@ -66,6 +66,21 @@ under *sudo* will cause some loss of functionality.
 *-r DEG*, *--rotate DEG*::
   Accepts an argument in degrees, to rotate the skyview
   counterclockwise.
+*-s NUM*, *--sats NUM*::
+  Set number of sats to display in sat window.
+*-u MODE*, *--units MODE*::
+  The unit of speed where MODE is one of:
+  i - imperial, m - metric, n - nautical
+*-m SIZE*, *--marker SIZE*::
+  Size of the marker in sky view.
+*-i SIZE*, *--infofont SIZE*::
+  Size of the fonts in the info area.
+*-o SIZE*, *--circlefontsize SIZE*::
+  Size of the fonts in the skyview great circle.
+*-e SIZE*, *--legendfontsize SIZE*::
+  Size of the fonts for the legend.
+*-g SIZE*, *--greatcircle SIZE*::
+  Size of great circle in pixels.
 *-c FORMAT*, *--const FORMAT*::
   Display format of constellation.
   Can display abbreviated, full name or full name & flag where possible.
