@@ -101,7 +101,7 @@
 
 static struct gps_data_t gpsdata;
 static time_t status_timer;     // Time of last state change.
-static int state = 0;           // or MODE_NO_FIX=1, MODE_2D=2, MODE_3D=3
+static int state = MODE_NOT_SEEN;
 static float altfactor = METERS_TO_FEET;
 static float speedfactor = MPS_TO_MPH;
 static char *altunits = "ft";
@@ -1066,7 +1066,7 @@ static void update_gps_panel(struct gps_data_t *gpsdata, char *message,
     // Fill in the GPS status and the time since the last state change.
     if (0 == gpsdata->online.tv_sec &&
         0 == gpsdata->online.tv_nsec) {
-        newstate = 0;
+        newstate = MODE_NOT_SEEN;
         (void)strlcpy(scr, "OFFLINE", sizeof(scr));
     } else {
         const char *fmt;
@@ -1267,7 +1267,7 @@ static void update_gps_panel(struct gps_data_t *gpsdata, char *message,
     }
 
     // Reset the status_timer if the state has changed.
-    if (newstate != state) {
+    if (newstate != MODE_NOT_SEEN && newstate != state) {
         status_timer = time(NULL);
         state = newstate;
     }
