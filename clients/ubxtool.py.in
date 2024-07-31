@@ -360,6 +360,7 @@ if gps.VERB_PROG <= opts['verbosity']:
         print("   %s: %s" % (option, opts[option]))
 
 # done parsing arguments from environment and CLI
+sys.stdout.reconfigure(line_buffering=True)
 
 try:
     # raw log file requested?
