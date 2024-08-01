@@ -1,22 +1,69 @@
 <style>
 
+:root {
+    color-scheme: light;
+    --background: url(paper.gif);
+    --block-backgroud: #f8f8f8;
+    --block-border: #777;
+    --color: #000000
+}
+
+/* Dark mode does not work right
+[color-scheme="dark"],
+@media (color-index: 48),
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: url(paper2.png);
+    --block-backgroud: #070707;
+    --block-border: #999;
+    --color: #ffffff
+  }
+}
+*/
+
 /* gpsd CSS customization. */
-#header > h1:first-child,
+body, p {
+  font-family: helvetica, sans-serif;
+}
+
 body {
-  color: #000;
+  background: var(--background);
+  color: var(--color);
+}
+
+h1, #header.details {
+  color: var(--color);
+}
+
+.listingblock pre,
+.listingblock>.content>pre:not(.highlight),
+.listingblock>.content>pre[class=highlight],
+.listingblock>.content>pre[class^="highlight "] {
+  color: var(--color);
+  background: var(--block-backgroud);
+}
+
+#content p {
+  text-indent: 2em;
 }
 
 .sidebarblock,
-#toc.toc2 {
-  background: #f8f8f8;
-  border: 1px dashed #999;
+#toc.toc2, #Index {
+  background: var(--block-backgroud);
+  border: 0.13rem dashed var(--block-border);
+  list-style: none;
+}
+
+.rogue.nowrap.highlight .w {
+  background: var(--block-backgroud);
 }
 
 .sidebarblock {
   display: inline-block;
   float: left;
-  margin-right: 20px;
-  margin-bottom: 20px;
+  margin-right: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 #toctitle {
@@ -26,34 +73,39 @@ body {
 #content #toc.toc {
   background: inherit;
   border: none;
-  padding: 0em;
 }
 
 #header,
-#content,
 #footnotes,
 #footer {
   max-width: initial;
 }
 
-@media screen and (min-width: 768px) {
-  body {
-    --left-col: 15em;
+#Menu {
+  width: 15rem;
+}
+
+@media screen and (min-width: 48rem) {
+  #content, #Menu {
+    margin: 0 1.25rem 1.25rem 0;
   }
 
-  #content #Menu {
-    border: 1px dashed #999;
-    bottom: 2px;
-    left: 2px;
-    margin: 0 20px 20px 0;
+  #Menu {
+    float: left;
     position: absolute;
-    top: 2px;
-    width: var(--left-col);
+    top: 0.125rem;
+    left: 0.125rem;
   }
-
   #content #preamble,
   #content .sect1 {
-    margin-left: calc(var(--left-col) + 22px);
+    margin-left: 16.5rem;
+  }
+}
+
+@media screen and (max-width: 48rem) {
+  /* Mis-bucket the <48 * >38 range */
+  #Index {
+    clear: left;
   }
 }
 </style>
