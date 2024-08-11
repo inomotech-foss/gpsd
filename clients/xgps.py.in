@@ -1067,7 +1067,8 @@ frame * {
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-        vbox = Gtk.VBox(homogeneous=False, spacing=0)
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                       homogeneous=False, spacing=0)
         self.window.add(vbox)
 
         self.window.connect("destroy", lambda _unused: Gtk.main_quit())
@@ -1230,7 +1231,11 @@ frame * {
 
         vbox.pack_start(menubar, expand=False, fill=True, padding=0)
 
-        # Gtk.HBox() is deprecated, use Gtk.Box() or Gtk.Grid().
+        # FIXME: Using horizontal .Box not .HBox the sky table doesn't expand.
+        # GtkBox no longer deprecated but GtkHBOx/GtkVBox are.
+        # https://docs.gtk.org/gtk3/class.HBox.html#constructors
+        # https://docs.gtk.org/gtk3/class.VBox.html#constructors
+        # https://discourse.gnome.org/t/is-gtkbox-going-to-be-deprecated/2332
         self.satbox = Gtk.HBox(homogeneous=False, spacing=0)
         vbox.add(self.satbox)
 
@@ -1352,7 +1357,6 @@ frame * {
         imuraw_frame.add(self.imuraw_view.widget)
 
         # Add noise box
-        # FIXME: GtkBox() is deprecated, use Gtk.Grid()
         self.noisebox = Gtk.Box(homogeneous=False, spacing=0)
         vbox.add(self.noisebox)
         noiseframe = Gtk.Frame(label="Noise Statistics")
