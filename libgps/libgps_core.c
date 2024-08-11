@@ -474,7 +474,7 @@ extern const char *gps_errstr(const int err)
      * We might add our own error codes in the future, e.g for
      * protocol compatibility checks
      */
-#ifdef USE_QT
+#ifndef USE_QT
 #ifdef SHM_EXPORT_ENABLE
     if (SHM_NOSHARED == err) {
         return "no shared-memory segment or daemon not running";
