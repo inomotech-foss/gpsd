@@ -1062,8 +1062,10 @@ static void mtk3301_event_hook(struct gps_device_t *session, event_t event)
          * badly documented */
          (void)nmea_send(session, "$PMTK424");
 
-        // ECEFPOSVEL enable
+        // ECEFPOSVEL message enable
         (void)nmea_send(session, "$PQECEF,W,1,0");
+        // PQVEL message enable
+        (void)nmea_send(session, "$PQVEL,W,1,0");
     }
 }
 

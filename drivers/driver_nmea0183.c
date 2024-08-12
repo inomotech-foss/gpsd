@@ -3825,6 +3825,50 @@ static gps_mask_t processPQTMVER(int count UNUSED, char *field[],
     return mask;
 }
 
+static gps_mask_t processPQVEL(int count, char *field[],
+                               struct gps_device_t *session)
+{
+    /*
+     * Set/Get command:
+     *
+     * $PQVEL,W,OK*0D
+     *
+     * 1 Command type.
+     * 2 Command status.
+     */
+
+    /*
+     * Output message:
+     *
+     * $PQVEL,1.000000,2.000000,-0.000000*42
+     *
+     * 1 North velocity
+     * 2 East velocity
+     * 3 Down velocity
+     */
+    gps_mask_t mask = ONLINE_SET;
+
+    switch (count) {
+        // Set/Get command
+        case 3:
+            GPSD_LOG(LOG_PROG, &session->context->errout,
+                     "NMEA0183: PQVEL: command %s %s\n", field[1], field[2]);
+            break;
+        // Output message
+        case 4:
+            session->newdata.NED.velN = safe_atof(field[1]);
+            session->newdata.NED.velE = safe_atof(field[2]);
+            session->newdata.NED.velD = safe_atof(field[3]);
+            mask |= VNED_SET;
+            break;
+        default:
+            GPSD_LOG(LOG_WARN, &session->context->errout,
+                     "NMEA0183: PQVEL: count %d\n", count);
+            break;
+    }
+    return mask;
+}
+
 static gps_mask_t processPQVERNO(int c UNUSED, char* field[],
                                  struct gps_device_t* session)
 {
@@ -5279,6 +5323,7 @@ gps_mask_t nmea_parse(char *sentence, struct gps_device_t * session)
         {"PQTMQMPT", NULL, 2, false, NULL},            // Meters / tick
         {"PQTMVEHMSG", NULL, 2, false, NULL},          // Vehicle Info
         {"PQTMVER", NULL, 4, false, processPQTMVER},   // Firmware info
+        {"PQVEL", NULL, 4, false, processPQVEL},       // Velocity
 
         {"PQVERNO", NULL, 5, false, processPQVERNO},   // Version
         // smart watch sensors, Yes: space!
