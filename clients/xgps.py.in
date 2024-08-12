@@ -1605,7 +1605,9 @@ frame * {
             elif gps.STATUS_PPS_FIX == data.status:
                 sub_status = " PPS"
 
-        if gps.MODE_2D == data.mode:
+        if gps.MODE_NOT_SEEN == data.mode:
+            status = "NOT SEEN"
+        elif gps.MODE_2D == data.mode:
             status = "2D%s FIX" % sub_status
         elif gps.MODE_3D == data.mode:
             if hasattr(data, 'status') and gps.STATUS_TIME == data.status:
@@ -1615,7 +1617,7 @@ frame * {
         else:
             status = "NO FIX"
 
-        if data.mode != self.saved_mode:
+        if data.mode != self.saved_mode and data.mode != gps.MODE_NOT_SEEN:
             self.last_transition = time.time()
             self.saved_mode = data.mode
         return status
