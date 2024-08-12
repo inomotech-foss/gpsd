@@ -1061,6 +1061,9 @@ static void mtk3301_event_hook(struct gps_device_t *session, event_t event)
          * http://trl.trimble.com/docushare/dsweb/Get/Document-482603/CONDOR_UG_2C_75263-00.pdf *
          * badly documented */
          (void)nmea_send(session, "$PMTK424");
+
+        // ECEFPOSVEL enable
+        (void)nmea_send(session, "$PQECEF,W,1,0");
     }
 }
 

@@ -3641,6 +3641,34 @@ static gps_mask_t processPQxOK(int c UNUSED, char* field[],
     return ONLINE_SET;
 }
 
+// Quectel $ECEFPOSVEL - ECEF position and velocity
+static gps_mask_t processECEFPOSVEL(int c UNUSED, char *field[], struct gps_device_t *session) {
+    /*
+     * $ECEFPOSVEL,052743.000,-1526672.867459,6191083.982801,143008.780911,0,0,0*14
+     *
+     * 1 UTC from the internal real-time clock.
+     * 2 The value of X axis
+     * 3 The value of Y axis
+     * 4 The value of Z axis
+     * 5 Velocity component of X axis
+     * 6 Velocity component of Y axis
+     * 7 Velocity component of Z axis
+     */
+    gps_mask_t mask = ONLINE_SET;
+
+    session->newdata.ecef.x = safe_atof(field[2]);
+    session->newdata.ecef.y = safe_atof(field[3]);
+    session->newdata.ecef.z = safe_atof(field[4]);
+    mask |= ECEF_SET;
+
+    session->newdata.ecef.vx = safe_atof(field[5]);
+    session->newdata.ecef.vy = safe_atof(field[6]);
+    session->newdata.ecef.vz = safe_atof(field[7]);
+    mask |= VECEF_SET;
+
+    return mask;
+}
+
 // Quectel $PQTMGPS - GNSS position stuff
 static gps_mask_t processPQTMGPS(int count UNUSED, char *field[],
                                  struct gps_device_t *session)
@@ -5236,6 +5264,7 @@ gps_mask_t nmea_parse(char *sentence, struct gps_device_t * session)
         // MTK-3301 -- $POLYN
 
         // Quectel proprietary
+        {"ECEFPOSVEL", NULL, 8, false, processECEFPOSVEL},           // ECEF Position and Velocity
         {"PQTMCFGEINSMSGERROR", NULL, 1, false, processPQxERR},      // Error
         {"PQTMCFGEINSMSGOK", NULL, 1, false, processPQxOK},          // OK
         {"PQTMCFGORIENTATIONERROR", NULL, 1, false, processPQxERR},  // Error
