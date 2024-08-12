@@ -4914,6 +4914,23 @@ static gps_mask_t processTXT(int count, char *field[],
     GPSD_LOG(LOG_WARN, &session->context->errout,
              "NMEA0183: TXT: %.10s: %.80s\n",
              msgType_txt, field[4]);
+
+    /*
+     * Quectel:
+     *
+     * ANTSTATUS=OK: antenna is well connected
+     * ANTSTATUS=OPEN: antenna has been disconnected
+     * ANTSTATUS=SHORT: antenna is short-circuited
+     */
+    if (0 == strncmp( "ANTSTATUS=OK", field[4], 12)) {
+        session->newdata.ant_stat = ANT_OK;
+    } else if (0 == strncmp( "ANTSTATUS=OPEN", field[4], 14)) {
+        session->newdata.ant_stat = ANT_OPEN;
+    } else if (0 == strncmp( "ANTSTATUS=SHORT", field[4], 15)) {
+        session->newdata.ant_stat = ANT_SHORT;
+    }
+    mask |= REPORT_IS;
+
     return mask;
 }
 
