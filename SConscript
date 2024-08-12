@@ -585,8 +585,8 @@ env['SC_PYTHON'] = sys.executable  # Path to SCons Python
 # explicitly quote them or (better yet) use the "=" form of GNU option
 # settings.
 #
-# Scons also uses different internal names than most other build-systems.
-# So we rely on MergeFlags/ParseFlags to do the right thing for us.
+# Scons also uses different internal names than most other build-systems,
+# e.g. it uses LINKFLAGS instead of LDFLAGS.
 #
 # scons uses gcc, or clang, to link. Thus LDFLAGS does not serve its
 # traditional function of providing arguments to ln. LDFLAGS set in the
@@ -618,14 +618,15 @@ for i in ["ARFLAGS",
           "SHLINKFLAGS",
           ]:
     if i in os.environ:
-        # MergeFlags() puts the options where scons wants them, not
-        # where you asked them to go.
-        env.MergeFlags(Split(os.getenv(i)))
+        t = i
+        if t == "LDFLAGS":
+            t = "LINKFLAGS"
+        env.MergeFlags({t: Split(os.getenv(i))})
 
 
-# Keep scan-build options in the environment
+# Keep scan-build and rpm options in the environment
 for key, value in os.environ.items():
-    if key.startswith('CCC_'):
+    if key.startswith('CCC_') or key.startswith('RPM_'):
         env.Append(ENV={key: value})
 
 # Placeholder so we can kluge together something like VPATH builds.
